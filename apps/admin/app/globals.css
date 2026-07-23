@@ -1,0 +1,13 @@
+/* Ponto de entrada de estilos do painel LINKA.
+   Os tokens da marca vivem em @linka/ui/tokens.css (fonte única de cor/raio/tipografia). */
+@import "@linka/ui/tokens.css";
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

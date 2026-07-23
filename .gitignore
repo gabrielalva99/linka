@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
+# Supabase (local)
+supabase/.branches
+supabase/.temp
+**/supabase/.env
+
+# Android (apps/agent — futuro)
+*.apk
+*.aab
+*.keystore
+apps/agent/.gradle/
+apps/agent/build/
+apps/agent/local.properties
+apps/agent/app/build/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# TypeScript
+*.tsbuildinfo

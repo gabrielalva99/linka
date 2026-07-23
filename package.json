@@ -1,0 +1,21 @@
+{
+  "name": "linka",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LINKA — plataforma de gestão, conteúdo e analytics para dispositivos de demonstração no varejo",
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @linka/admin dev",
+    "build": "pnpm --filter @linka/admin build",
+    "start": "pnpm --filter @linka/admin start",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}

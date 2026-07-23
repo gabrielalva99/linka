@@ -1,0 +1,61 @@
+/**
+ * LINKA — Design tokens (provisórios)
+ * Paleta base da identidade: preto #000000 · verde #00f24f · verde claro #d9f9e3.
+ * Dark-first (o produto e os mockups da identidade são escuros).
+ * Estes tokens são o único ponto de verdade de cor/raio/tipografia — quando o kit
+ * final do design chegar, troca-se aqui, sem tocar nos componentes.
+ */
+@import "tailwindcss";
+
+@theme {
+  /* Marca — verde LINKA */
+  --color-brand-50: #eafef1;
+  --color-brand-100: #d9f9e3;
+  --color-brand-200: #a7f0c4;
+  --color-brand-300: #6fe6a1;
+  --color-brand-400: #33dd76;
+  --color-brand-500: #00f24f;
+  --color-brand-600: #00c840;
+  --color-brand-700: #009a32;
+  --color-brand-800: #087026;
+  --color-brand-900: #0a5820;
+
+  /* Neutros (dark-first, leve viés verde-neutro) */
+  --color-ink-50: #f7f9f8;
+  --color-ink-100: #eef1ef;
+  --color-ink-200: #d7ddd8;
+  --color-ink-300: #b8c0ba;
+  --color-ink-400: #8a938c;
+  --color-ink-500: #5b655e;
+  --color-ink-600: #3a423c;
+  --color-ink-700: #262b27;
+  --color-ink-800: #1a1e1b;
+  --color-ink-900: #121513;
+  --color-ink-950: #0a0b0a;
+
+  /* Papéis semânticos (geram utilitários: bg-surface, text-muted, border-line...) */
+  --color-background: #0a0b0a;
+  --color-surface: #121513;
+  --color-surface-2: #1a1e1b;
+  --color-line: #262b27;
+  --color-foreground: #f7f9f8;
+  --color-muted: #8a938c;
+  --color-primary: #00f24f;
+  --color-primary-foreground: #04150a;
+
+  /* Status */
+  --color-success: #00f24f;
+  --color-warning: #f5b301;
+  --color-danger: #ff4d4f;
+  --color-info: #3b9eff;
+
+  /* Raios */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Tipografia */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
