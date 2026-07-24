@@ -26,6 +26,17 @@ object Prefs {
         editor.apply()
     }
 
+    private const val KEY_MODE = "mode"
+
+    /** Estado operacional real: not_running | main_menu | show (o painel não deve adivinhar). */
+    fun mode(ctx: Context): String =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_MODE, "not_running")
+            ?: "not_running"
+
+    fun setMode(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_MODE, value).apply()
+
     private const val KEY_FIT = "playing_fit"
 
     /** Enquadramento aplicado ao conteúdo em exibição (zoom | fit). */

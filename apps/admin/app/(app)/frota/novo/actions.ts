@@ -29,9 +29,9 @@ export async function createDevice(
     code: emptyToNull(formData.get("code")),
     model_id: emptyToNull(formData.get("model_id")),
     store_id: emptyToNull(formData.get("store_id")),
+    position_id: emptyToNull(formData.get("position_id")),
     platform: String(formData.get("platform") ?? "android"),
     imei: emptyToNull(formData.get("imei")),
-    os_version: emptyToNull(formData.get("os_version")),
   });
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };

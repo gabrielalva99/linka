@@ -30,7 +30,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, playing_url, playing_fit, provisioning_code, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, playing_url, playing_fit, provisioning_code, hardware_model, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -59,14 +59,28 @@ export default async function DeviceDetailPage({
     playing_url: string | null;
     playing_fit: ContentFit | null;
     provisioning_code: string | null;
+    hardware_model: string | null;
     device_models: Rel;
     stores: Rel;
+    positions: { label: string | null } | { label: string | null }[] | null;
   };
+
+  // O aparelho reporta o próprio modelo; o catálogo só refina o nome comercial.
+  const catalogModel = relName(d.device_models);
+  const modelLabel =
+    catalogModel !== "—"
+      ? catalogModel
+      : d.hardware_model
+        ? `${d.hardware_model} (${t.device.detected})`
+        : "—";
+  const positionLabel =
+    (Array.isArray(d.positions) ? d.positions[0]?.label : d.positions?.label) ?? "—";
 
   const info: [string, string][] = [
     [t.device.code, d.code ?? "—"],
-    [t.device.model, relName(d.device_models)],
+    [t.device.model, modelLabel],
     [t.device.store, relName(d.stores)],
+    [t.device.position, positionLabel],
     [t.device.mode, d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"],
     [
       t.device.battery,
@@ -103,7 +117,15 @@ export default async function DeviceDetailPage({
       <Link href="/frota" className="text-sm text-muted hover:underline">
         ← {t.device.back}
       </Link>
-      <h1 className="mt-2 text-xl font-semibold">{d.name}</h1>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{d.name}</h1>
+        <Link
+          href={`/frota/${d.id}/editar`}
+          className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+        >
+          {t.device.edit}
+        </Link>
+      </div>
 
       <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {info.map(([k, v]) => (

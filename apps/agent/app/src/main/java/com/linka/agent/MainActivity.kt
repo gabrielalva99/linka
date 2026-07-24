@@ -41,6 +41,11 @@ class MainActivity : Activity() {
         const val FIT_ZOOM = "zoom"
         /** Mostra o vídeo inteiro, sem cortar (pode sobrar faixa preta). */
         const val FIT_FIT = "fit"
+
+        // Modos reportados ao painel (espelham public.device_mode).
+        const val MODE_SHOW = "show"
+        const val MODE_MENU = "main_menu"
+        const val MODE_STOPPED = "not_running"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,8 +156,12 @@ class MainActivity : Activity() {
         Prefs.setPlayingFit(this, if (url != null) fit else null)
 
         if (urlChanged) {
-            if (url != null) playVideo(url, fit)
-            else setContentView(waitingView("Pareado. Aguardando conteúdo…"))
+            if (url != null) {
+                playVideo(url, fit)
+            } else {
+                Prefs.setMode(this, MODE_MENU)
+                setContentView(waitingView("Pareado. Aguardando conteúdo…"))
+            }
         } else {
             // Só o enquadramento mudou: ajusta sem reiniciar o vídeo.
             playerView?.resizeMode = resizeMode(fit)
@@ -188,12 +197,18 @@ class MainActivity : Activity() {
             repeatMode = Player.REPEAT_MODE_ALL
             playWhenReady = true
             addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    // "Demonstração" só quando há frame na tela de verdade.
+                    if (isPlaying) Prefs.setMode(this@MainActivity, MODE_SHOW)
+                }
+
                 override fun onPlayerError(error: PlaybackException) {
                     // Zera para o próximo ciclo tentar de novo (falha pode ser transitória).
                     currentUrl = null
                     playerView = null
                     Prefs.setPlayingUrl(this@MainActivity, null)
                     Prefs.setPlayingFit(this@MainActivity, null)
+                    Prefs.setMode(this@MainActivity, MODE_STOPPED)
                     setContentView(
                         waitingView("Não foi possível tocar o conteúdo: ${error.errorCodeName}"),
                     )

@@ -20,6 +20,32 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/**
+ * Liga o modelo reportado pelo aparelho ao catálogo do cliente.
+ * "motorola edge 30 ultra" e "Moto Edge 30 Ultra" viram a mesma chave; só vincula
+ * quando a correspondência é única (na dúvida, deixa para uma pessoa decidir).
+ */
+function modelKey(s: string) {
+  return s.toLowerCase().replace(/motorola|moto\b/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+async function linkCatalogModel(
+  supabase: ReturnType<typeof createClient>,
+  deviceId: string,
+  tenantId: string,
+  hardwareModel: string,
+) {
+  const { data: models } = await supabase
+    .from("device_models")
+    .select("id, name")
+    .eq("tenant_id", tenantId);
+  const key = modelKey(hardwareModel);
+  const hits = (models ?? []).filter((m) => modelKey(String(m.name)) === key);
+  if (hits.length === 1) {
+    await supabase.from("devices").update({ model_id: hits[0].id }).eq("id", deviceId);
+  }
+}
+
 function newToken() {
   return (
     crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")
@@ -44,7 +70,7 @@ Deno.serve(async (req) => {
 
   const { data: device, error } = await supabase
     .from("devices")
-    .select("id, device_token")
+    .select("id, device_token, tenant_id, model_id")
     .eq("provisioning_code", code)
     .maybeSingle();
 
@@ -58,7 +84,8 @@ Deno.serve(async (req) => {
     status: "online",
     last_seen_at: new Date().toISOString(),
   };
-  if (payload.serial) update.serial = String(payload.serial);
+  if (payload.android_id) update.android_id = String(payload.android_id);
+  if (payload.hardware_model) update.hardware_model = String(payload.hardware_model);
   if (payload.os_version) update.os_version = String(payload.os_version);
   if (payload.agent_version) update.agent_version = String(payload.agent_version);
   if (payload.platform === "android" || payload.platform === "ios") {
@@ -67,6 +94,15 @@ Deno.serve(async (req) => {
 
   const { error: upErr } = await supabase.from("devices").update(update).eq("id", device.id);
   if (upErr) return json({ error: "update_failed" }, 500);
+
+  if (!device.model_id && payload.hardware_model) {
+    await linkCatalogModel(
+      supabase,
+      String(device.id),
+      String(device.tenant_id),
+      String(payload.hardware_model),
+    );
+  }
 
   return json({ device_id: device.id, device_token: token });
 });

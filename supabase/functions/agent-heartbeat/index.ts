@@ -24,6 +24,11 @@ const MODE = new Set([
 ]);
 const FIT = new Set(["zoom", "fit"]);
 
+/** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
+function modelKey(s: string) {
+  return s.toLowerCase().replace(/motorola|moto\b/g, "").replace(/[^a-z0-9]/g, "");
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -51,7 +56,7 @@ Deno.serve(async (req) => {
 
   const { data: device } = await supabase
     .from("devices")
-    .select("id")
+    .select("id, tenant_id, model_id")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -82,8 +87,24 @@ Deno.serve(async (req) => {
     update.playing_fit = FIT.has(String(payload.playing_fit)) ? payload.playing_fit : null;
   }
 
+  const hardwareModel = payload.hardware_model ? String(payload.hardware_model) : null;
+  if (hardwareModel) update.hardware_model = hardwareModel;
+
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
+
+  // Aparelho sem modelo no catálogo: tenta ligar sozinho (evita digitar 250 vezes).
+  if (!device.model_id && hardwareModel) {
+    const { data: models } = await supabase
+      .from("device_models")
+      .select("id, name")
+      .eq("tenant_id", device.tenant_id);
+    const key = modelKey(hardwareModel);
+    const hits = (models ?? []).filter((m) => modelKey(String(m.name)) === key);
+    if (hits.length === 1) {
+      await supabase.from("devices").update({ model_id: hits[0].id }).eq("id", device.id);
+    }
+  }
 
   return json({ ok: true });
 });
