@@ -18,13 +18,12 @@ type CampaignRow = {
   id: string;
   name: string;
   is_active: boolean;
-  fit_mode: ContentFit | null;
   starts_on: string | null;
   ends_on: string | null;
   start_time: string | null;
   end_time: string | null;
   rotation_seconds: number;
-  campaign_items: { position: number; media_assets: Rel }[];
+  campaign_items: { position: number; fit_mode: ContentFit | null; media_assets: Rel }[];
   campaign_targets: Target[];
 };
 
@@ -36,7 +35,7 @@ export default async function CampanhasPage() {
   const { data } = await supabase
     .from("campaigns")
     .select(
-      "id, name, is_active, fit_mode, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
+      "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -68,10 +67,13 @@ export default async function CampanhasPage() {
     const items = (c.campaign_items ?? [])
       .slice()
       .sort((a, b) => a.position - b.position)
-      .map((i) => relName(i.media_assets));
+      .map((i) => {
+        const name = relName(i.media_assets);
+        return i.fit_mode ? `${name} (${CONTENT_FIT_LABELS[i.fit_mode]})` : name;
+      });
     if (items.length === 0) return "—";
-    const names = items.map((n, i) => `${i + 1}. ${n}`).join("  →  ");
     if (items.length === 1) return items[0];
+    const names = items.map((n, i) => `${i + 1}. ${n}`).join("  →  ");
     return `${names} · ${t.campaigns.every} ${Math.round(c.rotation_seconds / 60)} min`;
   }
 
@@ -128,7 +130,6 @@ export default async function CampanhasPage() {
                   <p className="truncate text-sm font-medium">{c.name}</p>
                   <p className="mt-1 text-xs text-muted">
                     {playlistLabel(c)}
-                    {c.fit_mode ? ` · ${CONTENT_FIT_LABELS[c.fit_mode]}` : ""}
                   </p>
                   <p className="mt-2 text-xs text-muted">
                     <span className="text-foreground">{t.campaigns.where}:</span>{" "}

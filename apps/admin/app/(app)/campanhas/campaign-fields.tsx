@@ -9,9 +9,11 @@ const field =
 
 export type Option = { id: string; label: string };
 
+export type PlaylistItem = { mediaId: string; fitMode: string };
+
 export type CampaignDefaults = {
   name?: string;
-  mediaIds?: string[];
+  items?: PlaylistItem[];
   rotationMinutes?: number;
   scope?: string;
   targetId?: string | null;
@@ -19,7 +21,6 @@ export type CampaignDefaults = {
   endsOn?: string | null;
   startTime?: string | null;
   endTime?: string | null;
-  fitMode?: string | null;
 };
 
 /** Campos da campanha — compartilhados entre criar e editar. */
@@ -38,9 +39,9 @@ export function CampaignFields({
 }) {
   const t = getMessages();
   const [scope, setScope] = useState(defaults?.scope ?? "tenant");
-  // Lista ordenada de vídeos; a ordem dos campos no formulário é a ordem de exibição.
-  const [items, setItems] = useState<string[]>(
-    defaults?.mediaIds?.length ? defaults.mediaIds : [""],
+  // Lista ordenada; a ordem dos campos no formulário é a ordem de exibição.
+  const [items, setItems] = useState<PlaylistItem[]>(
+    defaults?.items?.length ? defaults.items : [{ mediaId: "", fitMode: "" }],
   );
 
   const targets: Record<string, Option[]> = { chain: chains, store: stores, device: devices };
@@ -74,16 +75,16 @@ export function CampaignFields({
       <fieldset className="rounded-xl border border-line p-4">
         <legend className="px-1 text-sm text-muted">{t.campaigns.playlist}</legend>
         <div className="flex flex-col gap-2">
-          {items.map((value, i) => (
-            <div key={i} className="flex items-center gap-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
               <span className="w-5 shrink-0 text-xs text-muted">{i + 1}.</span>
               <select
                 name="media_ids"
                 required
-                value={value}
+                value={item.mediaId}
                 onChange={(e) => {
                   const next = [...items];
-                  next[i] = e.target.value;
+                  next[i] = { ...next[i], mediaId: e.target.value };
                   setItems(next);
                 }}
                 className={`${field} min-w-0 flex-1`}
@@ -94,6 +95,24 @@ export function CampaignFields({
                 {media.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
+                  </option>
+                ))}
+              </select>
+              {/* Enquadramento por vídeo: numa lista de 5, cada peça pede o seu. */}
+              <select
+                name="fit_modes"
+                value={item.fitMode}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[i] = { ...next[i], fitMode: e.target.value };
+                  setItems(next);
+                }}
+                className={`${field} shrink-0`}
+              >
+                <option value="">{t.campaigns.fitDefault}</option>
+                {CONTENT_FIT.map((f) => (
+                  <option key={f} value={f}>
+                    {CONTENT_FIT_LABELS[f]}
                   </option>
                 ))}
               </select>
@@ -126,7 +145,7 @@ export function CampaignFields({
         </div>
         <button
           type="button"
-          onClick={() => setItems([...items, ""])}
+          onClick={() => setItems([...items, { mediaId: "", fitMode: "" }])}
           className="mt-3 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
         >
           + {t.campaigns.addVideo}
@@ -233,21 +252,6 @@ export function CampaignFields({
         <p className="mt-1 text-xs text-muted">{t.campaigns.fallbackHint}</p>
       </fieldset>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm text-muted">{t.campaigns.fit}</span>
-        <select
-          name="fit_mode"
-          defaultValue={defaults?.fitMode ?? ""}
-          className={field}
-        >
-          <option value="">{t.campaigns.fitDefault}</option>
-          {CONTENT_FIT.map((f) => (
-            <option key={f} value={f}>
-              {CONTENT_FIT_LABELS[f]}
-            </option>
-          ))}
-        </select>
-      </label>
     </>
   );
 }

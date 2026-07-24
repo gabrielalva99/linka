@@ -23,7 +23,7 @@ export default async function EditarCampanhaPage({
     supabase
       .from("campaigns")
       .select(
-        "id, name, fit_mode, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(media_id, position), campaign_targets(scope, chain_id, store_id, device_id)",
+        "id, name, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(media_id, position, fit_mode), campaign_targets(scope, chain_id, store_id, device_id)",
       )
       .eq("id", id)
       .single(),
@@ -36,6 +36,7 @@ export default async function EditarCampanhaPage({
   const items = ((campaign.campaign_items ?? []) as {
     media_id: string;
     position: number;
+    fit_mode: string | null;
   }[])
     .slice()
     .sort((a, b) => a.position - b.position);
@@ -49,7 +50,10 @@ export default async function EditarCampanhaPage({
           {...options}
           defaults={{
             name: campaign.name as string,
-            mediaIds: items.map((i) => i.media_id),
+            items: items.map((i) => ({
+              mediaId: i.media_id,
+              fitMode: i.fit_mode ?? "",
+            })),
             rotationMinutes: Math.round(
               (campaign.rotation_seconds as number) / 60,
             ),
@@ -60,7 +64,6 @@ export default async function EditarCampanhaPage({
             endsOn: campaign.ends_on as string | null,
             startTime: (campaign.start_time as string | null)?.slice(0, 5) ?? null,
             endTime: (campaign.end_time as string | null)?.slice(0, 5) ?? null,
-            fitMode: campaign.fit_mode as string | null,
           }}
         />
       </div>

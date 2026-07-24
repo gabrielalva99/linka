@@ -12,26 +12,32 @@ const emptyToNull = (v: FormDataEntryValue | null) => {
   return s.length > 0 ? s : null;
 };
 
+type Item = { mediaId: string; fitMode: string | null };
+
 type Parsed = {
   fields: Record<string, unknown>;
-  mediaIds: string[];
+  items: Item[];
   scope: string;
   targetId: string | null;
 };
 
 function parse(formData: FormData): Parsed | null {
   const name = String(formData.get("name") ?? "").trim();
-  const mediaIds = formData
-    .getAll("media_ids")
-    .map((v) => String(v))
-    .filter((v) => v.length > 0);
-  if (!name || mediaIds.length === 0) return null;
+  // Os dois campos saem na mesma ordem das linhas do formulário.
+  const mediaIds = formData.getAll("media_ids").map((v) => String(v));
+  const fitModes = formData.getAll("fit_modes").map((v) => String(v));
+  const items = mediaIds
+    .map((mediaId, i) => ({
+      mediaId,
+      fitMode: fitModes[i] && fitModes[i].length > 0 ? fitModes[i] : null,
+    }))
+    .filter((item) => item.mediaId.length > 0);
+  if (!name || items.length === 0) return null;
 
   const minutes = Number(formData.get("rotation_minutes") ?? 20);
   return {
     fields: {
       name,
-      fit_mode: emptyToNull(formData.get("fit_mode")),
       starts_on: emptyToNull(formData.get("starts_on")),
       ends_on: emptyToNull(formData.get("ends_on")),
       start_time: emptyToNull(formData.get("start_time")),
@@ -39,7 +45,7 @@ function parse(formData: FormData): Parsed | null {
       rotation_seconds:
         Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : 1200,
     },
-    mediaIds,
+    items,
     scope: String(formData.get("scope") ?? "tenant"),
     targetId: emptyToNull(formData.get("target_id")),
   };
@@ -82,10 +88,11 @@ export async function createCampaign(
   if (error || !campaign) return { status: "error" };
 
   const { error: itemsError } = await supabase.from("campaign_items").insert(
-    parsed.mediaIds.map((mediaId, i) => ({
+    parsed.items.map((item, i) => ({
       tenant_id: tenant.id,
       campaign_id: campaign.id,
-      media_id: mediaId,
+      media_id: item.mediaId,
+      fit_mode: item.fitMode,
       position: i + 1,
     })),
   );
@@ -124,10 +131,11 @@ export async function updateCampaign(
   await supabase.from("campaign_targets").delete().eq("campaign_id", id);
 
   const { error: itemsError } = await supabase.from("campaign_items").insert(
-    parsed.mediaIds.map((mediaId, i) => ({
+    parsed.items.map((item, i) => ({
       tenant_id: tenant.id,
       campaign_id: id,
-      media_id: mediaId,
+      media_id: item.mediaId,
+      fit_mode: item.fitMode,
       position: i + 1,
     })),
   );
