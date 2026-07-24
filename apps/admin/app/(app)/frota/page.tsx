@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import {
@@ -67,7 +68,20 @@ export default async function FrotaPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="text-xl font-semibold">{t.fleet.title}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">{t.fleet.title}</h1>
+        <div className="flex items-center gap-3">
+          <Link href="/frota/modelos" className="text-sm text-muted hover:underline">
+            {t.models.manage}
+          </Link>
+          <Link
+            href="/frota/novo"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            {t.deviceForm.new}
+          </Link>
+        </div>
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Kpi label={t.fleet.active} value={online} total={total} />
