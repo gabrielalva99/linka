@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
 import { ROLE_LABELS } from "@linka/shared";
+import { NavLink } from "./nav-link";
 
 export default async function AppLayout({
   children,
@@ -17,10 +18,9 @@ export default async function AppLayout({
     : (ROLE_LABELS[ctx.memberships[0]?.role ?? "client"] ?? "—");
 
   const nav = [
-    { label: t.nav.dashboard, href: "/", active: true },
-    { label: t.nav.fleet, href: "/frota", active: false },
-    { label: t.nav.content, href: "/conteudo", active: false },
-    { label: t.nav.stores, href: "/lojas", active: false },
+    { label: t.nav.dashboard, href: "/" },
+    { label: t.nav.chains, href: "/redes" },
+    { label: t.nav.stores, href: "/lojas" },
   ];
 
   return (
@@ -32,18 +32,7 @@ export default async function AppLayout({
         </div>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              aria-disabled={!item.active}
-              className={
-                item.active
-                  ? "rounded-md bg-surface-2 px-3 py-2 text-sm font-medium"
-                  : "rounded-md px-3 py-2 text-sm text-muted hover:bg-surface-2"
-              }
-            >
-              {item.label}
-            </a>
+            <NavLink key={item.href} href={item.href} label={item.label} />
           ))}
         </nav>
       </aside>

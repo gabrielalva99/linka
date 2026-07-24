@@ -5,8 +5,7 @@
   },
   "nav": {
     "dashboard": "Visão geral",
-    "fleet": "Frota",
-    "content": "Conteúdo",
+    "chains": "Redes",
     "stores": "Lojas"
   },
   "login": {
@@ -26,5 +25,35 @@
     "signout": "Sair",
     "superadminNote": "Você é operador da plataforma — vê todos os clientes.",
     "noTenants": "Nenhum cliente vinculado ainda."
+  },
+  "chains": {
+    "title": "Redes",
+    "name": "Nome da rede",
+    "create": "Adicionar",
+    "creating": "Adicionando…",
+    "empty": "Nenhuma rede cadastrada ainda.",
+    "dup": "Já existe uma rede com esse nome.",
+    "error": "Não foi possível salvar."
+  },
+  "stores": {
+    "title": "Lojas",
+    "new": "Nova loja",
+    "name": "Nome",
+    "code": "Código (PDV)",
+    "chain": "Rede",
+    "kind": "Tipo",
+    "kindShopping": "Shopping",
+    "kindStreet": "Rua",
+    "kindOther": "Outro",
+    "city": "Cidade",
+    "state": "UF",
+    "country": "País",
+    "timezone": "Fuso horário",
+    "create": "Criar loja",
+    "creating": "Criando…",
+    "empty": "Nenhuma loja cadastrada ainda.",
+    "back": "Voltar",
+    "dup": "Já existe uma loja com esse código.",
+    "error": "Não foi possível salvar."
   }
 }
