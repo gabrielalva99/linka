@@ -3,8 +3,28 @@
     "name": "LINKA",
     "tagline": "Gestão, conteúdo e analytics para dispositivos de demonstração no varejo."
   },
-  "home": {
-    "phase": "Fundação (R0) em construção",
-    "subtitle": "Painel administrativo"
+  "nav": {
+    "dashboard": "Visão geral",
+    "fleet": "Frota",
+    "content": "Conteúdo",
+    "stores": "Lojas"
+  },
+  "login": {
+    "title": "Entrar",
+    "subtitle": "Acesse o painel LINKA",
+    "email": "E-mail",
+    "password": "Senha",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "invalid": "E-mail ou senha inválidos.",
+    "required": "Preencha e-mail e senha."
+  },
+  "dashboard": {
+    "welcome": "Bem-vindo",
+    "role": "Papel",
+    "tenants": "Clientes",
+    "signout": "Sair",
+    "superadminNote": "Você é operador da plataforma — vê todos os clientes.",
+    "noTenants": "Nenhum cliente vinculado ainda."
   }
 }

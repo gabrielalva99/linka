@@ -1,0 +1,71 @@
+"use client";
+
+import { useActionState } from "react";
+import { getMessages } from "@/lib/i18n";
+import { login, type LoginState } from "./actions";
+
+const initialState: LoginState = { error: null };
+
+export default function LoginPage() {
+  const t = getMessages();
+  const [state, formAction, pending] = useActionState(login, initialState);
+
+  const errorText =
+    state.error === "invalid"
+      ? t.login.invalid
+      : state.error === "required"
+        ? t.login.required
+        : null;
+
+  return (
+    <main className="flex min-h-full flex-1 items-center justify-center p-8">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex items-center gap-2.5">
+          <span className="inline-block h-3.5 w-3.5 rounded-full bg-primary" />
+          <span className="text-2xl font-bold tracking-tight">{t.app.name}</span>
+        </div>
+
+        <h1 className="text-lg font-semibold">{t.login.title}</h1>
+        <p className="mt-1 text-sm text-muted">{t.login.subtitle}</p>
+
+        <form action={formAction} className="mt-6 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted">{t.login.email}</span>
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className="rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted">{t.login.password}</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          {errorText && (
+            <p className="text-sm text-danger" role="alert">
+              {errorText}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="mt-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-60"
+          >
+            {pending ? t.login.submitting : t.login.submit}
+          </button>
+        </form>
+      </div>
+    </main>
+  );
+}
