@@ -16,7 +16,7 @@ export default async function EditarDispositivoPage({
       supabase
         .from("devices")
         .select(
-          "id, name, code, model_id, store_id, position_id, platform, imei, hardware_model",
+          "id, name, code, model_id, store_id, position_id, platform, device_type, imei, hardware_model",
         )
         .eq("id", id)
         .single(),
@@ -54,6 +54,7 @@ export default async function EditarDispositivoPage({
             storeId: device.store_id as string | null,
             positionId: device.position_id as string | null,
             platform: device.platform as string | null,
+            deviceType: device.device_type as string | null,
             imei: device.imei as string | null,
           }}
           detectedModel={device.hardware_model as string | null}

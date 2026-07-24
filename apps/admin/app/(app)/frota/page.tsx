@@ -3,10 +3,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import {
   DEVICE_MODE_LABELS,
+  DEVICE_TYPE,
   type DeviceMode,
   type DeviceStatus,
+  type DeviceType,
 } from "@linka/shared";
 import { StatusBadge } from "./status-badge";
+import { TypeTabs } from "./type-tabs";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 type DeviceRow = {
@@ -21,6 +24,7 @@ type DeviceRow = {
   app_updated: boolean;
   agent_version: string | null;
   last_seen_at: string | null;
+  device_type: DeviceType;
   device_models: Rel;
   stores: Rel;
 };
@@ -60,16 +64,33 @@ function Kpi({ label, value, total }: { label: string; value: number; total: num
   );
 }
 
-export default async function FrotaPage() {
+export default async function FrotaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tipo?: string }>;
+}) {
+  const { tipo } = await searchParams;
+  const activeType = (DEVICE_TYPE as readonly string[]).includes(tipo ?? "")
+    ? (tipo as DeviceType)
+    : null;
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, device_models(name), stores(name)",
     )
     .order("code", { ascending: true });
   const t = getMessages();
-  const devices = (data ?? []) as DeviceRow[];
+  const all = (data ?? []) as DeviceRow[];
+
+  // Contagem por tipo sai da lista completa; as abas não podem depender do filtro.
+  const counts: Record<string, number> = {};
+  for (const d of all) counts[d.device_type] = (counts[d.device_type] ?? 0) + 1;
+
+  const devices = activeType
+    ? all.filter((d) => d.device_type === activeType)
+    : all;
 
   const total = devices.length;
   const online = devices.filter(
@@ -94,6 +115,8 @@ export default async function FrotaPage() {
           </Link>
         </div>
       </div>
+
+      <TypeTabs active={activeType} counts={counts} />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Kpi label={t.fleet.active} value={online} total={total} />

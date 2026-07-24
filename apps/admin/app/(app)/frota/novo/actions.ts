@@ -31,6 +31,7 @@ export async function createDevice(
     store_id: emptyToNull(formData.get("store_id")),
     position_id: emptyToNull(formData.get("position_id")),
     platform: String(formData.get("platform") ?? "android"),
+    device_type: String(formData.get("device_type") ?? "smartphone"),
     imei: emptyToNull(formData.get("imei")),
   });
 

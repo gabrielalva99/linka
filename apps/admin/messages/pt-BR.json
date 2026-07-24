@@ -5,7 +5,7 @@
   },
   "nav": {
     "dashboard": "Visão geral",
-    "fleet": "Frota",
+    "fleet": "Dispositivos",
     "library": "Biblioteca",
     "chains": "Redes",
     "stores": "Lojas"
@@ -29,7 +29,8 @@
     "noTenants": "Nenhum cliente vinculado ainda."
   },
   "fleet": {
-    "title": "Frota",
+    "title": "Dispositivos",
+    "all": "Todos",
     "active": "Telas ativas",
     "synced": "Sincronizados",
     "updated": "App atualizado",
@@ -146,6 +147,9 @@
     "store": "Loja",
     "position": "Posição",
     "noPositions": "Esta loja ainda não tem posições cadastradas.",
+    "createPositions": "Cadastrar posições desta loja",
+    "codeAuto": "Deixe vazio para gerar automaticamente.",
+    "type": "Tipo",
     "platform": "Plataforma",
     "imei": "IMEI",
     "os": "Versão do Android",

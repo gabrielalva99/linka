@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { DEVICE_TYPE, DEVICE_TYPE_LABELS } from "@linka/shared";
 import { getMessages } from "@/lib/i18n";
 
 export type Option = { id: string; label: string };
@@ -13,8 +15,8 @@ export type DeviceDefaults = {
   storeId?: string | null;
   positionId?: string | null;
   platform?: string | null;
+  deviceType?: string | null;
   imei?: string | null;
-  osVersion?: string | null;
 };
 
 const field =
@@ -50,6 +52,7 @@ export function DeviceFields({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.deviceForm.code}</span>
           <input name="code" defaultValue={defaults?.code ?? ""} className={field} />
+          <span className="text-xs text-muted">{t.deviceForm.codeAuto}</span>
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -75,9 +78,11 @@ export function DeviceFields({
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.deviceForm.store}</span>
+          {/* Não controlado de propósito: o valor vem do próprio campo, então nenhum
+              estado do React pode "esquecer" a loja e salvar vazio por cima. */}
           <select
             name="store_id"
-            value={storeId}
+            defaultValue={defaults?.storeId ?? ""}
             onChange={(e) => setStoreId(e.target.value)}
             className={field}
           >
@@ -107,8 +112,28 @@ export function DeviceFields({
             ))}
           </select>
           {storeId && storePositions.length === 0 && (
-            <span className="text-xs text-muted">{t.deviceForm.noPositions}</span>
+            <span className="text-xs text-muted">
+              {t.deviceForm.noPositions}{" "}
+              <Link href={`/lojas/${storeId}`} className="text-primary underline">
+                {t.deviceForm.createPositions}
+              </Link>
+            </span>
           )}
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t.deviceForm.type}</span>
+          <select
+            name="device_type"
+            defaultValue={defaults?.deviceType ?? "smartphone"}
+            className={field}
+          >
+            {DEVICE_TYPE.map((ty) => (
+              <option key={ty} value={ty}>
+                {DEVICE_TYPE_LABELS[ty]}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="flex flex-col gap-1.5">

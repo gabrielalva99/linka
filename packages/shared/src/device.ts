@@ -29,6 +29,30 @@ export const DEVICE_MODE_LABELS: Record<DeviceMode, string> = {
   alarm: "Alarme",
 };
 
+/**
+ * Tipo de aparelho. A frota do varejo é heterogênea: além de celulares há TV
+ * player e notebook em demonstração (REFERENCIA §2).
+ */
+export const DEVICE_TYPE = ["smartphone", "tablet", "tv", "notebook", "other"] as const;
+export type DeviceType = (typeof DEVICE_TYPE)[number];
+
+export const DEVICE_TYPE_LABELS: Record<DeviceType, string> = {
+  smartphone: "Smartphone",
+  tablet: "Tablet",
+  tv: "TV",
+  notebook: "Notebook",
+  other: "Outro",
+};
+
+/** Rótulos das abas da lista de dispositivos. */
+export const DEVICE_TYPE_TABS: Record<DeviceType, string> = {
+  smartphone: "Smartphones",
+  tablet: "Tablets",
+  tv: "TVs",
+  notebook: "Notebooks",
+  other: "Outros",
+};
+
 /** Plataforma do dispositivo — agnóstico desde o dia 1 (iOS é trilha futura). */
 export const DEVICE_PLATFORM = ["android", "ios"] as const;
 export type DevicePlatform = (typeof DEVICE_PLATFORM)[number];
