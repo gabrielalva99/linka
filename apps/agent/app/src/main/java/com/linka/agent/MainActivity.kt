@@ -214,8 +214,12 @@ class MainActivity : Activity() {
             playWhenReady = true
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    // "Demonstração" só quando há frame na tela de verdade.
-                    if (isPlaying) Prefs.setMode(this@MainActivity, MODE_SHOW)
+                    // "Demonstração" só quando há frame na tela de verdade; avisa o painel
+                    // na hora (a condição evita repetir a cada rebuffer).
+                    if (isPlaying && Prefs.mode(this@MainActivity) != MODE_SHOW) {
+                        Prefs.setMode(this@MainActivity, MODE_SHOW)
+                        Telemetry.beatAsync(this@MainActivity)
+                    }
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
