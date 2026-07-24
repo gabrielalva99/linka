@@ -147,6 +147,8 @@
     "store": "Loja",
     "position": "Posição",
     "noPositions": "Esta loja ainda não tem posições cadastradas.",
+    "storeMissing": "A lista mostra só as lojas cadastradas.",
+    "createStore": "Cadastrar nova loja",
     "createPositions": "Cadastrar posições desta loja",
     "codeAuto": "Deixe vazio para gerar automaticamente.",
     "type": "Tipo",

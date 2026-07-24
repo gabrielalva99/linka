@@ -93,6 +93,13 @@ export function DeviceFields({
               </option>
             ))}
           </select>
+          {/* A lista só tem lojas cadastradas — sem atalho, parece que o campo travou. */}
+          <span className="text-xs text-muted">
+            {t.deviceForm.storeMissing}{" "}
+            <Link href="/lojas/nova" className="text-primary underline">
+              {t.deviceForm.createStore}
+            </Link>
+          </span>
         </label>
 
         <label className="flex flex-col gap-1.5">
