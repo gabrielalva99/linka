@@ -28,6 +28,16 @@ type DeviceRow = {
 const relName = (rel: Rel) =>
   (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
 
+// Um aparelho que parou de reportar não envia "offline" — ele só some. Então o status
+// honesto é derivado do último contato: sem sinal há > 3 min = fora do ar.
+const STALE_MS = 3 * 60 * 1000;
+function effectiveStatus(status: DeviceStatus, lastSeen: string | null): DeviceStatus {
+  if (!lastSeen) return status;
+  const age = Date.now() - new Date(lastSeen).getTime();
+  if (age > STALE_MS) return "offline";
+  return status;
+}
+
 function relativeLastSeen(ts: string | null): string {
   if (!ts) return "—";
   const min = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
@@ -62,7 +72,9 @@ export default async function FrotaPage() {
   const devices = (data ?? []) as DeviceRow[];
 
   const total = devices.length;
-  const online = devices.filter((d) => d.status === "online").length;
+  const online = devices.filter(
+    (d) => effectiveStatus(d.status, d.last_seen_at) === "online",
+  ).length;
   const synced = devices.filter((d) => d.synced).length;
   const updated = devices.filter((d) => d.app_updated).length;
 
@@ -109,7 +121,7 @@ export default async function FrotaPage() {
               {devices.map((d) => (
                 <tr key={d.id} className="bg-surface">
                   <td className="px-4 py-3">
-                    <StatusBadge status={d.status} />
+                    <StatusBadge status={effectiveStatus(d.status, d.last_seen_at)} />
                   </td>
                   <td className="px-4 py-3 text-muted">{d.code ?? "—"}</td>
                   <td className="px-4 py-3 font-medium">{d.name}</td>
