@@ -10,8 +10,8 @@ import {
   type DeviceMode,
 } from "@linka/shared";
 import { AutoRefresh } from "../../auto-refresh";
-import { FitToggle } from "../../biblioteca/fit-toggle";
 import { ContentManager } from "./content-manager";
+import { DeviceFit } from "./device-fit";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -30,7 +30,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, playing_url, playing_fit, provisioning_code, hardware_model, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -56,6 +56,7 @@ export default async function DeviceDetailPage({
     os_version: string | null;
     agent_version: string | null;
     content_url: string | null;
+    content_fit: ContentFit | null;
     playing_url: string | null;
     playing_fit: ContentFit | null;
     provisioning_code: string | null;
@@ -103,7 +104,10 @@ export default async function DeviceDetailPage({
     ? (assigned?.name ??
       decodeURIComponent(assignedUrl.split("/").pop() ?? assignedUrl))
     : null;
-  const fitOk = assigned == null || d.playing_fit === assigned.fit_mode;
+  // O aparelho manda no enquadramento; sem ajuste próprio, vale o padrão do arquivo.
+  const inheritedFit = assigned?.fit_mode ?? "zoom";
+  const effectiveFit = d.content_fit ?? inheritedFit;
+  const fitOk = assigned == null || d.playing_fit === effectiveFit;
   const isLive = assignedUrl != null && d.playing_url === assignedUrl && fitOk;
 
   const badge = !assignedUrl
@@ -155,15 +159,15 @@ export default async function DeviceDetailPage({
           </div>
 
           {assigned && (
-            <div className="mb-5 flex flex-wrap items-center gap-3 border-b border-line pb-5">
+            <div className="mb-5 flex flex-col gap-2 border-b border-line pb-5">
               <span className="text-xs text-muted">{t.device.fit}</span>
-              <FitToggle
-                mediaId={assigned.id}
-                value={assigned.fit_mode}
+              <DeviceFit
                 deviceId={d.id}
+                value={d.content_fit}
+                inherited={inheritedFit}
               />
               <span className="text-xs text-muted">
-                {CONTENT_FIT_HINTS[assigned.fit_mode]}
+                {CONTENT_FIT_HINTS[effectiveFit]}
               </span>
             </div>
           )}

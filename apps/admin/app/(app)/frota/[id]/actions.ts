@@ -3,6 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
+import type { ContentFit } from "@linka/shared";
+
+/**
+ * Enquadramento só deste aparelho (nulo volta a seguir o padrão do arquivo).
+ * A tela de cada modelo corta de um jeito — o ajuste não pode ser sempre global.
+ */
+export async function setDeviceFit(deviceId: string, fit: ContentFit | null) {
+  const supabase = await createSupabaseServerClient();
+  await supabase.from("devices").update({ content_fit: fit }).eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
 
 export type AssignState = { ok: boolean };
 

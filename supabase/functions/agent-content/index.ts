@@ -38,12 +38,13 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("content_url")
+    .select("content_url, content_fit")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
 
-  // O enquadramento é propriedade do arquivo na biblioteca; padrão zoom (preenche a tela).
+  // Enquadramento: o do aparelho ganha (a tela dele manda); sem ele, vale o padrão
+  // do arquivo; sem nada, zoom (preenche a tela).
   let fit = "zoom";
   if (device.content_url) {
     const { data: assets } = await supabase
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
       .limit(1);
     if (assets?.[0]?.fit_mode) fit = assets[0].fit_mode;
   }
+  if (device.content_fit) fit = device.content_fit;
 
   return json({ content_url: device.content_url ?? null, fit });
 });
