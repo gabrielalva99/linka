@@ -1,5 +1,5 @@
 // LINKA — Edge Function: conteúdo do agente.
-// O aparelho pede o que exibir; retorna a URL do conteúdo (placeholder do R1).
+// O aparelho pede o que exibir; devolve a URL e como enquadrar na tela.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -43,5 +43,16 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
 
-  return json({ content_url: device.content_url ?? null });
+  // O enquadramento é propriedade do arquivo na biblioteca; padrão zoom (preenche a tela).
+  let fit = "zoom";
+  if (device.content_url) {
+    const { data: assets } = await supabase
+      .from("media_assets")
+      .select("fit_mode")
+      .eq("url", device.content_url)
+      .limit(1);
+    if (assets?.[0]?.fit_mode) fit = assets[0].fit_mode;
+  }
+
+  return json({ content_url: device.content_url ?? null, fit });
 });

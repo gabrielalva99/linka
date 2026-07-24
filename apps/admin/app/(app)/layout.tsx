@@ -20,6 +20,7 @@ export default async function AppLayout({
   const nav = [
     { label: t.nav.dashboard, href: "/" },
     { label: t.nav.fleet, href: "/frota" },
+    { label: t.nav.library, href: "/biblioteca" },
     { label: t.nav.chains, href: "/redes" },
     { label: t.nav.stores, href: "/lojas" },
   ];

@@ -10,7 +10,7 @@ object Api {
     // Chave pública (anon) — protegida por RLS; segura para embutir no app.
     const val ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhremt0bXNxdHZwa3htemZ0YXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTQ3MzksImV4cCI6MjEwMDQzMDczOX0.SdqYO4RAxNr6Z3s-EJVzHJyAdhzXG7t213YHj7P-9D8"
-    const val AGENT_VERSION = "0.3.0"
+    const val AGENT_VERSION = "0.4.0"
 
     data class Result(val code: Int, val body: String)
 
@@ -54,6 +54,7 @@ object Api {
         charging: Boolean,
         osVersion: String,
         playingUrl: String?,
+        playingFit: String?,
     ): Result {
         val body = JSONObject()
             .put("status", "online")
@@ -63,6 +64,7 @@ object Api {
             .put("os_version", osVersion)
             .put("agent_version", AGENT_VERSION)
             .put("playing_url", playingUrl ?: JSONObject.NULL)
+            .put("playing_fit", playingFit ?: JSONObject.NULL)
         return post("agent-heartbeat", body, token)
     }
 }

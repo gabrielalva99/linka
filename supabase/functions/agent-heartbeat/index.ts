@@ -22,6 +22,7 @@ const MODE = new Set([
   "sleep",
   "alarm",
 ]);
+const FIT = new Set(["zoom", "fit"]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -76,6 +77,9 @@ Deno.serve(async (req) => {
       typeof payload.playing_url === "string" && payload.playing_url.length > 0
         ? payload.playing_url
         : null;
+  }
+  if ("playing_fit" in payload) {
+    update.playing_fit = FIT.has(String(payload.playing_fit)) ? payload.playing_fit : null;
   }
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);

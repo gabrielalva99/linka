@@ -6,6 +6,7 @@
   "nav": {
     "dashboard": "Visão geral",
     "fleet": "Frota",
+    "library": "Biblioteca",
     "chains": "Redes",
     "stores": "Lojas"
   },
@@ -59,6 +60,7 @@
     "contentNone": "Nenhum",
     "contentLive": "No ar ✓",
     "contentPending": "Aplicado — aguardando o aparelho (~20s)",
+    "fit": "Enquadramento",
     "pickMedia": "Escolher da biblioteca",
     "none": "Nenhum",
     "apply": "Aplicar",
@@ -67,6 +69,19 @@
     "uploading": "Enviando…",
     "uploaded": "enviado e aplicado",
     "uploadError": "Falha no envio do vídeo."
+  },
+  "library": {
+    "title": "Biblioteca",
+    "subtitle": "Vídeos disponíveis para exibição. O enquadramento vale para todos os aparelhos que exibirem o arquivo.",
+    "empty": "Nenhum vídeo enviado ainda. Envie pela página do aparelho.",
+    "inUse": "Em uso",
+    "unused": "Sem uso",
+    "fit": "Enquadramento",
+    "delete": "Excluir",
+    "deleting": "Excluindo…",
+    "confirmDelete": "Excluir \"{name}\" da biblioteca? Não dá para desfazer.",
+    "inUseBlock": "Está em uso em {n} aparelho(s). Troque o conteúdo deles antes de excluir.",
+    "deleteError": "Não foi possível excluir."
   },
   "chains": {
     "title": "Redes",

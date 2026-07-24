@@ -25,11 +25,21 @@ import org.json.JSONObject
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
+@OptIn(UnstableApi::class)
 class MainActivity : Activity() {
 
     private var player: ExoPlayer? = null
+    private var playerView: PlayerView? = null
     private var currentUrl: String? = null
+    private var currentFit: String = FIT_ZOOM
     private var contentTimer: Timer? = null
+
+    companion object {
+        /** Preenche a tela cortando as bordas (padrão). */
+        const val FIT_ZOOM = "zoom"
+        /** Mostra o vídeo inteiro, sem cortar (pode sobrar faixa preta). */
+        const val FIT_FIT = "fit"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,7 +117,7 @@ class MainActivity : Activity() {
         }
     }
 
-    // Busca o conteúdo periodicamente; troca o vídeo se a URL mudou no painel.
+    // Busca o conteúdo periodicamente; troca o vídeo ou o enquadramento se mudou no painel.
     private fun checkContent(token: String) {
         Thread {
             val result = try {
@@ -115,19 +125,41 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 Api.Result(-1, "")
             }
-            val url = if (result.code in 200..299) {
-                JSONObject(result.body).optString("content_url").takeIf { it.isNotEmpty() }
-            } else null
-            runOnUiThread {
-                if (url != currentUrl) {
-                    currentUrl = url
-                    Prefs.setPlayingUrl(this, url)
-                    if (url != null) playVideo(url)
-                    else setContentView(waitingView("Pareado. Aguardando conteúdo…"))
-                }
+            var url: String? = null
+            var fit = FIT_ZOOM
+            if (result.code in 200..299) {
+                val body = JSONObject(result.body)
+                url = body.optString("content_url").takeIf { it.isNotEmpty() }
+                if (body.optString("fit") == FIT_FIT) fit = FIT_FIT
             }
+            runOnUiThread { applyContent(url, fit) }
         }.start()
     }
+
+    /** Aplica o que o painel mandou e confirma de volta (o painel mostra "no ar"). */
+    private fun applyContent(url: String?, fit: String) {
+        val urlChanged = url != currentUrl
+        val fitChanged = fit != currentFit
+        if (!urlChanged && !fitChanged) return
+
+        currentUrl = url
+        currentFit = fit
+        Prefs.setPlayingUrl(this, url)
+        Prefs.setPlayingFit(this, if (url != null) fit else null)
+
+        if (urlChanged) {
+            if (url != null) playVideo(url, fit)
+            else setContentView(waitingView("Pareado. Aguardando conteúdo…"))
+        } else {
+            // Só o enquadramento mudou: ajusta sem reiniciar o vídeo.
+            playerView?.resizeMode = resizeMode(fit)
+        }
+        Telemetry.beatAsync(this)
+    }
+
+    private fun resizeMode(fit: String) =
+        if (fit == FIT_FIT) AspectRatioFrameLayout.RESIZE_MODE_FIT
+        else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
 
     private fun waitingView(text: String) = TextView(this).apply {
         this.text = text
@@ -135,14 +167,13 @@ class MainActivity : Activity() {
         setPadding(56, 120, 56, 56)
     }
 
-    @OptIn(UnstableApi::class)
-    private fun playVideo(url: String) {
+    private fun playVideo(url: String, fit: String) {
         enterImmersive()
         player?.release()
-        val playerView = PlayerView(this).apply {
+        val view = PlayerView(this).apply {
             useController = false
-            // Preenche a tela inteira em qualquer modelo, sem distorcer (corta o excedente).
-            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            // Enquadramento definido no painel; nunca distorce o vídeo.
+            resizeMode = resizeMode(fit)
             setBackgroundColor(0xFF000000.toInt())
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -157,17 +188,21 @@ class MainActivity : Activity() {
                 override fun onPlayerError(error: PlaybackException) {
                     // Zera para o próximo ciclo tentar de novo (falha pode ser transitória).
                     currentUrl = null
+                    playerView = null
                     Prefs.setPlayingUrl(this@MainActivity, null)
+                    Prefs.setPlayingFit(this@MainActivity, null)
                     setContentView(
                         waitingView("Não foi possível tocar o conteúdo: ${error.errorCodeName}"),
                     )
+                    Telemetry.beatAsync(this@MainActivity)
                 }
             })
             prepare()
         }
-        playerView.player = exo
+        view.player = exo
         player = exo
-        setContentView(playerView)
+        playerView = view
+        setContentView(view)
     }
 
     private fun enterImmersive() {
@@ -195,6 +230,7 @@ class MainActivity : Activity() {
         contentTimer = null
         player?.release()
         player = null
+        playerView = null
         super.onDestroy()
     }
 }

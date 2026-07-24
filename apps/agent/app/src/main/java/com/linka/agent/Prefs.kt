@@ -25,4 +25,16 @@ object Prefs {
         if (value == null) editor.remove(KEY_PLAYING) else editor.putString(KEY_PLAYING, value)
         editor.apply()
     }
+
+    private const val KEY_FIT = "playing_fit"
+
+    /** Enquadramento aplicado ao conteúdo em exibição (zoom | fit). */
+    fun playingFit(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_FIT, null)
+
+    fun setPlayingFit(ctx: Context, value: String?) {
+        val editor = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+        if (value == null) editor.remove(KEY_FIT) else editor.putString(KEY_FIT, value)
+        editor.apply()
+    }
 }

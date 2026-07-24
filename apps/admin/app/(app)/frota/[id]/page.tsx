@@ -3,15 +3,21 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import { getMessages } from "@/lib/i18n";
-import { DEVICE_MODE_LABELS, type DeviceMode } from "@linka/shared";
+import {
+  CONTENT_FIT_HINTS,
+  DEVICE_MODE_LABELS,
+  type ContentFit,
+  type DeviceMode,
+} from "@linka/shared";
 import { AutoRefresh } from "../../auto-refresh";
+import { FitToggle } from "../../biblioteca/fit-toggle";
 import { ContentManager } from "./content-manager";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
   (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
 
-type Media = { id: string; name: string; url: string };
+type Media = { id: string; name: string; url: string; fit_mode: ContentFit };
 
 export default async function DeviceDetailPage({
   params,
@@ -24,7 +30,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, playing_url, provisioning_code, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, playing_url, playing_fit, provisioning_code, device_models(name), stores(name)",
     )
     .eq("id", id)
     .single();
@@ -33,7 +39,7 @@ export default async function DeviceDetailPage({
   const [{ data: mediaData }, tenant] = await Promise.all([
     supabase
       .from("media_assets")
-      .select("id, name, url")
+      .select("id, name, url, fit_mode")
       .order("created_at", { ascending: false }),
     getActiveTenant(),
   ]);
@@ -51,6 +57,7 @@ export default async function DeviceDetailPage({
     agent_version: string | null;
     content_url: string | null;
     playing_url: string | null;
+    playing_fit: ContentFit | null;
     provisioning_code: string | null;
     device_models: Rel;
     stores: Rel;
@@ -72,14 +79,18 @@ export default async function DeviceDetailPage({
     [t.device.pairing, d.provisioning_code ?? "—"],
   ];
 
-  // Status do conteúdo: comparar o que foi mandado (content_url) com o que o
-  // aparelho confirma exibir (playing_url).
+  // Status do conteúdo: comparar o que foi mandado (arquivo + enquadramento) com o
+  // que o aparelho confirma estar exibindo.
   const assignedUrl = d.content_url;
+  const assigned = assignedUrl
+    ? (media.find((m) => m.url === assignedUrl) ?? null)
+    : null;
   const assignedName = assignedUrl
-    ? (media.find((m) => m.url === assignedUrl)?.name ??
+    ? (assigned?.name ??
       decodeURIComponent(assignedUrl.split("/").pop() ?? assignedUrl))
     : null;
-  const isLive = assignedUrl != null && d.playing_url === assignedUrl;
+  const fitOk = assigned == null || d.playing_fit === assigned.fit_mode;
+  const isLive = assignedUrl != null && d.playing_url === assignedUrl && fitOk;
 
   const badge = !assignedUrl
     ? { text: t.device.contentNone, cls: "bg-surface-2 text-muted" }
@@ -120,6 +131,20 @@ export default async function DeviceDetailPage({
               {badge.text}
             </span>
           </div>
+
+          {assigned && (
+            <div className="mb-5 flex flex-wrap items-center gap-3 border-b border-line pb-5">
+              <span className="text-xs text-muted">{t.device.fit}</span>
+              <FitToggle
+                mediaId={assigned.id}
+                value={assigned.fit_mode}
+                deviceId={d.id}
+              />
+              <span className="text-xs text-muted">
+                {CONTENT_FIT_HINTS[assigned.fit_mode]}
+              </span>
+            </div>
+          )}
 
           <ContentManager
             deviceId={d.id}

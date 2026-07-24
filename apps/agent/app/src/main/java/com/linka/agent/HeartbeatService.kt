@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import java.util.Timer
@@ -24,23 +23,10 @@ class HeartbeatService : Service() {
         startInForeground()
         if (timer == null) {
             timer = Timer().also {
-                it.scheduleAtFixedRate(timerTask { beat() }, 0L, 60_000L)
+                it.scheduleAtFixedRate(timerTask { Telemetry.beat(this@HeartbeatService) }, 0L, 60_000L)
             }
         }
         return START_STICKY
-    }
-
-    private fun beat() {
-        val token = Prefs.token(this) ?: return
-        val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-        val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        val charging = bm.isCharging
-        val playing = Prefs.playingUrl(this)
-        try {
-            Api.heartbeat(token, level, charging, Build.VERSION.RELEASE, playing)
-        } catch (_: Exception) {
-            // rede indisponível — tenta de novo no próximo ciclo
-        }
     }
 
     private fun startInForeground() {
