@@ -60,12 +60,14 @@ export default async function DeviceDetailPage({
     .single();
   if (!device) notFound();
 
-  const [{ data: mediaData }, tenant] = await Promise.all([
+  const [{ data: mediaData }, tenant, { data: resolvedRows }] = await Promise.all([
     supabase
       .from("media_assets")
       .select("id, name, url, fit_mode")
       .order("created_at", { ascending: false }),
     getActiveTenant(),
+    // Quem decide o que toca é o banco (fixo no aparelho > campanha mais específica).
+    supabase.rpc("resolve_device_content", { p_device_id: id }),
   ]);
 
   const t = getMessages();
@@ -142,9 +144,17 @@ export default async function DeviceDetailPage({
     [t.device.signal, signalLabel(d.signal_dbm)],
   ];
 
-  // Status do conteúdo: comparar o que foi mandado (arquivo + enquadramento) com o
-  // que o aparelho confirma estar exibindo.
-  const assignedUrl = d.content_url;
+  // O que este aparelho DEVE exibir agora, já com a precedência resolvida.
+  const resolved = (
+    Array.isArray(resolvedRows) ? resolvedRows[0] : null
+  ) as {
+    out_url: string | null;
+    out_fit: ContentFit | null;
+    out_source: string | null;
+    out_campaign_name: string | null;
+  } | null;
+
+  const assignedUrl = resolved?.out_url ?? null;
   const assigned = assignedUrl
     ? (media.find((m) => m.url === assignedUrl) ?? null)
     : null;
@@ -152,10 +162,16 @@ export default async function DeviceDetailPage({
     ? (assigned?.name ??
       decodeURIComponent(assignedUrl.split("/").pop() ?? assignedUrl))
     : null;
-  // O aparelho manda no enquadramento; sem ajuste próprio, vale o padrão do arquivo.
   const inheritedFit = assigned?.fit_mode ?? "zoom";
-  const effectiveFit = d.content_fit ?? inheritedFit;
-  const fitOk = assigned == null || d.playing_fit === effectiveFit;
+  const effectiveFit = resolved?.out_fit ?? d.content_fit ?? inheritedFit;
+  const sourceLabel =
+    resolved?.out_source === "campaign"
+      ? `${t.device.fromCampaign}: ${resolved.out_campaign_name}`
+      : resolved?.out_source === "device"
+        ? t.device.fromDevice
+        : null;
+
+  const fitOk = assignedUrl == null || d.playing_fit === effectiveFit;
   const isLive = assignedUrl != null && d.playing_url === assignedUrl && fitOk;
 
   const badge = !assignedUrl
@@ -210,6 +226,9 @@ export default async function DeviceDetailPage({
               <p className="truncate text-sm font-medium">
                 {assignedName ?? t.device.contentNone}
               </p>
+              {sourceLabel && (
+                <p className="mt-0.5 truncate text-xs text-muted">{sourceLabel}</p>
+              )}
             </div>
             <span
               className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${badge.cls}`}

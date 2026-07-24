@@ -1,5 +1,6 @@
 // LINKA — Edge Function: conteúdo do agente.
-// O aparelho pede o que exibir; devolve a URL e como enquadrar na tela.
+// O aparelho pergunta o que exibir; quem decide é resolve_device_content no banco
+// (vídeo fixo do aparelho > campanha mais específica, no fuso da loja).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -38,23 +39,18 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("content_url, content_fit")
+    .select("id")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
 
-  // Enquadramento: o do aparelho ganha (a tela dele manda); sem ele, vale o padrão
-  // do arquivo; sem nada, zoom (preenche a tela).
-  let fit = "zoom";
-  if (device.content_url) {
-    const { data: assets } = await supabase
-      .from("media_assets")
-      .select("fit_mode")
-      .eq("url", device.content_url)
-      .limit(1);
-    if (assets?.[0]?.fit_mode) fit = assets[0].fit_mode;
-  }
-  if (device.content_fit) fit = device.content_fit;
+  const { data: rows } = await supabase.rpc("resolve_device_content", {
+    p_device_id: device.id,
+  });
+  const resolved = Array.isArray(rows) ? rows[0] : null;
 
-  return json({ content_url: device.content_url ?? null, fit });
+  return json({
+    content_url: resolved?.out_url ?? null,
+    fit: resolved?.out_fit ?? "zoom",
+  });
 });
