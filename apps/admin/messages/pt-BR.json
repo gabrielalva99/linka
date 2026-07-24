@@ -5,6 +5,7 @@
   },
   "nav": {
     "dashboard": "Visão geral",
+    "fleet": "Frota",
     "chains": "Redes",
     "stores": "Lojas"
   },
@@ -25,6 +26,23 @@
     "signout": "Sair",
     "superadminNote": "Você é operador da plataforma — vê todos os clientes.",
     "noTenants": "Nenhum cliente vinculado ainda."
+  },
+  "fleet": {
+    "title": "Frota",
+    "active": "Telas ativas",
+    "synced": "Sincronizados",
+    "updated": "App atualizado",
+    "charging": "Carregando",
+    "empty": "Nenhum aparelho ainda. Eles aparecem quando o agente é instalado e conecta.",
+    "colStatus": "Status",
+    "colCode": "Código",
+    "colName": "Aparelho",
+    "colModel": "Modelo",
+    "colStore": "Loja",
+    "colMode": "Modo",
+    "colBattery": "Bateria",
+    "colVersion": "Versão",
+    "colLastSeen": "Últ. contato"
   },
   "chains": {
     "title": "Redes",
