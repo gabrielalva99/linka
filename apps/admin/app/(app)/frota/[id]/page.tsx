@@ -19,6 +19,30 @@ const relName = (rel: Rel) =>
 
 type Media = { id: string; name: string; url: string; fit_mode: ContentFit };
 
+/** "3h51" / "2d 4h" — reinício sozinho aparece como tempo baixo demais. */
+function humanUptime(seconds: number | null): string {
+  if (seconds == null) return "—";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h < 24) return h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m}min`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+/** dBm é ilegível para quem opera loja: traduz para palavra. */
+function signalLabel(dbm: number | null): string {
+  if (dbm == null) return "—";
+  const quality =
+    dbm >= -60 ? "ótimo" : dbm >= -70 ? "bom" : dbm >= -80 ? "fraco" : "ruim";
+  return `${quality} (${dbm} dBm)`;
+}
+
+const CONNECTION_LABELS: Record<string, string> = {
+  wifi: "Wi-Fi",
+  cellular: "Chip / 5G",
+  ethernet: "Cabo",
+  none: "Sem rede",
+};
+
 export default async function DeviceDetailPage({
   params,
 }: {
@@ -30,7 +54,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -61,6 +85,11 @@ export default async function DeviceDetailPage({
     playing_fit: ContentFit | null;
     provisioning_code: string | null;
     hardware_model: string | null;
+    temperature_c: number | string | null;
+    uptime_seconds: number | null;
+    screen_on: boolean | null;
+    connection: string | null;
+    signal_dbm: number | null;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -92,6 +121,25 @@ export default async function DeviceDetailPage({
     [t.device.os, d.os_version ?? "—"],
     [t.device.version, d.agent_version ?? "—"],
     [t.device.pairing, d.provisioning_code ?? "—"],
+  ];
+
+  // Saúde: a resposta para "por que essa loja não está no ar?".
+  const temp = d.temperature_c != null ? Number(d.temperature_c) : null;
+  const health: [string, string][] = [
+    [
+      t.device.temperature,
+      temp != null ? `${temp.toFixed(1)} °C${temp >= 40 ? " ⚠️" : ""}` : "—",
+    ],
+    [t.device.uptime, humanUptime(d.uptime_seconds)],
+    [
+      t.device.screen,
+      d.screen_on == null ? "—" : d.screen_on ? t.device.screenOn : t.device.screenOff,
+    ],
+    [
+      t.device.connection,
+      d.connection ? (CONNECTION_LABELS[d.connection] ?? d.connection) : "—",
+    ],
+    [t.device.signal, signalLabel(d.signal_dbm)],
   ];
 
   // Status do conteúdo: comparar o que foi mandado (arquivo + enquadramento) com o
@@ -139,6 +187,18 @@ export default async function DeviceDetailPage({
           </div>
         ))}
       </dl>
+
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-muted">{t.device.health}</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {health.map(([k, v]) => (
+            <div key={k} className="rounded-xl border border-line bg-surface p-4">
+              <dt className="text-xs text-muted">{k}</dt>
+              <dd className="mt-1 text-sm">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.content}</h2>

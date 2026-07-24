@@ -20,6 +20,12 @@ object Telemetry {
             .put("os_version", Build.VERSION.RELEASE)
             .put("playing_url", Prefs.playingUrl(ctx) ?: JSONObject.NULL)
             .put("playing_fit", Prefs.playingFit(ctx) ?: JSONObject.NULL)
+            // Saúde: explica queda de loja sem visita técnica.
+            .put("temperature_c", Health.temperatureC(ctx) ?: JSONObject.NULL)
+            .put("uptime_seconds", Health.uptimeSeconds())
+            .put("screen_on", Health.screenOn(ctx))
+            .put("connection", Health.connection(ctx))
+            .put("signal_dbm", Health.signalDbm(ctx) ?: JSONObject.NULL)
         try {
             Api.heartbeat(token, body)
         } catch (_: Exception) {

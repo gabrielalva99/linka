@@ -23,6 +23,7 @@ const MODE = new Set([
   "alarm",
 ]);
 const FIT = new Set(["zoom", "fit"]);
+const CONNECTION = new Set(["wifi", "cellular", "ethernet", "none"]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
 function modelKey(s: string) {
@@ -89,6 +90,22 @@ Deno.serve(async (req) => {
 
   const hardwareModel = payload.hardware_model ? String(payload.hardware_model) : null;
   if (hardwareModel) update.hardware_model = hardwareModel;
+
+  // Saúde do aparelho (REFERENCIA §12.1) — cada campo é opcional e validado.
+  if (payload.temperature_c != null) {
+    const n = Number(payload.temperature_c);
+    if (Number.isFinite(n) && n > -50 && n < 150) update.temperature_c = n;
+  }
+  if (payload.uptime_seconds != null) {
+    const n = Number(payload.uptime_seconds);
+    if (Number.isFinite(n) && n >= 0) update.uptime_seconds = Math.round(n);
+  }
+  if (typeof payload.screen_on === "boolean") update.screen_on = payload.screen_on;
+  if (CONNECTION.has(String(payload.connection))) update.connection = payload.connection;
+  if (payload.signal_dbm != null) {
+    const n = Number(payload.signal_dbm);
+    if (Number.isFinite(n) && n > -200 && n < 0) update.signal_dbm = Math.round(n);
+  }
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
