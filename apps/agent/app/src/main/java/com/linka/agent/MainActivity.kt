@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
@@ -44,6 +46,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        drawBehindCutout()
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
@@ -205,7 +208,29 @@ class MainActivity : Activity() {
         setContentView(view)
     }
 
+    /**
+     * Sem isto o sistema recua a janela abaixo do furo da câmera e sobra uma faixa
+     * preta no topo — a tela nunca fica realmente cheia (medido: 90px no Edge 30 Ultra).
+     */
+    private fun drawBehindCutout() {
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
+    }
+
     private fun enterImmersive() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.insetsController?.let {
+                it.hide(WindowInsets.Type.systemBars())
+                it.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+            return
+        }
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
