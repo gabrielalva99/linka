@@ -55,11 +55,17 @@
     "version": "Agente",
     "pairing": "Cód. pareamento",
     "content": "Conteúdo",
+    "contentCurrent": "Conteúdo atual",
+    "contentNone": "Nenhum",
+    "contentLive": "No ar ✓",
+    "contentPending": "Aplicado — aguardando o aparelho (~20s)",
     "pickMedia": "Escolher da biblioteca",
     "none": "Nenhum",
     "apply": "Aplicar",
+    "applied": "✓ Conteúdo aplicado",
     "upload": "Enviar novo vídeo",
     "uploading": "Enviando…",
+    "uploaded": "enviado e aplicado",
     "uploadError": "Falha no envio do vídeo."
   },
   "chains": {

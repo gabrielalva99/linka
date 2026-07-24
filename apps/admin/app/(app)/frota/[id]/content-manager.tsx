@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getMessages } from "@/lib/i18n";
-import { addMedia, assignContent } from "./actions";
+import { addMedia, assignContent, type AssignState } from "./actions";
 
 type Media = { id: string; name: string; url: string };
 
+const initialAssign: AssignState = { ok: false };
 const field =
   "rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
 
@@ -24,13 +25,19 @@ export function ContentManager({
 }) {
   const t = getMessages();
   const router = useRouter();
+  const [assignState, assignAction, assignPending] = useActionState(
+    assignContent,
+    initialAssign,
+  );
   const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function onFile(file: File) {
     setUploading(true);
     setError(null);
+    setUploaded(null);
     try {
       const supabase = createSupabaseBrowserClient();
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -52,6 +59,7 @@ export function ContentManager({
         contentType: file.type,
         size: file.size,
       });
+      setUploaded(file.name);
       if (fileRef.current) fileRef.current.value = "";
       router.refresh();
     } catch {
@@ -64,7 +72,7 @@ export function ContentManager({
   return (
     <div className="flex flex-col gap-6">
       {/* Escolher da biblioteca */}
-      <form action={assignContent} className="flex items-end gap-2">
+      <form action={assignAction} className="flex items-end gap-2">
         <input type="hidden" name="device_id" value={deviceId} />
         <label className="flex flex-1 flex-col gap-1.5">
           <span className="text-sm text-muted">{t.device.pickMedia}</span>
@@ -79,11 +87,15 @@ export function ContentManager({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          disabled={assignPending}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           {t.device.apply}
         </button>
       </form>
+      {assignState.ok && (
+        <span className="-mt-4 text-xs text-success">{t.device.applied}</span>
+      )}
 
       {/* Enviar novo vídeo */}
       <div className="flex flex-col gap-2">
@@ -100,6 +112,11 @@ export function ContentManager({
           className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-sm file:text-foreground"
         />
         {uploading && <span className="text-xs text-muted">{t.device.uploading}</span>}
+        {uploaded && (
+          <span className="text-xs text-success">
+            ✓ {uploaded} — {t.device.uploaded}
+          </span>
+        )}
         {error && <span className="text-xs text-danger">{error}</span>}
       </div>
     </div>

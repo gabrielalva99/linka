@@ -35,8 +35,9 @@ class HeartbeatService : Service() {
         val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
         val charging = bm.isCharging
+        val playing = Prefs.playingUrl(this)
         try {
-            Api.heartbeat(token, level, charging, Build.VERSION.RELEASE)
+            Api.heartbeat(token, level, charging, Build.VERSION.RELEASE, playing)
         } catch (_: Exception) {
             // rede indisponível — tenta de novo no próximo ciclo
         }

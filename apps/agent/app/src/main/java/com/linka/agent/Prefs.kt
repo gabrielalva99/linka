@@ -13,4 +13,16 @@ object Prefs {
     fun setToken(ctx: Context, value: String) =
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_TOKEN, value).apply()
+
+    private const val KEY_PLAYING = "playing_url"
+
+    /** URL do conteúdo que o app está exibindo agora (para reportar no heartbeat). */
+    fun playingUrl(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_PLAYING, null)
+
+    fun setPlayingUrl(ctx: Context, value: String?) {
+        val editor = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+        if (value == null) editor.remove(KEY_PLAYING) else editor.putString(KEY_PLAYING, value)
+        editor.apply()
+    }
 }

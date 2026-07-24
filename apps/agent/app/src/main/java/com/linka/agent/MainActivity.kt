@@ -121,6 +121,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 if (url != currentUrl) {
                     currentUrl = url
+                    Prefs.setPlayingUrl(this, url)
                     if (url != null) playVideo(url)
                     else setContentView(waitingView("Pareado. Aguardando conteúdo…"))
                 }
@@ -154,11 +155,12 @@ class MainActivity : Activity() {
             playWhenReady = true
             addListener(object : Player.Listener {
                 override fun onPlayerError(error: PlaybackException) {
-                    val msg = TextView(this@MainActivity).apply {
-                        text = "Não foi possível tocar o conteúdo: ${error.errorCodeName}"
-                        setPadding(56, 120, 56, 56)
-                    }
-                    setContentView(msg)
+                    // Zera para o próximo ciclo tentar de novo (falha pode ser transitória).
+                    currentUrl = null
+                    Prefs.setPlayingUrl(this@MainActivity, null)
+                    setContentView(
+                        waitingView("Não foi possível tocar o conteúdo: ${error.errorCodeName}"),
+                    )
                 }
             })
             prepare()

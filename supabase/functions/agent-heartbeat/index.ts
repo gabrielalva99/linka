@@ -71,6 +71,12 @@ Deno.serve(async (req) => {
   }
   if (typeof payload.synced === "boolean") update.synced = payload.synced;
   if (typeof payload.app_updated === "boolean") update.app_updated = payload.app_updated;
+  if ("playing_url" in payload) {
+    update.playing_url =
+      typeof payload.playing_url === "string" && payload.playing_url.length > 0
+        ? payload.playing_url
+        : null;
+  }
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);

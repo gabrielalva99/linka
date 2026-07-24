@@ -4,11 +4,16 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 
+export type AssignState = { ok: boolean };
+
 /** Define (ou limpa) o conteúdo que o aparelho exibe. */
-export async function assignContent(formData: FormData) {
+export async function assignContent(
+  _prev: AssignState,
+  formData: FormData,
+): Promise<AssignState> {
   const deviceId = String(formData.get("device_id") ?? "");
   const url = String(formData.get("url") ?? "").trim();
-  if (!deviceId) return;
+  if (!deviceId) return { ok: false };
 
   const supabase = await createSupabaseServerClient();
   await supabase
@@ -16,6 +21,7 @@ export async function assignContent(formData: FormData) {
     .update({ content_url: url.length > 0 ? url : null })
     .eq("id", deviceId);
   revalidatePath(`/frota/${deviceId}`);
+  return { ok: true };
 }
 
 /** Registra um arquivo enviado ao Storage na biblioteca e já o aplica no aparelho. */
