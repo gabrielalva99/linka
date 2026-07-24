@@ -13,6 +13,7 @@ import {
 import { AutoRefresh } from "../../auto-refresh";
 import { ContentManager } from "./content-manager";
 import { DeviceFit } from "./device-fit";
+import { PinNotice } from "./pin-notice";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -215,6 +216,8 @@ export default async function DeviceDetailPage({
         <h2 className="text-sm font-medium text-muted">{t.device.content}</h2>
 
         <div className="mt-3 rounded-xl border border-line bg-surface p-5">
+          {d.content_url && <PinNotice deviceId={d.id} />}
+
           <div className="mb-5 flex items-center justify-between gap-3 border-b border-line pb-4">
             <div className="min-w-0">
               <p className="text-xs text-muted">{t.device.contentCurrent}</p>

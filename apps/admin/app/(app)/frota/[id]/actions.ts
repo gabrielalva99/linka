@@ -5,6 +5,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import type { ContentFit } from "@linka/shared";
 
+/** Devolve o aparelho ao controle das campanhas (tira o vídeo fixado). */
+export async function unpinContent(deviceId: string) {
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ content_url: null, content_fit: null })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
 /**
  * Enquadramento só deste aparelho (nulo volta a seguir o padrão do arquivo).
  * A tela de cada modelo corta de um jeito — o ajuste não pode ser sempre global.

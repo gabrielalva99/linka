@@ -23,7 +23,8 @@ type CampaignRow = {
   ends_on: string | null;
   start_time: string | null;
   end_time: string | null;
-  media_assets: Rel;
+  rotation_seconds: number;
+  campaign_items: { position: number; media_assets: Rel }[];
   campaign_targets: Target[];
 };
 
@@ -35,7 +36,7 @@ export default async function CampanhasPage() {
   const { data } = await supabase
     .from("campaigns")
     .select(
-      "id, name, is_active, fit_mode, starts_on, ends_on, start_time, end_time, media_assets(name), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
+      "id, name, is_active, fit_mode, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -48,6 +49,18 @@ export default async function CampanhasPage() {
     if (target.scope === "chain") return `${t.campaigns.scopeChain}: ${relName(target.retail_chains)}`;
     if (target.scope === "store") return `${t.campaigns.scopeStore}: ${relName(target.stores)}`;
     return `${t.campaigns.scopeDevice}: ${relName(target.devices)}`;
+  }
+
+  /** "1. abertura.mp4 → 2. copa.mp4 · troca a cada 20 min" */
+  function playlistLabel(c: CampaignRow): string {
+    const items = (c.campaign_items ?? [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((i) => relName(i.media_assets));
+    if (items.length === 0) return "—";
+    const names = items.map((n, i) => `${i + 1}. ${n}`).join("  →  ");
+    if (items.length === 1) return items[0];
+    return `${names} · ${t.campaigns.every} ${Math.round(c.rotation_seconds / 60)} min`;
   }
 
   function whenLabel(c: CampaignRow): string {
@@ -89,8 +102,8 @@ export default async function CampanhasPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{c.name}</p>
-                  <p className="mt-1 truncate text-xs text-muted">
-                    {relName(c.media_assets)}
+                  <p className="mt-1 text-xs text-muted">
+                    {playlistLabel(c)}
                     {c.fit_mode ? ` · ${CONTENT_FIT_LABELS[c.fit_mode]}` : ""}
                   </p>
                   <p className="mt-2 text-xs text-muted">
