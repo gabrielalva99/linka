@@ -59,7 +59,14 @@ export default async function LojasPage() {
             <tbody className="divide-y divide-line">
               {stores.map((s) => (
                 <tr key={s.id} className="bg-surface">
-                  <td className="px-4 py-3">{s.name}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/lojas/${s.id}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {s.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-muted">{s.code ?? "—"}</td>
                   <td className="px-4 py-3 text-muted">{chainName(s.retail_chains)}</td>
                   <td className="px-4 py-3 text-muted">{kindLabel(s.kind)}</td>

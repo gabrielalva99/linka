@@ -55,5 +55,14 @@
     "back": "Voltar",
     "dup": "Já existe uma loja com esse código.",
     "error": "Não foi possível salvar."
+  },
+  "positions": {
+    "title": "Posições",
+    "label": "Posição (ex.: Mesa 3)",
+    "add": "Adicionar",
+    "adding": "Adicionando…",
+    "empty": "Nenhuma posição nesta loja ainda.",
+    "delete": "Remover",
+    "error": "Não foi possível salvar."
   }
 }
