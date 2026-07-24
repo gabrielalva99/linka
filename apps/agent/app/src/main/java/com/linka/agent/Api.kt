@@ -10,7 +10,7 @@ object Api {
     // Chave pública (anon) — protegida por RLS; segura para embutir no app.
     const val ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhremt0bXNxdHZwa3htemZ0YXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTQ3MzksImV4cCI6MjEwMDQzMDczOX0.SdqYO4RAxNr6Z3s-EJVzHJyAdhzXG7t213YHj7P-9D8"
-    const val AGENT_VERSION = "0.1.0"
+    const val AGENT_VERSION = "0.2.0"
 
     data class Result(val code: Int, val body: String)
 
@@ -42,6 +42,10 @@ object Api {
             .put("agent_version", AGENT_VERSION)
             .put("platform", "android")
         return post("agent-provision", body)
+    }
+
+    fun content(token: String): Result {
+        return post("agent-content", JSONObject(), token)
     }
 
     fun heartbeat(token: String, batteryLevel: Int, charging: Boolean, osVersion: String): Result {
