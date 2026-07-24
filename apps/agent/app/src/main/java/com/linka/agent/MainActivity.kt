@@ -17,7 +17,9 @@ import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.json.JSONObject
 
@@ -115,10 +117,13 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    @OptIn(UnstableApi::class)
     private fun playVideo(url: String) {
         enterImmersive()
         val playerView = PlayerView(this).apply {
             useController = false
+            // Preenche a tela inteira em qualquer modelo, sem distorcer (corta o excedente).
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             setBackgroundColor(0xFF000000.toInt())
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
