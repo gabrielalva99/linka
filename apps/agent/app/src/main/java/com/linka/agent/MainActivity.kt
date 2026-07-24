@@ -22,10 +22,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.json.JSONObject
+import java.util.Timer
+import kotlin.concurrent.timerTask
 
 class MainActivity : Activity() {
 
     private var player: ExoPlayer? = null
+    private var currentUrl: String? = null
+    private var contentTimer: Timer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,32 +98,46 @@ class MainActivity : Activity() {
 
     // ── Conteúdo (player) ─────────────────────────────────────────────────
     private fun showContent(token: String) {
-        val waiting = TextView(this).apply {
-            text = "Carregando conteúdo…"
-            textSize = 18f
-            setPadding(56, 120, 56, 56)
+        setContentView(waitingView("Carregando conteúdo…"))
+        checkContent(token)
+        if (contentTimer == null) {
+            contentTimer = Timer().also {
+                it.scheduleAtFixedRate(timerTask { checkContent(token) }, 20_000L, 20_000L)
+            }
         }
-        setContentView(waiting)
+    }
 
+    // Busca o conteúdo periodicamente; troca o vídeo se a URL mudou no painel.
+    private fun checkContent(token: String) {
         Thread {
             val result = try {
                 Api.content(token)
             } catch (e: Exception) {
-                Api.Result(-1, e.message ?: "erro")
+                Api.Result(-1, "")
             }
             val url = if (result.code in 200..299) {
                 JSONObject(result.body).optString("content_url").takeIf { it.isNotEmpty() }
             } else null
             runOnUiThread {
-                if (url != null) playVideo(url) else waiting.text =
-                    "Pareado. Aguardando conteúdo…"
+                if (url != currentUrl) {
+                    currentUrl = url
+                    if (url != null) playVideo(url)
+                    else setContentView(waitingView("Pareado. Aguardando conteúdo…"))
+                }
             }
         }.start()
+    }
+
+    private fun waitingView(text: String) = TextView(this).apply {
+        this.text = text
+        textSize = 18f
+        setPadding(56, 120, 56, 56)
     }
 
     @OptIn(UnstableApi::class)
     private fun playVideo(url: String) {
         enterImmersive()
+        player?.release()
         val playerView = PlayerView(this).apply {
             useController = false
             // Preenche a tela inteira em qualquer modelo, sem distorcer (corta o excedente).
@@ -171,6 +189,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        contentTimer?.cancel()
+        contentTimer = null
         player?.release()
         player = null
         super.onDestroy()

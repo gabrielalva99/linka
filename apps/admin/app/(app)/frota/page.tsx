@@ -124,7 +124,14 @@ export default async function FrotaPage() {
                     <StatusBadge status={effectiveStatus(d.status, d.last_seen_at)} />
                   </td>
                   <td className="px-4 py-3 text-muted">{d.code ?? "—"}</td>
-                  <td className="px-4 py-3 font-medium">{d.name}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/frota/${d.id}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {d.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-muted">{relName(d.device_models)}</td>
                   <td className="px-4 py-3 text-muted">{relName(d.stores)}</td>
                   <td className="px-4 py-3 text-muted">

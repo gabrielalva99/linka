@@ -44,6 +44,24 @@
     "colVersion": "Versão",
     "colLastSeen": "Últ. contato"
   },
+  "device": {
+    "back": "Frota",
+    "code": "Código",
+    "model": "Modelo",
+    "store": "Loja",
+    "mode": "Modo",
+    "battery": "Bateria",
+    "os": "Android",
+    "version": "Agente",
+    "pairing": "Cód. pareamento",
+    "content": "Conteúdo",
+    "pickMedia": "Escolher da biblioteca",
+    "none": "Nenhum",
+    "apply": "Aplicar",
+    "upload": "Enviar novo vídeo",
+    "uploading": "Enviando…",
+    "uploadError": "Falha no envio do vídeo."
+  },
   "chains": {
     "title": "Redes",
     "name": "Nome da rede",
