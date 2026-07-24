@@ -8,6 +8,7 @@ import {
   type DeviceStatus,
   type DeviceType,
 } from "@linka/shared";
+import { modelLabel } from "@/lib/device-display";
 import { StatusBadge } from "./status-badge";
 import { TypeTabs } from "./type-tabs";
 
@@ -25,6 +26,7 @@ type DeviceRow = {
   agent_version: string | null;
   last_seen_at: string | null;
   device_type: DeviceType;
+  hardware_model: string | null;
   device_models: Rel;
   stores: Rel;
 };
@@ -78,7 +80,7 @@ export default async function FrotaPage({
   const { data } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, hardware_model, device_models(name), stores(name)",
     )
     .order("code", { ascending: true });
   const t = getMessages();
@@ -155,7 +157,13 @@ export default async function FrotaPage({
                       {d.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-muted">{relName(d.device_models)}</td>
+                  <td className="px-4 py-3 text-muted">
+                    {modelLabel(
+                      relName(d.device_models),
+                      d.hardware_model,
+                      t.device.detected,
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-muted">{relName(d.stores)}</td>
                   <td className="px-4 py-3 text-muted">
                     {d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"}

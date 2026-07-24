@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import { getMessages } from "@/lib/i18n";
+import { modelLabel } from "@/lib/device-display";
 import {
   CONTENT_FIT_HINTS,
   DEVICE_MODE_LABELS,
@@ -98,19 +99,13 @@ export default async function DeviceDetailPage({
   };
 
   // O aparelho reporta o próprio modelo; o catálogo só refina o nome comercial.
-  const catalogModel = relName(d.device_models);
-  const modelLabel =
-    catalogModel !== "—"
-      ? catalogModel
-      : d.hardware_model
-        ? `${d.hardware_model} (${t.device.detected})`
-        : "—";
+  const model = modelLabel(relName(d.device_models), d.hardware_model, t.device.detected);
   const positionLabel =
     (Array.isArray(d.positions) ? d.positions[0]?.label : d.positions?.label) ?? "—";
 
   const info: [string, string][] = [
     [t.device.code, d.code ?? "—"],
-    [t.device.model, modelLabel],
+    [t.device.model, model],
     [t.device.store, relName(d.stores)],
     [t.device.position, positionLabel],
     [t.device.mode, d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"],
