@@ -230,6 +230,7 @@ export function CampaignFields({
           </label>
         </div>
         <p className="mt-3 text-xs text-muted">{t.campaigns.whenHint}</p>
+        <p className="mt-1 text-xs text-muted">{t.campaigns.fallbackHint}</p>
       </fieldset>
 
       <label className="flex flex-col gap-1.5">

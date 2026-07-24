@@ -235,6 +235,18 @@ export default async function DeviceDetailPage({
             </span>
           </div>
 
+          {!assignedUrl && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+              <span className="text-xs text-warning">{t.device.noContentWarning}</span>
+              <Link
+                href="/campanhas/nova"
+                className="shrink-0 rounded-md border border-warning/40 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/10"
+              >
+                {t.device.createCampaign}
+              </Link>
+            </div>
+          )}
+
           {assigned && (
             <div className="mb-5 flex flex-col gap-2 border-b border-line pb-5">
               <span className="text-xs text-muted">{t.device.fit}</span>

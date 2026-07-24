@@ -43,6 +43,18 @@ export default async function CampanhasPage() {
   const t = getMessages();
   const campaigns = (data ?? []) as CampaignRow[];
 
+  // Rede de segurança: campanha ativa, para todos, sem data e sem horário.
+  // Sem ela, qualquer aparelho não coberto fica com a tela vazia na loja.
+  const hasFallback = campaigns.some(
+    (c) =>
+      c.is_active &&
+      c.campaign_targets?.[0]?.scope === "tenant" &&
+      !c.starts_on &&
+      !c.ends_on &&
+      !c.start_time &&
+      !c.end_time,
+  );
+
   function whereLabel(target: Target | undefined): string {
     if (!target) return "—";
     if (target.scope === "tenant") return t.campaigns.scopeTenant;
@@ -90,6 +102,18 @@ export default async function CampanhasPage() {
           {t.campaigns.new}
         </Link>
       </div>
+
+      {!hasFallback && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+          <span className="text-xs text-warning">{t.campaigns.noFallback}</span>
+          <Link
+            href="/campanhas/nova"
+            className="shrink-0 rounded-md border border-warning/40 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/10"
+          >
+            {t.campaigns.createFallback}
+          </Link>
+        </div>
+      )}
 
       {campaigns.length === 0 ? (
         <p className="mt-8 rounded-xl border border-line bg-surface p-6 text-sm text-muted">

@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private var currentUrl: String? = null
     private var currentFit: String = FIT_ZOOM
     private var contentTimer: Timer? = null
+    private var waitingShown = false
 
     companion object {
         /** Preenche a tela cortando as bordas (padrão). */
@@ -158,41 +159,45 @@ class MainActivity : Activity() {
         val modeChanged = url == null && Prefs.mode(this) != MODE_MENU
         if (modeChanged) Prefs.setMode(this, MODE_MENU)
 
-        if (!urlChanged && !fitChanged) {
-            if (modeChanged) Telemetry.beatAsync(this)
-            return
-        }
-
         currentUrl = url
         currentFit = fit
         Prefs.setPlayingUrl(this, url)
         Prefs.setPlayingFit(this, if (url != null) fit else null)
 
-        if (urlChanged) {
-            if (url != null) {
-                playVideo(url, fit)
-            } else {
-                // Sem conteúdo: solta o player (senão segue decodificando escondido).
+        if (url == null) {
+            // Estado, não transição: subir sem conteúdo também precisa sair do
+            // "Carregando…" (senão a vitrine fica presa nessa mensagem para sempre).
+            if (!waitingShown) {
                 player?.release()
                 player = null
                 playerView = null
-                setContentView(waitingView("Pareado. Aguardando conteúdo…"))
+                enterImmersive()
+                setContentView(waitingView("Aguardando conteúdo"))
+                waitingShown = true
             }
-        } else {
+        } else if (urlChanged) {
+            playVideo(url, fit)
+            waitingShown = false
+        } else if (fitChanged) {
             // Só o enquadramento mudou: ajusta sem reiniciar o vídeo.
             playerView?.resizeMode = resizeMode(fit)
         }
-        Telemetry.beatAsync(this)
+
+        if (urlChanged || fitChanged || modeChanged) Telemetry.beatAsync(this)
     }
 
     private fun resizeMode(fit: String) =
         if (fit == FIT_FIT) AspectRatioFrameLayout.RESIZE_MODE_FIT
         else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
 
+    /** Tela de espera: preta e discreta. Fundo branco numa vitrine parece app quebrado. */
     private fun waitingView(text: String) = TextView(this).apply {
         this.text = text
-        textSize = 18f
-        setPadding(56, 120, 56, 56)
+        textSize = 16f
+        setBackgroundColor(0xFF000000.toInt())
+        setTextColor(0xFF666666.toInt())
+        gravity = android.view.Gravity.CENTER
+        setPadding(56, 56, 56, 56)
     }
 
     private fun playVideo(url: String, fit: String) {
@@ -232,6 +237,7 @@ class MainActivity : Activity() {
                     setContentView(
                         waitingView("Não foi possível tocar o conteúdo: ${error.errorCodeName}"),
                     )
+                    waitingShown = true
                     Telemetry.beatAsync(this@MainActivity)
                 }
             })
