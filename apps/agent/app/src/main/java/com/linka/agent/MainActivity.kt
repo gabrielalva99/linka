@@ -137,8 +137,12 @@ class MainActivity : Activity() {
             var fit = FIT_ZOOM
             if (result.code in 200..299) {
                 val body = JSONObject(result.body)
-                url = body.optString("content_url").takeIf { it.isNotEmpty() }
-                if (body.optString("fit") == FIT_FIT) fit = FIT_FIT
+                // optString devolve a string "null" para um JSON null — sem isNull o app
+                // tentava tocar um arquivo chamado "null" ao remover o conteúdo.
+                if (!body.isNull("content_url")) {
+                    url = body.optString("content_url").takeIf { it.isNotEmpty() }
+                }
+                if (!body.isNull("fit") && body.optString("fit") == FIT_FIT) fit = FIT_FIT
             }
             runOnUiThread { applyContent(url, fit) }
         }.start()
@@ -148,7 +152,16 @@ class MainActivity : Activity() {
     private fun applyContent(url: String?, fit: String) {
         val urlChanged = url != currentUrl
         val fitChanged = fit != currentFit
-        if (!urlChanged && !fitChanged) return
+
+        // App de pé e sem nada para exibir é "menu inicial", não "não rodando" —
+        // vale também quando o app sobe já sem conteúdo (não só na troca).
+        val modeChanged = url == null && Prefs.mode(this) != MODE_MENU
+        if (modeChanged) Prefs.setMode(this, MODE_MENU)
+
+        if (!urlChanged && !fitChanged) {
+            if (modeChanged) Telemetry.beatAsync(this)
+            return
+        }
 
         currentUrl = url
         currentFit = fit
@@ -159,7 +172,10 @@ class MainActivity : Activity() {
             if (url != null) {
                 playVideo(url, fit)
             } else {
-                Prefs.setMode(this, MODE_MENU)
+                // Sem conteúdo: solta o player (senão segue decodificando escondido).
+                player?.release()
+                player = null
+                playerView = null
                 setContentView(waitingView("Pareado. Aguardando conteúdo…"))
             }
         } else {
