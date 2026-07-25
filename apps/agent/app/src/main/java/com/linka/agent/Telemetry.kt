@@ -20,6 +20,8 @@ object Telemetry {
             .put("os_version", Build.VERSION.RELEASE)
             .put("playing_url", Prefs.playingUrl(ctx) ?: JSONObject.NULL)
             .put("playing_fit", Prefs.playingFit(ctx) ?: JSONObject.NULL)
+            // Campanha inteira já no aparelho: exibição não depende mais da rede.
+            .put("synced", Prefs.synced(ctx))
             // Saúde: explica queda de loja sem visita técnica.
             .put("temperature_c", Health.temperatureC(ctx) ?: JSONObject.NULL)
             .put("uptime_seconds", Health.uptimeSeconds())

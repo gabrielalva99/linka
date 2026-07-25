@@ -26,6 +26,16 @@ object Prefs {
         editor.apply()
     }
 
+    private const val KEY_SYNCED = "synced"
+
+    /** Toda a campanha já está baixada no aparelho (alimenta o KPI "Sincronizados"). */
+    fun synced(ctx: Context): Boolean =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_SYNCED, false)
+
+    fun setSynced(ctx: Context, value: Boolean) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_SYNCED, value).apply()
+
     private const val KEY_MODE = "mode"
 
     /** Estado operacional real: not_running | main_menu | show (o painel não deve adivinhar). */

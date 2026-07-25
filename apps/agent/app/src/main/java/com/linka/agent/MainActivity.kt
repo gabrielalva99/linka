@@ -36,6 +36,7 @@ class MainActivity : Activity() {
     private var currentFit: String = FIT_ZOOM
     private var contentTimer: Timer? = null
     private var waitingShown = false
+    private var playingLocal = false
 
     companion object {
         /** Preenche a tela cortando as bordas (padrão). */
@@ -117,7 +118,16 @@ class MainActivity : Activity() {
 
     // ── Conteúdo (player) ─────────────────────────────────────────────────
     private fun showContent(token: String) {
-        setContentView(waitingView("Carregando conteúdo…"))
+        // Retoma o último conteúdo conhecido, se estiver no aparelho: reiniciar
+        // sem internet (queda de luz na loja de manhã) não pode virar tela preta.
+        val last = Prefs.playingUrl(this)
+        if (last != null && MediaCache.isCached(this, last)) {
+            currentUrl = last
+            currentFit = Prefs.playingFit(this) ?: FIT_ZOOM
+            playVideo(last, currentFit)
+        } else {
+            setContentView(waitingView("Carregando conteúdo…"))
+        }
         checkContent(token)
         if (contentTimer == null) {
             contentTimer = Timer().also {
@@ -134,9 +144,14 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 Api.Result(-1, "")
             }
+            // Sem resposta do servidor não é o mesmo que "sem conteúdo": rede da loja
+            // caindo não pode apagar a vitrine. Só resposta válida manda trocar.
+            if (result.code !in 200..299) return@Thread
+
             var url: String? = null
             var fit = FIT_ZOOM
-            if (result.code in 200..299) {
+            val prefetch = mutableListOf<String>()
+            run {
                 val body = JSONObject(result.body)
                 // optString devolve a string "null" para um JSON null — sem isNull o app
                 // tentava tocar um arquivo chamado "null" ao remover o conteúdo.
@@ -144,9 +159,44 @@ class MainActivity : Activity() {
                     url = body.optString("content_url").takeIf { it.isNotEmpty() }
                 }
                 if (!body.isNull("fit") && body.optString("fit") == FIT_FIT) fit = FIT_FIT
+                body.optJSONArray("prefetch")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        arr.optString(i).takeIf { it.isNotEmpty() }?.let { prefetch.add(it) }
+                    }
+                }
             }
-            runOnUiThread { applyContent(url, fit) }
+            runOnUiThread {
+                applyContent(url, fit)
+                handlePrefetch(prefetch)
+            }
         }.start()
+    }
+
+    /**
+     * Garante que a campanha inteira esteja no aparelho. Enquanto não estiver, o
+     * vídeo atual toca da nuvem para a vitrine não ficar vazia; assim que o
+     * arquivo desce, a exibição passa para o local e a rede deixa de importar.
+     */
+    private fun handlePrefetch(urls: List<String>) {
+        if (urls.isEmpty()) return
+        MediaCache.prune(this, urls)
+        updateSynced(urls)
+        for (u in urls) {
+            MediaCache.ensure(this, u) { ready ->
+                runOnUiThread {
+                    if (ready == currentUrl && !playingLocal) playVideo(ready, currentFit)
+                    updateSynced(urls)
+                }
+            }
+        }
+    }
+
+    private fun updateSynced(urls: List<String>) {
+        val synced = MediaCache.allCached(this, urls)
+        if (synced != Prefs.synced(this)) {
+            Prefs.setSynced(this, synced)
+            Telemetry.beatAsync(this)
+        }
     }
 
     /** Aplica o que o painel mandou e confirma de volta (o painel mostra "no ar"). */
@@ -171,8 +221,8 @@ class MainActivity : Activity() {
                 player?.release()
                 player = null
                 playerView = null
-                enterImmersive()
                 setContentView(waitingView("Aguardando conteúdo"))
+                enterImmersive()
                 waitingShown = true
             }
         } else if (urlChanged) {
@@ -200,8 +250,14 @@ class MainActivity : Activity() {
         setPadding(56, 56, 56, 56)
     }
 
+    /** Arquivo local quando existe; nuvem só como último recurso. */
+    private fun sourceFor(url: String): Uri {
+        val local = MediaCache.fileFor(this, url)
+        playingLocal = local.exists() && local.length() > 0
+        return if (playingLocal) Uri.fromFile(local) else Uri.parse(url)
+    }
+
     private fun playVideo(url: String, fit: String) {
-        enterImmersive()
         player?.release()
         val view = PlayerView(this).apply {
             useController = false
@@ -214,7 +270,7 @@ class MainActivity : Activity() {
             )
         }
         val exo = ExoPlayer.Builder(this).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+            setMediaItem(MediaItem.fromUri(sourceFor(url)))
             repeatMode = Player.REPEAT_MODE_ALL
             playWhenReady = true
             addListener(object : Player.Listener {
@@ -247,6 +303,7 @@ class MainActivity : Activity() {
         player = exo
         playerView = view
         setContentView(view)
+        enterImmersive()
     }
 
     /**
@@ -263,9 +320,13 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
     }
 
+    /**
+     * Precisa rodar DEPOIS de setContentView: antes disso a janela ainda não tem
+     * decor view e o controlador vem nulo (crash na inicialização).
+     */
     private fun enterImmersive() {
         if (Build.VERSION.SDK_INT >= 30) {
-            window.insetsController?.let {
+            window.decorView.windowInsetsController?.let {
                 it.hide(WindowInsets.Type.systemBars())
                 it.systemBarsBehavior =
                     WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
