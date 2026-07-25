@@ -1,0 +1,47 @@
+LINKA - PROVISIONAMENTO DE APARELHO
+===================================
+
+O QUE VAI NESTA PASTA (montada pelo suporte antes da visita):
+  PROVISIONAR.bat        <- o tecnico clica duas vezes aqui
+  Provisionar-LINKA.ps1
+  adb.exe                (+ AdbWinApi.dll e AdbWinUsbApi.dll)
+  linka-agente.apk
+
+
+ROTEIRO NA LOJA (por aparelho, 5 a 8 minutos)
+---------------------------------------------
+
+1. NO APARELHO - liberar a depuracao
+   Ajustes > Sobre o telefone > tocar 7 vezes em "Numero da versao"
+   Ajustes > Sistema > Opcoes do desenvolvedor > ligar "Depuracao USB"
+
+2. NO APARELHO - remover as contas
+   Ajustes > Contas (ou "Senhas e contas")
+   Remover TODAS. Sem isso o Android nao deixa o LINKA assumir o controle.
+
+3. CONECTAR o cabo USB no computador
+   Na tela do aparelho vai aparecer "Permitir depuracao USB?"
+   -> marcar "Sempre permitir" e tocar em PERMITIR
+
+4. NO COMPUTADOR - clicar duas vezes em PROVISIONAR.bat
+   O programa faz o resto e mostra APARELHO PRONTO ou o que falta fazer.
+
+5. NO APARELHO - abrir o app LINKA Agente e digitar o CODIGO DE PAREAMENTO
+   (o codigo esta na etiqueta/lista daquele aparelho)
+
+6. Conferir: em ate 1 minuto o video comeca a tocar sozinho.
+
+
+SE DER ERRADO
+-------------
+O programa sempre diz o que fazer. Se pedir para avisar o suporte:
+tire uma foto da tela do computador e mande junto com o codigo do aparelho.
+
+NAO tente resolver por conta propria nem instalar nada extra no aparelho.
+
+
+COMO O ESCRITORIO CONFERE
+-------------------------
+Nao dependemos do relato do tecnico: cada aparelho reporta sozinho ao painel
+se esta com as travas aplicadas. Em Dispositivos, o aparelho mostra
+"Wi-Fi e modo aviao bloqueados". Se nao mostrar, o servico nao terminou.
