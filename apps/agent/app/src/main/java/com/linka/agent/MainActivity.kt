@@ -52,6 +52,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Api.init(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         drawBehindCutout()
         // Reaplica as travas a cada início: atualização do app ou do Android não
@@ -168,6 +169,12 @@ class MainActivity : Activity() {
                 }
                 if (!body.isNull("volume_percent")) {
                     Prefs.setVolumePercent(this@MainActivity, body.optInt("volume_percent", 0))
+                }
+                if (!body.isNull("current_version")) {
+                    Prefs.setPublishedVersion(
+                        this@MainActivity,
+                        body.optString("current_version"),
+                    )
                 }
                 // Nova versão publicada: o aparelho se atualiza sozinho.
                 body.optJSONObject("agent_update")?.let { up ->

@@ -10,7 +10,21 @@ object Api {
     // Chave pública (anon) — protegida por RLS; segura para embutir no app.
     const val ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhremt0bXNxdHZwa3htemZ0YXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTQ3MzksImV4cCI6MjEwMDQzMDczOX0.SdqYO4RAxNr6Z3s-EJVzHJyAdhzXG7t213YHj7P-9D8"
-    const val AGENT_VERSION = "0.10.1"
+    /**
+     * Lida do próprio pacote instalado (versionName do build), não escrita à mão:
+     * as duas já divergiram uma vez — o painel dizia 0.10.1 e o Android via 0.1.0,
+     * o que estraga tanto o diagnóstico quanto a decisão de atualizar.
+     */
+    var AGENT_VERSION: String = "0.0.0"
+        private set
+
+    fun init(ctx: android.content.Context) {
+        AGENT_VERSION = try {
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "0.0.0"
+        } catch (_: Exception) {
+            "0.0.0"
+        }
+    }
 
     /** Como o aparelho se identifica — evita digitar modelo em centenas de aparelhos. */
     val HARDWARE_MODEL: String

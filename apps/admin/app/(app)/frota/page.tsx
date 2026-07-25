@@ -27,6 +27,7 @@ type DeviceRow = {
   last_seen_at: string | null;
   device_type: DeviceType;
   hardware_model: string | null;
+  kiosk_locked: boolean;
   device_models: Rel;
   stores: Rel;
 };
@@ -80,7 +81,7 @@ export default async function FrotaPage({
   const { data } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, hardware_model, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, device_models(name), stores(name)",
     )
     .order("code", { ascending: true });
   const t = getMessages();
@@ -100,6 +101,9 @@ export default async function FrotaPage({
   ).length;
   const synced = devices.filter((d) => d.synced).length;
   const updated = devices.filter((d) => d.app_updated).length;
+  // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
+  // precisa aparecer aqui, não ser descoberto um por um.
+  const locked = devices.filter((d) => d.kiosk_locked).length;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -120,11 +124,18 @@ export default async function FrotaPage({
 
       <TypeTabs active={activeType} counts={counts} />
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <Kpi label={t.fleet.active} value={online} total={total} />
+        <Kpi label={t.fleet.locked} value={locked} total={total} />
         <Kpi label={t.fleet.synced} value={synced} total={total} />
         <Kpi label={t.fleet.updated} value={updated} total={total} />
       </div>
+
+      {locked < total && (
+        <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
+          {t.fleet.unlockedWarning.replace("{n}", String(total - locked))}
+        </p>
+      )}
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-line">
         {devices.length > 0 ? (

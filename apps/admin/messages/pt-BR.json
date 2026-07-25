@@ -33,6 +33,8 @@
     "title": "Dispositivos",
     "all": "Todos",
     "active": "Telas ativas",
+    "locked": "Com bloqueio",
+    "unlockedWarning": "{n} aparelho(s) sem bloqueio: neles o Wi-Fi pode ser desligado pelo cliente e o app não se atualiza sozinho. Precisam do procedimento por cabo.",
     "synced": "Sincronizados",
     "updated": "App atualizado",
     "charging": "Carregando",

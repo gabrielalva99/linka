@@ -75,18 +75,10 @@ Deno.serve(async (req) => {
     .select("version, url")
     .eq("is_current", true)
     .maybeSingle();
-  const agentUpdate =
-    release && release.version !== device.agent_version
-      ? { version: release.version, url: release.url }
-      : null;
-
-  // app_updated no painel deve refletir a realidade, não a intenção.
-  if (release) {
-    await supabase
-      .from("devices")
-      .update({ app_updated: release.version === device.agent_version })
-      .eq("id", device.id);
-  }
+  // Manda sempre: quem compara versões (e recusa rebaixar) é o agente.
+  const agentUpdate = release
+    ? { version: release.version, url: release.url }
+    : null;
 
   return json({
     content_url: contentUrl,
@@ -95,6 +87,9 @@ Deno.serve(async (req) => {
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
     idle_return_seconds: device.idle_return_seconds ?? 30,
     volume_percent: device.volume_percent ?? 0,
+    // Quem decide "estou atualizado" é o aparelho (ele conhece as duas pontas);
+    // o servidor comparando com o cache dava "atualizado" logo após instalar.
+    current_version: release?.version ?? null,
     agent_update: agentUpdate,
   });
 });

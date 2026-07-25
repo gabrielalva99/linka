@@ -11,9 +11,13 @@ android {
         applicationId = "com.linka.agent"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // Fonte única da versão: o agente reporta BuildConfig.VERSION_NAME, então
+        // a versão do pacote e a versão reportada não podem mais divergir (elas
+        // divergiram: o painel dizia 0.10.1 e o Android ainda via 0.1.0).
+        versionCode = 1002
+        versionName = "0.10.2"
     }
+
 
     buildTypes {
         release {

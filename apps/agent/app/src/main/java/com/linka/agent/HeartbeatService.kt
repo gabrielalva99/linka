@@ -21,6 +21,7 @@ class HeartbeatService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Api.init(this)
         startInForeground()
         if (timer == null) {
             timer = Timer().also {

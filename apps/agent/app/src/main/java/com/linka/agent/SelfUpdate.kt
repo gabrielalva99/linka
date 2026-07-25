@@ -21,8 +21,26 @@ object SelfUpdate {
 
     private var running = false
 
+    /**
+     * Só instala versão MAIS NOVA. Comparar por "diferente" fazia um aparelho que
+     * já estava adiante (build de teste em campo) tentar rebaixar para a versão
+     * publicada — o Android recusa e o aparelho tentaria de novo para sempre,
+     * baixando 5 MB a cada 20 segundos.
+     */
+    private fun isNewer(candidate: String, current: String): Boolean {
+        val a = candidate.split(".").map { it.toIntOrNull() ?: 0 }
+        val b = current.split(".").map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val x = a.getOrElse(i) { 0 }
+            val y = b.getOrElse(i) { 0 }
+            if (x != y) return x > y
+        }
+        return false
+    }
+
     fun maybeUpdate(ctx: Context, version: String, url: String) {
-        if (version == Api.AGENT_VERSION) return
+        if (version.isEmpty() || url.isEmpty()) return
+        if (!isNewer(version, Api.AGENT_VERSION)) return
         if (!Kiosk.isDeviceOwner(ctx)) return
         synchronized(this) {
             if (running) return

@@ -26,6 +26,20 @@ object Prefs {
         editor.apply()
     }
 
+    private const val KEY_PUBLISHED = "published_version"
+
+    /**
+     * Versão publicada no painel. Quem decide se está atualizado é o aparelho, que
+     * conhece as duas pontas — o servidor comparando com o que tinha em cache dava
+     * "atualizado" logo depois de uma instalação, o que é mentira por alguns segundos.
+     */
+    fun publishedVersion(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_PUBLISHED, null)
+
+    fun setPublishedVersion(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_PUBLISHED, value).apply()
+
     private const val KEY_VOLUME = "volume_percent"
 
     /** Volume do vídeo (0 = mudo, padrão). Definido no painel, por aparelho. */
