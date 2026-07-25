@@ -57,7 +57,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -98,6 +98,7 @@ export default async function DeviceDetailPage({
     is_device_owner: boolean;
     kiosk_locked: boolean;
     pending_command: string | null;
+    idle_return_seconds: number;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -223,6 +224,7 @@ export default async function DeviceDetailPage({
           isDeviceOwner={d.is_device_owner}
           kioskLocked={d.kiosk_locked}
           pendingCommand={d.pending_command}
+          idleReturnSeconds={d.idle_return_seconds}
         />
       </section>
 

@@ -16,6 +16,7 @@ import kotlin.concurrent.timerTask
 class HeartbeatService : Service() {
 
     private var timer: Timer? = null
+    private var idleTimer: Timer? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -26,7 +27,36 @@ class HeartbeatService : Service() {
                 it.scheduleAtFixedRate(timerTask { Telemetry.beat(this@HeartbeatService) }, 0L, 60_000L)
             }
         }
+        if (idleTimer == null) {
+            idleTimer = Timer().also {
+                it.scheduleAtFixedRate(timerTask { checkIdle() }, 5_000L, 5_000L)
+            }
+        }
         return START_STICKY
+    }
+
+    /**
+     * Traz a vitrine de volta quando o aparelho foi deixado fora do app.
+     * Quem vigia é o serviço (e não a tela) porque a tela está justamente parada
+     * em segundo plano quando isso precisa acontecer.
+     */
+    private fun checkIdle() {
+        val leftAt = Prefs.leftAt(this)
+        if (leftAt == 0L || Prefs.token(this) == null) return
+        val limitMs = Prefs.idleReturnSeconds(this) * 1000L
+        if (System.currentTimeMillis() - leftAt < limitMs) return
+        // Tela apagada: não é hora de acordar a loja no meio da madrugada.
+        if (!Health.screenOn(this)) return
+
+        Prefs.setLeftAt(this, 0L)
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            // Sem permissão de abrir em segundo plano: o provisionamento concede.
+        }
     }
 
     private fun startInForeground() {
@@ -60,6 +90,8 @@ class HeartbeatService : Service() {
     override fun onDestroy() {
         timer?.cancel()
         timer = null
+        idleTimer?.cancel()
+        idleTimer = null
         super.onDestroy()
     }
 }

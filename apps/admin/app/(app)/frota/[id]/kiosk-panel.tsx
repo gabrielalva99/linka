@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { sendCommand } from "./actions";
+import { IdleReturn } from "./idle-return";
 
 /**
  * Estado do bloqueio e a chave de saída. "Dono do aparelho" só se desfaz pelo
@@ -15,11 +16,13 @@ export function KioskPanel({
   isDeviceOwner,
   kioskLocked,
   pendingCommand,
+  idleReturnSeconds,
 }: {
   deviceId: string;
   isDeviceOwner: boolean;
   kioskLocked: boolean;
   pendingCommand: string | null;
+  idleReturnSeconds: number;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -64,6 +67,8 @@ export function KioskPanel({
           </button>
         )}
       </div>
+
+      <IdleReturn deviceId={deviceId} seconds={idleReturnSeconds} />
     </div>
   );
 }

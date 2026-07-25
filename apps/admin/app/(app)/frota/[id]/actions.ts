@@ -18,6 +18,17 @@ export async function sendCommand(deviceId: string, command: "deprovision") {
   revalidatePath(`/frota/${deviceId}`);
 }
 
+/** Tempo fora do app antes de a vitrine voltar sozinha. */
+export async function setIdleReturn(deviceId: string, seconds: number) {
+  const value = Math.min(3600, Math.max(5, Math.round(seconds)));
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ idle_return_seconds: value })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
 /** Devolve o aparelho ao controle das campanhas (tira o vídeo fixado). */
 export async function unpinContent(deviceId: string) {
   const supabase = await createSupabaseServerClient();

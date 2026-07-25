@@ -26,6 +26,29 @@ object Prefs {
         editor.apply()
     }
 
+    private const val KEY_LEFT_AT = "left_at"
+    private const val KEY_IDLE_RETURN = "idle_return_seconds"
+
+    /**
+     * Momento em que o cliente saiu do app (0 = está na vitrine).
+     * Guardado aqui e não em memória porque quem vigia é o serviço, que sobrevive
+     * à tela sendo trocada.
+     */
+    fun leftAt(ctx: Context): Long =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_LEFT_AT, 0L)
+
+    fun setLeftAt(ctx: Context, value: Long) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_LEFT_AT, value).apply()
+
+    /** Segundos fora do app antes de voltar sozinho (definido no painel). */
+    fun idleReturnSeconds(ctx: Context): Int =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_IDLE_RETURN, 30)
+
+    fun setIdleReturnSeconds(ctx: Context, value: Int) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_IDLE_RETURN, value).apply()
+
     private const val KEY_SYNCED = "synced"
 
     /** Toda a campanha já está baixada no aparelho (alimenta o KPI "Sincronizados"). */

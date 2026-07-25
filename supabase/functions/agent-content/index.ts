@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id")
+    .select("id, idle_return_seconds")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -73,5 +73,7 @@ Deno.serve(async (req) => {
     content_url: contentUrl,
     fit: resolved?.out_fit ?? "zoom",
     prefetch,
+    // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
+    idle_return_seconds: device.idle_return_seconds ?? 30,
   });
 });

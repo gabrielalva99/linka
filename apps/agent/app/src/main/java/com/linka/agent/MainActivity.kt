@@ -162,6 +162,10 @@ class MainActivity : Activity() {
                     url = body.optString("content_url").takeIf { it.isNotEmpty() }
                 }
                 if (!body.isNull("fit") && body.optString("fit") == FIT_FIT) fit = FIT_FIT
+                // Comportamento definido no painel; não exige novo APK para mudar.
+                body.optInt("idle_return_seconds", 0).takeIf { it > 0 }?.let {
+                    Prefs.setIdleReturnSeconds(this@MainActivity, it)
+                }
                 body.optJSONArray("prefetch")?.let { arr ->
                     for (i in 0 until arr.length()) {
                         arr.optString(i).takeIf { it.isNotEmpty() }?.let { prefetch.add(it) }
@@ -353,6 +357,27 @@ class MainActivity : Activity() {
     private fun startHeartbeat() {
         val i = Intent(this, HeartbeatService::class.java)
         if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
+    }
+
+    /**
+     * O cliente saiu do app (foi para a câmera, ajustes…). Marca a hora: o serviço
+     * traz a vitrine de volta depois do tempo definido no painel. Ninguém é
+     * impedido de testar o aparelho — ele só não fica abandonado fora da demo.
+     */
+    override fun onPause() {
+        super.onPause()
+        if (Prefs.token(this) != null) Prefs.setLeftAt(this, System.currentTimeMillis())
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Prefs.setLeftAt(this, 0L)
+    }
+
+    /** Voltar não sai da vitrine: dentro do app não há para onde voltar. */
+    @Deprecated("Compatibilidade com Activity clássica")
+    override fun onBackPressed() {
+        // sem super: engole o gesto
     }
 
     override fun onDestroy() {
