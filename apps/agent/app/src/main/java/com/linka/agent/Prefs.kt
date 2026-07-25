@@ -26,6 +26,16 @@ object Prefs {
         editor.apply()
     }
 
+    private const val KEY_VOLUME = "volume_percent"
+
+    /** Volume do vídeo (0 = mudo, padrão). Definido no painel, por aparelho. */
+    fun volumePercent(ctx: Context): Int =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_VOLUME, 0)
+
+    fun setVolumePercent(ctx: Context, value: Int) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_VOLUME, value.coerceIn(0, 100)).apply()
+
     private const val KEY_LEFT_AT = "left_at"
     private const val KEY_IDLE_RETURN = "idle_return_seconds"
 

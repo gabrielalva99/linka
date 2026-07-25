@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id, idle_return_seconds")
+    .select("id, idle_return_seconds, volume_percent, agent_version")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -69,11 +69,32 @@ Deno.serve(async (req) => {
     if (urls.length > 0) prefetch = urls;
   }
 
+  // Versão atual do app: o aparelho decide se precisa se atualizar.
+  const { data: release } = await supabase
+    .from("agent_releases")
+    .select("version, url")
+    .eq("is_current", true)
+    .maybeSingle();
+  const agentUpdate =
+    release && release.version !== device.agent_version
+      ? { version: release.version, url: release.url }
+      : null;
+
+  // app_updated no painel deve refletir a realidade, não a intenção.
+  if (release) {
+    await supabase
+      .from("devices")
+      .update({ app_updated: release.version === device.agent_version })
+      .eq("id", device.id);
+  }
+
   return json({
     content_url: contentUrl,
     fit: resolved?.out_fit ?? "zoom",
     prefetch,
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
     idle_return_seconds: device.idle_return_seconds ?? 30,
+    volume_percent: device.volume_percent ?? 0,
+    agent_update: agentUpdate,
   });
 });

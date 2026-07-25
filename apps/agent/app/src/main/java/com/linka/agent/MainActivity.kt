@@ -166,6 +166,17 @@ class MainActivity : Activity() {
                 body.optInt("idle_return_seconds", 0).takeIf { it > 0 }?.let {
                     Prefs.setIdleReturnSeconds(this@MainActivity, it)
                 }
+                if (!body.isNull("volume_percent")) {
+                    Prefs.setVolumePercent(this@MainActivity, body.optInt("volume_percent", 0))
+                }
+                // Nova versão publicada: o aparelho se atualiza sozinho.
+                body.optJSONObject("agent_update")?.let { up ->
+                    SelfUpdate.maybeUpdate(
+                        this@MainActivity,
+                        up.optString("version"),
+                        up.optString("url"),
+                    )
+                }
                 body.optJSONArray("prefetch")?.let { arr ->
                     for (i in 0 until arr.length()) {
                         arr.optString(i).takeIf { it.isNotEmpty() }?.let { prefetch.add(it) }
@@ -175,6 +186,8 @@ class MainActivity : Activity() {
             runOnUiThread {
                 applyContent(url, fit)
                 handlePrefetch(prefetch)
+                // Volume vem do painel: mudar não pode exigir novo APK.
+                player?.volume = Prefs.volumePercent(this@MainActivity) / 100f
             }
         }.start()
     }
@@ -279,6 +292,9 @@ class MainActivity : Activity() {
         val exo = ExoPlayer.Builder(this).build().apply {
             setMediaItem(MediaItem.fromUri(sourceFor(url)))
             repeatMode = Player.REPEAT_MODE_ALL
+            // Vitrine é muda por padrão: som só quando o painel liberar para este
+            // aparelho — e mesmo assim nunca com o app em segundo plano.
+            volume = Prefs.volumePercent(this@MainActivity) / 100f
             playWhenReady = true
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -366,12 +382,19 @@ class MainActivity : Activity() {
      */
     override fun onPause() {
         super.onPause()
+        // Silêncio total fora da vitrine: o cliente pode ter aberto o YouTube para
+        // testar som — o nosso áudio por baixo é o pior defeito possível numa loja.
+        player?.pause()
         if (Prefs.token(this) != null) Prefs.setLeftAt(this, System.currentTimeMillis())
     }
 
     override fun onResume() {
         super.onResume()
         Prefs.setLeftAt(this, 0L)
+        player?.let {
+            it.volume = Prefs.volumePercent(this) / 100f
+            it.play()
+        }
     }
 
     /** Voltar não sai da vitrine: dentro do app não há para onde voltar. */
