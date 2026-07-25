@@ -170,6 +170,11 @@ Ok "Controle assumido"
 & $adb shell appops set com.linka.agent SYSTEM_ALERT_WINDOW allow 2>&1 | Out-Null
 Ok "Permissao de retorno automatico concedida"
 
+# Medicao de uso (quais telas o cliente abriu e por quanto tempo). Sem isto o
+# Android nao entrega esse dado a nenhum app comum.
+& $adb shell appops set com.linka.agent GET_USAGE_STATS allow 2>&1 | Out-Null
+Ok "Permissao de medicao de uso concedida"
+
 # 5. Verificacao (o que vale e o que o aparelho confirma) ---------------------
 Titulo "Conferindo se as travas pegaram"
 & $adb shell am force-stop com.linka.agent | Out-Null
