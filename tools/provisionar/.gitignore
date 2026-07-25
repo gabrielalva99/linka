@@ -1,0 +1,6 @@
+# Binários de terceiros e o APK são MONTADOS na pasta na hora de preparar o kit
+# do técnico (ver LEIA-ME.txt). Não versionamos: pesam, não são nossos e mudam
+# a cada release do Android SDK / do agente.
+adb.exe
+*.dll
+*.apk
