@@ -24,6 +24,7 @@ const MODE = new Set([
 ]);
 const FIT = new Set(["zoom", "fit"]);
 const CONNECTION = new Set(["wifi", "cellular", "ethernet", "none"]);
+const COMMANDS = new Set(["deprovision"]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
 function modelKey(s: string) {
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
 
   const { data: device } = await supabase
     .from("devices")
-    .select("id, tenant_id, model_id")
+    .select("id, tenant_id, model_id, pending_command")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -107,6 +108,15 @@ Deno.serve(async (req) => {
     if (Number.isFinite(n) && n > -200 && n < 0) update.signal_dbm = Math.round(n);
   }
 
+  if (typeof payload.is_device_owner === "boolean") {
+    update.is_device_owner = payload.is_device_owner;
+  }
+  if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
+
+  // O comando só sai da fila quando o aparelho confirma ter executado.
+  const done = payload.command_done ? String(payload.command_done) : null;
+  if (done && done === device.pending_command) update.pending_command = null;
+
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
 
@@ -123,5 +133,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ ok: true });
+  // Sem conexão persistente: o comando pendente volta na resposta do heartbeat.
+  const pending = device.pending_command ? String(device.pending_command) : null;
+  const command = done || !pending || !COMMANDS.has(pending) ? null : pending;
+  return json({ ok: true, command });
 });

@@ -5,6 +5,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import type { ContentFit } from "@linka/shared";
 
+/**
+ * Enfileira um comando para o aparelho. Ele chega na resposta do próximo
+ * heartbeat (até 60s) e só sai da fila quando o aparelho confirma execução.
+ */
+export async function sendCommand(deviceId: string, command: "deprovision") {
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ pending_command: command })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
 /** Devolve o aparelho ao controle das campanhas (tira o vídeo fixado). */
 export async function unpinContent(deviceId: string) {
   const supabase = await createSupabaseServerClient();

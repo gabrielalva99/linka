@@ -54,6 +54,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         drawBehindCutout()
+        // Reaplica as travas a cada início: atualização do app ou do Android não
+        // pode destravar a vitrine sem ninguém perceber. É inócuo se não somos dono.
+        Kiosk.applyPolicies(this)
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)

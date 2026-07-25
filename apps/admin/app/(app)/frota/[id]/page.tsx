@@ -13,6 +13,7 @@ import {
 import { AutoRefresh } from "../../auto-refresh";
 import { ContentManager } from "./content-manager";
 import { DeviceFit } from "./device-fit";
+import { KioskPanel } from "./kiosk-panel";
 import { PinNotice } from "./pin-notice";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
@@ -56,7 +57,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -94,6 +95,9 @@ export default async function DeviceDetailPage({
     screen_on: boolean | null;
     connection: string | null;
     signal_dbm: number | null;
+    is_device_owner: boolean;
+    kiosk_locked: boolean;
+    pending_command: string | null;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -210,6 +214,16 @@ export default async function DeviceDetailPage({
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-muted">{t.device.kiosk}</h2>
+        <KioskPanel
+          deviceId={d.id}
+          isDeviceOwner={d.is_device_owner}
+          kioskLocked={d.kiosk_locked}
+          pendingCommand={d.pending_command}
+        />
       </section>
 
       <section className="mt-8">

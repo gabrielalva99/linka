@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Políticas declaradas do administrador. O que importa para o LINKA vem das
+     restrições de usuário aplicadas como device owner (Wi-Fi e modo avião). -->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+        <wipe-data />
+    </uses-policies>
+</device-admin>
