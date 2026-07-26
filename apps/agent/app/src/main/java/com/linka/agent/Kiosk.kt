@@ -79,6 +79,48 @@ object Kiosk {
         }
     }
 
+    // ── Depuração USB por controle remoto ────────────────────────────────────
+    // A porta do cabo é o que permite recuperar aparelho problemático. Poder
+    // fechá-la e reabri-la sem visita muda a operação — mas só vale afirmar isso
+    // depois de medir no aparelho: o Android foi restringindo `setGlobalSetting`
+    // versão a versão.
+
+    fun adbEnabled(ctx: Context): Boolean =
+        android.provider.Settings.Global.getInt(
+            ctx.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0,
+        ) == 1
+
+    fun setAdbEnabled(ctx: Context, enabled: Boolean): Boolean {
+        if (!isDeviceOwner(ctx)) return false
+        return try {
+            dpm(ctx).setGlobalSetting(
+                admin(ctx),
+                android.provider.Settings.Global.ADB_ENABLED,
+                if (enabled) "1" else "0",
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Desliga e religa a depuração, medindo cada passo. Devolve um relato para o
+     * painel — se o religar falhar, o aparelho fica sem cabo até alguém ligar na
+     * mão, e é exatamente isso que precisamos saber ANTES de 250 aparelhos.
+     */
+    fun probeDebug(ctx: Context): String {
+        val before = adbEnabled(ctx)
+        val offAccepted = setAdbEnabled(ctx, false)
+        Thread.sleep(2000)
+        val afterOff = adbEnabled(ctx)
+        val onAccepted = setAdbEnabled(ctx, true)
+        Thread.sleep(2000)
+        val afterOn = adbEnabled(ctx)
+        return "antes=$before | desligar aceito=$offAccepted -> $afterOff | " +
+            "religar aceito=$onAccepted -> $afterOn"
+    }
+
     /**
      * A chave de saída. Solta as travas, devolve a tela inicial ao sistema e
      * abre mão do cargo. Sem isto, "dono do aparelho" só sai com factory reset.

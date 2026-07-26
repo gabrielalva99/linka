@@ -14,7 +14,7 @@ object Telemetry {
 
     fun beat(ctx: Context) {
         val token = Prefs.token(ctx) ?: return
-        val result = send(ctx, token, null) ?: return
+        val result = send(ctx, token) ?: return
         if (result.code !in 200..299) return
 
         val command = try {
@@ -25,7 +25,8 @@ object Telemetry {
         if (command.isNullOrEmpty()) return
 
         // Executa e confirma: o painel só limpa o comando quando o aparelho responde.
-        if (execute(ctx, command)) send(ctx, token, command)
+        val report = execute(ctx, command)
+        if (report != null) send(ctx, token, command, report)
     }
 
     /** Confirmação imediata após trocar o que está na tela (não bloqueia a UI). */
@@ -33,12 +34,24 @@ object Telemetry {
         Thread { beat(ctx) }.start()
     }
 
-    private fun execute(ctx: Context, command: String): Boolean = when (command) {
-        "deprovision" -> Kiosk.deprovision(ctx)
-        else -> false
+    /** Devolve o relato do comando, ou null se não soubermos executá-lo. */
+    private fun execute(ctx: Context, command: String): String? = when (command) {
+        "deprovision" ->
+            if (Kiosk.deprovision(ctx)) "controle devolvido" else "falhou: não era dono"
+        "debug_probe" -> Kiosk.probeDebug(ctx)
+        "debug_off" ->
+            if (Kiosk.setAdbEnabled(ctx, false)) "depuração desligada" else "recusado"
+        "debug_on" ->
+            if (Kiosk.setAdbEnabled(ctx, true)) "depuração ligada" else "recusado"
+        else -> null
     }
 
-    private fun send(ctx: Context, token: String, commandDone: String?): Api.Result? {
+    private fun send(
+        ctx: Context,
+        token: String,
+        commandDone: String? = null,
+        commandResult: String? = null,
+    ): Api.Result? {
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val body = JSONObject()
             .put("status", "online")
@@ -66,6 +79,7 @@ object Telemetry {
             body.put("app_updated", it == Api.AGENT_VERSION)
         }
         if (commandDone != null) body.put("command_done", commandDone)
+        if (commandResult != null) body.put("command_result", commandResult)
 
         return try {
             Api.heartbeat(token, body)

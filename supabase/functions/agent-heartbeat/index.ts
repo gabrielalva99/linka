@@ -24,7 +24,7 @@ const MODE = new Set([
 ]);
 const FIT = new Set(["zoom", "fit"]);
 const CONNECTION = new Set(["wifi", "cellular", "ethernet", "none"]);
-const COMMANDS = new Set(["deprovision"]);
+const COMMANDS = new Set(["deprovision", "debug_probe", "debug_off", "debug_on"]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
 function modelKey(s: string) {
@@ -116,6 +116,9 @@ Deno.serve(async (req) => {
   // O comando só sai da fila quando o aparelho confirma ter executado.
   const done = payload.command_done ? String(payload.command_done) : null;
   if (done && done === device.pending_command) update.pending_command = null;
+  if (payload.command_result != null) {
+    update.last_command_result = String(payload.command_result).slice(0, 500);
+  }
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
