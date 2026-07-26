@@ -73,6 +73,7 @@ object Telemetry {
             // Kiosk: o painel nunca deve adivinhar se a trava pegou.
             .put("is_device_owner", Kiosk.isDeviceOwner(ctx))
             .put("kiosk_locked", Kiosk.locked(ctx))
+            .put("adb_enabled", Kiosk.adbEnabled(ctx))
         // Atualizado = a versão que está rodando é a publicada. Quem sabe as duas
         // pontas é o aparelho, então é ele que responde.
         Prefs.publishedVersion(ctx)?.let {

@@ -9,7 +9,10 @@ import type { ContentFit } from "@linka/shared";
  * Enfileira um comando para o aparelho. Ele chega na resposta do próximo
  * heartbeat (até 60s) e só sai da fila quando o aparelho confirma execução.
  */
-export async function sendCommand(deviceId: string, command: "deprovision") {
+export async function sendCommand(
+  deviceId: string,
+  command: "deprovision" | "debug_off" | "debug_on" | "debug_probe",
+) {
   const supabase = await createSupabaseServerClient();
   await supabase
     .from("devices")

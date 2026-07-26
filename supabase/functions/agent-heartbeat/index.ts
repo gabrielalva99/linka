@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
     update.is_device_owner = payload.is_device_owner;
   }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
+  if (typeof payload.adb_enabled === "boolean") update.adb_enabled = payload.adb_enabled;
 
   // O comando só sai da fila quando o aparelho confirma ter executado.
   const done = payload.command_done ? String(payload.command_done) : null;

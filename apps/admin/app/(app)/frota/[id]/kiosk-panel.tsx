@@ -17,12 +17,16 @@ export function KioskPanel({
   kioskLocked,
   pendingCommand,
   idleReturnSeconds,
+  adbEnabled,
+  lastCommandResult,
 }: {
   deviceId: string;
   isDeviceOwner: boolean;
   kioskLocked: boolean;
   pendingCommand: string | null;
   idleReturnSeconds: number;
+  adbEnabled: boolean | null;
+  lastCommandResult: string | null;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -67,6 +71,43 @@ export function KioskPanel({
           </button>
         )}
       </div>
+
+      {isDeviceOwner && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          <span className="text-xs text-muted">{t.device.usbDebug}</span>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs ${
+              adbEnabled ? "bg-warning/15 text-warning" : "bg-surface-2 text-muted"
+            }`}
+          >
+            {adbEnabled === null
+              ? "—"
+              : adbEnabled
+                ? t.device.usbDebugOn
+                : t.device.usbDebugOff}
+          </span>
+          <button
+            type="button"
+            disabled={pending || pendingCommand != null}
+            onClick={() =>
+              startTransition(async () => {
+                await sendCommand(deviceId, adbEnabled ? "debug_off" : "debug_on");
+                router.refresh();
+              })
+            }
+            className="rounded-md border border-line px-3 py-1 text-xs text-muted hover:bg-surface-2 disabled:opacity-60"
+          >
+            {adbEnabled ? t.device.usbDebugDisable : t.device.usbDebugEnable}
+          </button>
+          <span className="w-full text-xs text-muted">{t.device.usbDebugHint}</span>
+        </div>
+      )}
+
+      {lastCommandResult && (
+        <p className="mt-3 text-xs text-muted">
+          {t.device.lastCommand}: {lastCommandResult}
+        </p>
+      )}
 
       <IdleReturn deviceId={deviceId} seconds={idleReturnSeconds} />
     </div>
