@@ -146,6 +146,30 @@ if (-not (Test-Path $apk)) {
 # verdadeiro/falso. Sem o -join, uma saida de varias linhas dava "falhou" num
 # aparelho que tinha sido provisionado com sucesso.
 $saidaInstall = (& $adb install -r $apk 2>&1) -join " "
+
+# Aparelho que ja teve uma versao antiga do LINKA (assinada com outra chave) nao
+# aceita instalar por cima. Nesse caso o app precisa sair antes.
+if ($saidaInstall -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|signatures do not match") {
+  Aviso "Ja existe um LINKA antigo neste aparelho, com assinatura diferente"
+  if ($donos -match "com.linka.agent") {
+    Fim $false @"
+Este aparelho tem um LINKA antigo que ainda esta como dono do aparelho.
+
+O QUE FAZER:
+ 1. No painel, abra este aparelho e clique em DESPROVISIONAR.
+ 2. Espere ate o painel mostrar "Sem bloqueio" (ate 1 minuto).
+ 3. Rode este programa de novo.
+"@
+  }
+  $saidaRemove = (& $adb uninstall com.linka.agent 2>&1) -join " "
+  if ($saidaRemove -match "Success") {
+    Ok "Versao antiga removida"
+    $saidaInstall = (& $adb install -r $apk 2>&1) -join " "
+  } else {
+    Fim $false "Nao foi possivel remover a versao antiga:`n$saidaRemove"
+  }
+}
+
 if ($saidaInstall -match "Success") { Ok "Aplicativo instalado" }
 else { Fim $false "Falha ao instalar o aplicativo:`n$saidaInstall" }
 

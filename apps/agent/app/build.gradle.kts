@@ -1,6 +1,16 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// Chave de produção: fora do repositório e fora do projeto. Se ela se perder,
+// nenhum dos aparelhos em campo aceita atualização nunca mais — só visita com
+// cabo. É o ativo mais crítico do agente.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -19,9 +29,26 @@ android {
     }
 
 
+    signingConfigs {
+        create("linka") {
+            if (keystoreProps.getProperty("storeFile") != null) {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Sem DEBUGGABLE: em aparelho de loja, app depurável é porta aberta
+            // para quem chegar com um cabo.
+            isDebuggable = false
+            if (keystoreProps.getProperty("storeFile") != null) {
+                signingConfig = signingConfigs.getByName("linka")
+            }
         }
     }
 
