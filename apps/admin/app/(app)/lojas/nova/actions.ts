@@ -33,6 +33,10 @@ export async function createStore(
     state: emptyToNull(formData.get("state")),
     country: String(formData.get("country") ?? "BR"),
     timezone: String(formData.get("timezone") ?? "America/Sao_Paulo"),
+    // Recorta o denominador dos relatórios: a vitrine fica acesa 24h, mas
+    // madrugada não é exposição.
+    opens_at: String(formData.get("opens_at") || "09:00"),
+    closes_at: String(formData.get("closes_at") || "22:00"),
   });
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };

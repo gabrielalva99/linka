@@ -10,9 +10,14 @@ import { getMessages } from "@/lib/i18n";
 export type Journey = {
   dia: string;
   fuso: string;
+  abre: number;
+  fecha: number;
   visitas: number;
   segundos_uso: number;
   segundos_vitrine: number;
+  media_visitas: number | null;
+  media_segundos_uso: number | null;
+  dias_comparados: number;
   recursos: {
     recurso: string;
     categoria: string | null;
@@ -22,12 +27,49 @@ export type Journey = {
   horas: { hora: number; visitas: number; segundos: number }[];
 };
 
-/** "1min20" / "45s" — ninguém lê relatório de loja contando em segundos. */
+/** "1min20" / "45s" / "2h10" — ninguém lê relatório de loja em segundos. */
 function tempo(segundos: number): string {
   if (segundos < 60) return `${segundos}s`;
-  const m = Math.floor(segundos / 60);
-  const s = segundos % 60;
-  return s > 0 ? `${m}min${String(s).padStart(2, "0")}` : `${m}min`;
+  if (segundos < 3600) {
+    const m = Math.floor(segundos / 60);
+    const s = segundos % 60;
+    return s > 0 ? `${m}min${String(s).padStart(2, "0")}` : `${m}min`;
+  }
+  const h = Math.floor(segundos / 3600);
+  const m = Math.round((segundos % 3600) / 60);
+  return m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
+}
+
+/**
+ * "+40% vs. média" — a comparação é com o próprio aparelho, nunca com outro.
+ * Comparar duas lojas mede fluxo de rua, não desempenho da vitrine.
+ */
+function Comparacao({
+  hoje,
+  media,
+  dias,
+}: {
+  hoje: number;
+  media: number | null;
+  dias: number;
+}) {
+  // Um dia só não é média. Dizer "+300%" contra uma única terça é ruído.
+  if (media == null || media <= 0 || dias < 2) {
+    return (
+      <span className="text-xs text-muted">
+        {dias === 0 ? "primeiro dia" : `${dias} dia(s) de histórico`}
+      </span>
+    );
+  }
+  const delta = Math.round(((hoje - media) / media) * 100);
+  const cor =
+    delta > 10 ? "text-success" : delta < -10 ? "text-warning" : "text-muted";
+  return (
+    <span className={`text-xs ${cor}`}>
+      {delta > 0 ? "+" : ""}
+      {delta}% vs. média de {dias}d ({media})
+    </span>
+  );
 }
 
 export function JourneyPanel({ journey }: { journey: Journey | null }) {
@@ -40,9 +82,11 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
   const maiorRecurso = Math.max(1, ...(j?.recursos ?? []).map((r) => r.segundos));
   const maiorHora = Math.max(1, ...(j?.horas ?? []).map((h) => h.visitas));
 
-  // Horário comercial: 8h às 22h. Hora sem movimento aparece vazia — o buraco
-  // no meio da tarde é informação, não motivo para esconder a coluna.
-  const faixa = Array.from({ length: 15 }, (_, i) => i + 8);
+  // A faixa é o expediente DAQUELA loja, não um horário comercial inventado:
+  // hora fora do expediente no gráfico sugere um buraco que não existe.
+  const abre = j?.abre ?? 9;
+  const fecha = j?.fecha ?? 22;
+  const faixa = Array.from({ length: Math.max(1, fecha - abre) }, (_, i) => i + abre);
   const porHora = new Map((j?.horas ?? []).map((h) => [h.hora, h]));
 
   return (
@@ -61,11 +105,22 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
               <dd className="mt-1 text-2xl font-semibold text-brand-500">
                 {j.visitas}
               </dd>
+              <dd className="mt-0.5">
+                <Comparacao
+                  hoje={j.visitas}
+                  media={j.media_visitas}
+                  dias={j.dias_comparados}
+                />
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-muted">{t.device.journeyTime}</dt>
               <dd className="mt-1 text-2xl font-semibold">
                 {tempo(j.segundos_uso)}
+              </dd>
+              <dd className="mt-0.5 text-xs text-muted">
+                {j.visitas > 0 &&
+                  `${tempo(Math.round(j.segundos_uso / j.visitas))} por visita`}
               </dd>
             </div>
             {/* O denominador. Sem ele, "4 visitas" não vira taxa de parada — e

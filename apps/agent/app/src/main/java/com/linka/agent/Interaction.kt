@@ -113,6 +113,18 @@ object Interaction {
                             )
                             telaLigadaEm = 0
                         }
+                        // Tela apagada encerra a sessão: sem isso, um aparelho
+                        // que dorme (bateria fraca, tela quebrada) acumularia
+                        // horas de "vitrine" que ninguém viu. Hoje a vitrine
+                        // segura a tela ligada, mas o dado não pode depender
+                        // disso continuar verdade.
+                        if (atual != null) {
+                            gravados += enfileirar(
+                                queue, tipoDe(atual), atual, atualDesde, e.timeStamp,
+                            )
+                            atual = null
+                            atualDesde = 0
+                        }
                     }
                 }
             }

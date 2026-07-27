@@ -92,7 +92,21 @@ export function StoreForm({ chains }: { chains: { id: string; name: string }[] }
             ))}
           </select>
         </label>
+
+        {/* Não é detalhe de cadastro: é o que separa "vitrine exposta" de
+            "vídeo rodando para a loja vazia" no relatório. */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t.stores.opensAt}</span>
+          <input type="time" name="opens_at" defaultValue="09:00" className={fieldClass} />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t.stores.closesAt}</span>
+          <input type="time" name="closes_at" defaultValue="22:00" className={fieldClass} />
+        </label>
       </div>
+
+      <p className="-mt-2 text-xs text-muted">{t.stores.hoursHint}</p>
 
       {state.status === "dup" && (
         <span className="text-sm text-danger">{t.stores.dup}</span>
