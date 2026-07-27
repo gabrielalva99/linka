@@ -122,7 +122,16 @@
     "blockApps": "Ajustes e Play Store",
     "blocked": "Bloqueados",
     "notBlocked": "Liberados",
-    "blockAppsHint": "Bloqueia o caminho para criar senha de tela e instalar apps. Câmera, navegador e o resto continuam livres para o cliente testar."
+    "blockAppsHint": "Bloqueia o caminho para criar senha de tela e instalar apps. Câmera, navegador e o resto continuam livres para o cliente testar.",
+    "journey": "Jornada do cliente hoje",
+    "journeyVisits": "Visitas",
+    "journeyTime": "Tempo de uso",
+    "journeyTop": "Recurso mais usado",
+    "journeyEmpty": "Ninguém interagiu com este aparelho hoje.",
+    "journeyFeatures": "O que o cliente abriu",
+    "journeyHours": "Por hora",
+    "journeySessions": "aberturas",
+    "journeyHint": "Visita = bloco de uso separado por 90s sem ninguém tocar em nada. Horário da loja."
   },
   "campaigns": {
     "title": "Campanhas",

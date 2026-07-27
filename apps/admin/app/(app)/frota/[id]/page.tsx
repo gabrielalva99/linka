@@ -15,6 +15,7 @@ import { ContentManager } from "./content-manager";
 import { DeviceFit } from "./device-fit";
 import { CleanupPanel } from "./cleanup-panel";
 import { KioskPanel } from "./kiosk-panel";
+import { JourneyPanel, type Journey } from "./journey-panel";
 import { PinNotice } from "./pin-notice";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
@@ -64,15 +65,19 @@ export default async function DeviceDetailPage({
     .single();
   if (!device) notFound();
 
-  const [{ data: mediaData }, tenant, { data: resolvedRows }] = await Promise.all([
-    supabase
-      .from("media_assets")
-      .select("id, name, url, fit_mode")
-      .order("created_at", { ascending: false }),
-    getActiveTenant(),
-    // Quem decide o que toca é o banco (fixo no aparelho > campanha mais específica).
-    supabase.rpc("resolve_device_content", { p_device_id: id }),
-  ]);
+  const [{ data: mediaData }, tenant, { data: resolvedRows }, { data: journeyData }] =
+    await Promise.all([
+      supabase
+        .from("media_assets")
+        .select("id, name, url, fit_mode")
+        .order("created_at", { ascending: false }),
+      getActiveTenant(),
+      // Quem decide o que toca é o banco (fixo no aparelho > campanha mais específica).
+      supabase.rpc("resolve_device_content", { p_device_id: id }),
+      // O dia é o da loja: em fuso do servidor, loja fora de SP teria o
+      // expediente cortado no meio.
+      supabase.rpc("device_journey", { p_device_id: id }),
+    ]);
 
   const t = getMessages();
   const media = (mediaData ?? []) as Media[];
@@ -232,6 +237,8 @@ export default async function DeviceDetailPage({
           {t.device.updateBlocked}: {d.update_error}
         </p>
       )}
+
+      <JourneyPanel journey={(journeyData as Journey | null) ?? null} />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.kiosk}</h2>
