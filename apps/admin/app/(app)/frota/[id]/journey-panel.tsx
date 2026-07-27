@@ -12,6 +12,7 @@ export type Journey = {
   fuso: string;
   visitas: number;
   segundos_uso: number;
+  segundos_vitrine: number;
   recursos: {
     recurso: string;
     categoria: string | null;
@@ -54,7 +55,7 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
         </div>
       ) : (
         <div className="mt-3 rounded-xl border border-line bg-surface p-5">
-          <dl className="grid grid-cols-3 gap-4">
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <dt className="text-xs text-muted">{t.device.journeyVisits}</dt>
               <dd className="mt-1 text-2xl font-semibold text-brand-500">
@@ -66,6 +67,23 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
               <dd className="mt-1 text-2xl font-semibold">
                 {tempo(j.segundos_uso)}
               </dd>
+            </div>
+            {/* O denominador. Sem ele, "4 visitas" não vira taxa de parada — e
+                é a taxa que diz se o ponto converte, não a contagem. */}
+            <div>
+              <dt className="text-xs text-muted">{t.device.journeyShowcase}</dt>
+              <dd className="mt-1 text-2xl font-semibold">
+                {j.segundos_vitrine > 0 ? tempo(j.segundos_vitrine) : "—"}
+              </dd>
+              {j.segundos_vitrine > 0 && (
+                <dd className="mt-0.5 text-xs text-muted">
+                  {t.device.journeyRate}{" "}
+                  {(
+                    (j.visitas / (j.segundos_vitrine / 3600)) || 0
+                  ).toFixed(1)}
+                  /h
+                </dd>
+              )}
             </div>
             <div className="min-w-0">
               <dt className="text-xs text-muted">{t.device.journeyTop}</dt>

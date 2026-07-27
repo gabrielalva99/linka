@@ -131,7 +131,9 @@
     "journeyFeatures": "O que o cliente abriu",
     "journeyHours": "Por hora",
     "journeySessions": "aberturas",
-    "journeyHint": "Visita = bloco de uso separado por 90s sem ninguém tocar em nada. Horário da loja."
+    "journeyHint": "Visita = bloco de uso que termina quando a vitrine volta à tela. Horário da loja.",
+    "journeyShowcase": "Vitrine na tela",
+    "journeyRate": "parada:"
   },
   "campaigns": {
     "title": "Campanhas",

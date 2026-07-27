@@ -14,7 +14,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const KINDS = new Set(["app_usage", "screen_session"]);
+const KINDS = new Set(["app_usage", "screen_session", "showcase"]);
 const MAX_LOTE = 500;
 
 function json(body: unknown, status = 200) {

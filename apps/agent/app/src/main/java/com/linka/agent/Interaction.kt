@@ -94,7 +94,7 @@ object Interaction {
                             // Trocou de app de verdade: fecha o anterior e abre o novo.
                             if (atual != null) {
                                 gravados += enfileirar(
-                                    queue, "app_usage", atual, atualDesde, e.timeStamp,
+                                    queue, tipoDe(atual), atual, atualDesde, e.timeStamp,
                                 )
                             }
                             atual = e.packageName
@@ -127,6 +127,19 @@ object Interaction {
         return gravados
     }
 
+    /**
+     * A vitrine tocando é dado, não ruído.
+     *
+     * Antes o próprio LINKA era descartado por ser "nosso app". Só que ele é a
+     * metade que faltava da medição: sem o tempo de vídeo rodando, "o cliente
+     * mexeu 2min08" não diz se o ponto é morto ou se converte.
+     *
+     * E é ele que fecha a visita com precisão — a vitrine voltar à tela É o
+     * cliente ter ido embora, sem precisar estimar por tempo de silêncio.
+     */
+    private fun tipoDe(pkg: String): String =
+        if (pkg == NOSSO_PACOTE) "showcase" else "app_usage"
+
     private fun enfileirar(
         queue: EventQueue,
         kind: String,
@@ -136,7 +149,6 @@ object Interaction {
     ): Int {
         val segundos = (fim - inicio) / 1000
         if (segundos < MIN_SEGUNDOS) return 0
-        if (pkg == NOSSO_PACOTE) return 0
         // id determinístico: o mesmo intervalo lido duas vezes não duplica.
         val eventId = "$kind:${pkg ?: "tela"}:$inicio"
         queue.add(
