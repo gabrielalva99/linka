@@ -1,6 +1,7 @@
 package com.linka.agent
 
 import android.content.Context
+import android.os.Build
 import android.os.Environment
 import java.io.File
 import java.util.Calendar
@@ -35,17 +36,36 @@ object Cleanup {
         "com.android.vending",
     )
 
-    /** Roda a faxina e devolve um relato curto para o painel. */
+    /**
+     * Roda a faxina e devolve um relato para o painel.
+     *
+     * O relato nomeia o que foi limpo e separa "não tinha nada" de "não consegui":
+     * um "0 arquivos" silencioso esconderia aparelho sem permissão, e alguém só
+     * descobriria olhando a galeria de um aparelho na loja.
+     */
     fun run(ctx: Context): String {
-        var files = 0
-        for (dir in MEDIA_DIRS) {
-            files += wipe(File(Environment.getExternalStorageDirectory(), dir))
+        val partes = mutableListOf<String>()
+
+        if (podeApagarArquivos()) {
+            var files = 0
+            for (dir in MEDIA_DIRS) {
+                files += wipe(File(Environment.getExternalStorageDirectory(), dir))
+            }
+            partes.add("$files arquivo(s)")
+        } else {
+            partes.add("SEM PERMISSÃO de arquivos (reprovisionar por cabo)")
         }
-        var apps = 0
-        for (pkg in APPS) if (clearApp(ctx, pkg)) apps++
+
+        val limpos = APPS.filter { clearApp(ctx, it) }.map { it.substringAfterLast('.') }
+        partes.add(if (limpos.isEmpty()) "nenhum app limpo" else "apps: ${limpos.joinToString(", ")}")
+
         Prefs.setLastCleanupDay(ctx, today())
-        return "$files arquivo(s) apagado(s), $apps app(s) limpo(s)"
+        return partes.joinToString(" · ")
     }
+
+    /** Sem isto o Android 11+ não deixa tocar em DCIM/Pictures de jeito nenhum. */
+    private fun podeApagarArquivos(): Boolean =
+        Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
 
     /** Apaga o conteúdo, mantém a pasta: alguns apps quebram se o diretório some. */
     private fun wipe(dir: File): Int {
