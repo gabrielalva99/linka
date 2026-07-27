@@ -109,8 +109,13 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
                   : 2;
                 return (
                   <div key={h} className="flex flex-1 flex-col items-center gap-1">
+                    {dado && (
+                      <span className="text-[10px] text-brand-500">
+                        {dado.visitas}
+                      </span>
+                    )}
                     <span
-                      className={`w-full rounded-sm ${dado ? "bg-brand-500" : "bg-surface-2"}`}
+                      className={`w-4 rounded-sm ${dado ? "bg-brand-500" : "bg-surface-2"}`}
                       style={{ height: `${altura}px` }}
                       title={
                         dado
