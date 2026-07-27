@@ -96,6 +96,16 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR).apply()
 
+    private const val KEY_LAST_SCAN = "last_event_scan"
+
+    /** Até onde já lemos o uso do aparelho — evita recontar e evita pular. */
+    fun lastEventScan(ctx: Context): Long =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_LAST_SCAN, 0L)
+
+    fun setLastEventScan(ctx: Context, value: Long) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_LAST_SCAN, value).apply()
+
     private const val KEY_BLOCK_SETTINGS = "block_settings"
 
     /** Bloquear Ajustes e Play Store (decidido no painel, por aparelho). */

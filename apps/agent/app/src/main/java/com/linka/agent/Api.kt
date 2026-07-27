@@ -68,6 +68,11 @@ object Api {
         return post("agent-provision", body)
     }
 
+    /** Envia um lote de eventos; o servidor ignora repetidos. */
+    fun events(token: String, events: org.json.JSONArray): Result {
+        return post("agent-events", JSONObject().put("events", events), token)
+    }
+
     fun content(token: String): Result {
         return post("agent-content", JSONObject(), token)
     }

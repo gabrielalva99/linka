@@ -29,6 +29,7 @@ class HeartbeatService : Service() {
                     timerTask {
                         Telemetry.beat(this@HeartbeatService)
                         checkCleanup()
+                        coletarEEnviarEventos()
                     },
                     0L, 60_000L,
                 )
@@ -56,6 +57,34 @@ class HeartbeatService : Service() {
         val report = Cleanup.run(this)
         Prefs.setPendingCleanupReport(this, report)
         Telemetry.beatAsync(this)
+    }
+
+    /**
+     * Lê o uso do aparelho, guarda na fila local e envia o que der. O envio só
+     * limpa a fila com confirmação do servidor — queda de rede adia, não perde.
+     */
+    private fun coletarEEnviarEventos() {
+        val token = Prefs.token(this) ?: return
+        val fila = EventQueue(this)
+        try {
+            Interaction.collect(this, fila)
+            var restam = fila.size()
+            // Manda em lotes até esvaziar (ou até a rede falhar).
+            while (restam > 0) {
+                val (ids, lote) = fila.pending(200)
+                if (ids.isEmpty()) break
+                val r = try {
+                    Api.events(token, lote)
+                } catch (_: Exception) {
+                    return
+                }
+                if (r.code !in 200..299) return
+                fila.remove(ids)
+                restam = fila.size()
+            }
+        } finally {
+            fila.close()
+        }
     }
 
     private fun checkIdle() {
