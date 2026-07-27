@@ -72,7 +72,13 @@ function Comparacao({
   );
 }
 
-export function JourneyPanel({ journey }: { journey: Journey | null }) {
+export function JourneyPanel({
+  journey,
+  excluded,
+}: {
+  journey: Journey | null;
+  excluded: boolean;
+}) {
   const t = getMessages();
   const j = journey;
   const vazio = !j || j.visitas === 0;
@@ -91,7 +97,16 @@ export function JourneyPanel({ journey }: { journey: Journey | null }) {
 
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-medium text-muted">{t.device.journey}</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-medium text-muted">{t.device.journey}</h2>
+        {/* A marca fica ao lado do número, não escondida no cadastro: quem tira
+            print desta tela precisa ver que ela não vale como resultado. */}
+        {excluded && (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">
+            {t.device.journeyTestBadge}
+          </span>
+        )}
+      </div>
 
       {vazio ? (
         <div className="mt-3 rounded-xl border border-line bg-surface p-5">

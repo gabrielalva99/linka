@@ -133,7 +133,8 @@
     "journeySessions": "aberturas",
     "journeyHint": "Visita = bloco de uso que termina quando a vitrine volta à tela. Tempo de vitrine e horas contam só o expediente da loja.",
     "journeyShowcase": "Vitrine no expediente",
-    "journeyRate": "parada:"
+    "journeyRate": "parada:",
+    "journeyTestBadge": "aparelho de teste · fora dos relatórios"
   },
   "campaigns": {
     "title": "Campanhas",
@@ -269,6 +270,8 @@
     "saving": "Salvando…",
     "back": "Voltar",
     "dup": "Já existe um dispositivo com esse código.",
-    "error": "Não foi possível salvar."
+    "error": "Não foi possível salvar.",
+    "testDevice": "Aparelho de teste — fora dos relatórios",
+    "testDeviceHint": "Continua sendo medido normalmente, mas não entra em relatório de cliente nem no BI. Desmarque quando o aparelho for para a loja."
   }
 }

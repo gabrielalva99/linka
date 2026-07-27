@@ -42,6 +42,21 @@ export function EditDeviceForm({
         detectedModel={detectedModel}
       />
 
+      {/* Fica no cadastro, não num painel escondido: quem move um aparelho da
+          bancada para a loja é quem precisa lembrar de tirar essa marca. */}
+      <label className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 p-4">
+        <input
+          type="checkbox"
+          name="exclude_from_reports"
+          defaultChecked={defaults.excludeFromReports}
+          className="mt-0.5"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm">{t.deviceForm.testDevice}</span>
+          <span className="text-xs text-muted">{t.deviceForm.testDeviceHint}</span>
+        </span>
+      </label>
+
       {state.status === "dup" && (
         <span className="text-sm text-danger">{t.deviceForm.dup}</span>
       )}

@@ -17,6 +17,8 @@ export type DeviceDefaults = {
   platform?: string | null;
   deviceType?: string | null;
   imei?: string | null;
+  /** Aparelho de bancada: continua sendo medido, mas sai dos relatórios. */
+  excludeFromReports?: boolean;
 };
 
 const field =

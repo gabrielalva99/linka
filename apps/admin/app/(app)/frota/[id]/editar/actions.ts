@@ -32,6 +32,8 @@ export async function updateDevice(
       platform: String(formData.get("platform") ?? "android"),
       device_type: String(formData.get("device_type") ?? "smartphone"),
       imei: emptyToNull(formData.get("imei")),
+      // Checkbox desmarcada não vem no formulário: a ausência É o "false".
+      exclude_from_reports: formData.get("exclude_from_reports") != null,
     })
     .eq("id", id);
 

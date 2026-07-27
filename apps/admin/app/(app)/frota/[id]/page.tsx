@@ -59,7 +59,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, exclude_from_reports, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -114,6 +114,7 @@ export default async function DeviceDetailPage({
     update_error: string | null;
     block_settings: boolean;
     blocked_apps: string | null;
+    exclude_from_reports: boolean;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -238,7 +239,10 @@ export default async function DeviceDetailPage({
         </p>
       )}
 
-      <JourneyPanel journey={(journeyData as Journey | null) ?? null} />
+      <JourneyPanel
+        journey={(journeyData as Journey | null) ?? null}
+        excluded={d.exclude_from_reports}
+      />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.kiosk}</h2>
