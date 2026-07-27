@@ -170,6 +170,14 @@ class MainActivity : Activity() {
                 if (!body.isNull("volume_percent")) {
                     Prefs.setVolumePercent(this@MainActivity, body.optInt("volume_percent", 0))
                 }
+                if (!body.isNull("cleanup_time")) {
+                    Prefs.setCleanupTime(this@MainActivity, body.optString("cleanup_time"))
+                }
+                if (!body.isNull("cleanup_enabled")) {
+                    Prefs.setCleanupEnabled(
+                        this@MainActivity, body.optBoolean("cleanup_enabled", true),
+                    )
+                }
                 if (!body.isNull("current_version")) {
                     Prefs.setPublishedVersion(
                         this@MainActivity,

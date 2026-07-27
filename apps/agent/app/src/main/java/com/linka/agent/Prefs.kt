@@ -26,6 +26,47 @@ object Prefs {
         editor.apply()
     }
 
+    // ── Faxina diária ────────────────────────────────────────────────────────
+    private const val KEY_CLEANUP_ON = "cleanup_enabled"
+    private const val KEY_CLEANUP_TIME = "cleanup_time"
+    private const val KEY_CLEANUP_DAY = "last_cleanup_day"
+
+    fun cleanupEnabled(ctx: Context): Boolean =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_CLEANUP_ON, true)
+
+    fun setCleanupEnabled(ctx: Context, value: Boolean) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_CLEANUP_ON, value).apply()
+
+    /** "23:00" — horário local do aparelho. */
+    fun cleanupTime(ctx: Context): String =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getString(KEY_CLEANUP_TIME, "23:00") ?: "23:00"
+
+    fun setCleanupTime(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_CLEANUP_TIME, value).apply()
+
+    /** Dia da última faxina ("2026-07-27"): impede repetir no mesmo dia. */
+    fun lastCleanupDay(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_CLEANUP_DAY, null)
+
+    fun setLastCleanupDay(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_CLEANUP_DAY, value).apply()
+
+    private const val KEY_CLEANUP_REPORT = "pending_cleanup_report"
+
+    /** Relato da faxina esperando o próximo heartbeat levar ao painel. */
+    fun pendingCleanupReport(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_CLEANUP_REPORT, null)
+
+    fun setPendingCleanupReport(ctx: Context, value: String?) {
+        val e = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+        if (value == null) e.remove(KEY_CLEANUP_REPORT) else e.putString(KEY_CLEANUP_REPORT, value)
+        e.apply()
+    }
+
     private const val KEY_PUBLISHED = "published_version"
 
     /**

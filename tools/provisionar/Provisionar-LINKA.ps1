@@ -199,6 +199,10 @@ Ok "Permissao de retorno automatico concedida"
 & $adb shell appops set com.linka.agent GET_USAGE_STATS allow 2>&1 | Out-Null
 Ok "Permissao de medicao de uso concedida"
 
+# Faxina diaria: apagar fotos e videos que o cliente deixou no aparelho.
+& $adb shell appops set com.linka.agent MANAGE_EXTERNAL_STORAGE allow 2>&1 | Out-Null
+Ok "Permissao de limpeza de arquivos concedida"
+
 # 5. Verificacao (o que vale e o que o aparelho confirma) ---------------------
 Titulo "Conferindo se as travas pegaram"
 & $adb shell am force-stop com.linka.agent | Out-Null

@@ -16,6 +16,8 @@ object Telemetry {
         val token = Prefs.token(ctx) ?: return
         val result = send(ctx, token) ?: return
         if (result.code !in 200..299) return
+        // Entregue: pode esquecer o relato da faxina.
+        Prefs.setPendingCleanupReport(ctx, null)
 
         val command = try {
             JSONObject(result.body).let { if (it.isNull("command")) null else it.optString("command") }
@@ -43,6 +45,7 @@ object Telemetry {
             if (Kiosk.setAdbEnabled(ctx, false)) "depuração desligada" else "recusado"
         "debug_on" ->
             if (Kiosk.setAdbEnabled(ctx, true)) "depuração ligada" else "recusado"
+        "cleanup_now" -> Cleanup.run(ctx).also { Prefs.setPendingCleanupReport(ctx, it) }
         else -> null
     }
 
@@ -81,6 +84,8 @@ object Telemetry {
         }
         if (commandDone != null) body.put("command_done", commandDone)
         if (commandResult != null) body.put("command_result", commandResult)
+        // Faxina que rodou sozinha precisa aparecer no painel na mesma batida.
+        Prefs.pendingCleanupReport(ctx)?.let { body.put("cleanup_result", it) }
 
         return try {
             Api.heartbeat(token, body)

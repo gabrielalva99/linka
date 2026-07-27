@@ -24,7 +24,13 @@ const MODE = new Set([
 ]);
 const FIT = new Set(["zoom", "fit"]);
 const CONNECTION = new Set(["wifi", "cellular", "ethernet", "none"]);
-const COMMANDS = new Set(["deprovision", "debug_probe", "debug_off", "debug_on"]);
+const COMMANDS = new Set([
+  "deprovision",
+  "debug_probe",
+  "debug_off",
+  "debug_on",
+  "cleanup_now",
+]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
 function modelKey(s: string) {
@@ -119,6 +125,11 @@ Deno.serve(async (req) => {
   if (done && done === device.pending_command) update.pending_command = null;
   if (payload.command_result != null) {
     update.last_command_result = String(payload.command_result).slice(0, 500);
+  }
+  // Faxina: o painel registra o que foi apagado e quando, sem supor nada.
+  if (payload.cleanup_result != null) {
+    update.last_cleanup_result = String(payload.cleanup_result).slice(0, 500);
+    update.last_cleanup_at = new Date().toISOString();
   }
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);

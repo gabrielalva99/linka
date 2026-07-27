@@ -25,7 +25,13 @@ class HeartbeatService : Service() {
         startInForeground()
         if (timer == null) {
             timer = Timer().also {
-                it.scheduleAtFixedRate(timerTask { Telemetry.beat(this@HeartbeatService) }, 0L, 60_000L)
+                it.scheduleAtFixedRate(
+                    timerTask {
+                        Telemetry.beat(this@HeartbeatService)
+                        checkCleanup()
+                    },
+                    0L, 60_000L,
+                )
             }
         }
         if (idleTimer == null) {
@@ -41,6 +47,17 @@ class HeartbeatService : Service() {
      * Quem vigia é o serviço (e não a tela) porque a tela está justamente parada
      * em segundo plano quando isso precisa acontecer.
      */
+    /**
+     * A faxina roda no serviço, não na tela: às 23h a vitrine está tocando vídeo
+     * sozinha há horas e ninguém vai abrir o app para disparar isso.
+     */
+    private fun checkCleanup() {
+        if (!Cleanup.shouldRun(this)) return
+        val report = Cleanup.run(this)
+        Prefs.setPendingCleanupReport(this, report)
+        Telemetry.beatAsync(this)
+    }
+
     private fun checkIdle() {
         val leftAt = Prefs.leftAt(this)
         if (leftAt == 0L || Prefs.token(this) == null) return
