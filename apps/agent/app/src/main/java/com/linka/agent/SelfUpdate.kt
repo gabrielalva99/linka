@@ -38,10 +38,36 @@ object SelfUpdate {
         return false
     }
 
+    /**
+     * Quantas vezes tentar antes de desistir de uma versão.
+     *
+     * Instalação pode ser recusada de forma permanente — a mais comum é assinatura
+     * diferente da que já está no aparelho. Sem limite, o aparelho baixaria o APK
+     * a cada 20 segundos para sempre: em 250 aparelhos, é o chip 5G das lojas
+     * torrado por um erro de publicação.
+     */
+    private const val MAX_TENTATIVAS = 3
+
     fun maybeUpdate(ctx: Context, version: String, url: String) {
         if (version.isEmpty() || url.isEmpty()) return
-        if (!isNewer(version, Api.AGENT_VERSION)) return
+        if (!isNewer(version, Api.AGENT_VERSION)) {
+            // Já estamos nesta versão (ou à frente): esquece falhas anteriores.
+            Prefs.clearUpdateFailure(ctx)
+            return
+        }
         if (!Kiosk.isDeviceOwner(ctx)) return
+
+        val tentativas = Prefs.updateAttempts(ctx, version)
+        if (tentativas >= MAX_TENTATIVAS) {
+            Prefs.setUpdateError(
+                ctx,
+                "Instalação da versão $version recusada $tentativas vezes — " +
+                    "provável assinatura diferente. Precisa de passagem por cabo.",
+            )
+            return
+        }
+        // Conta ANTES de tentar: se o processo morrer no meio, a tentativa contou.
+        Prefs.setUpdateAttempt(ctx, version, tentativas + 1)
         synchronized(this) {
             if (running) return
             running = true

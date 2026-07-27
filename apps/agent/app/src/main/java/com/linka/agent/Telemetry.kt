@@ -86,6 +86,8 @@ object Telemetry {
         if (commandResult != null) body.put("command_result", commandResult)
         // Faxina que rodou sozinha precisa aparecer no painel na mesma batida.
         Prefs.pendingCleanupReport(ctx)?.let { body.put("cleanup_result", it) }
+        // Aparelho que desistiu de atualizar não pode ficar em silêncio.
+        body.put("update_error", Prefs.updateError(ctx) ?: JSONObject.NULL)
 
         return try {
             Api.heartbeat(token, body)

@@ -126,6 +126,13 @@ Deno.serve(async (req) => {
   if (payload.command_result != null) {
     update.last_command_result = String(payload.command_result).slice(0, 500);
   }
+  // Desistiu de atualizar: o painel precisa dizer por quê, não só "desatualizado".
+  if ("update_error" in payload) {
+    update.update_error =
+      typeof payload.update_error === "string" && payload.update_error.length > 0
+        ? payload.update_error.slice(0, 300)
+        : null;
+  }
   // Faxina: o painel registra o que foi apagado e quando, sem supor nada.
   if (payload.cleanup_result != null) {
     update.last_cleanup_result = String(payload.cleanup_result).slice(0, 500);

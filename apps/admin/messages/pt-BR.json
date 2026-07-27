@@ -117,7 +117,8 @@
     "cleanNow": "Limpar agora",
     "cleaningNow": "Limpando…",
     "cleanupHint": "Apaga fotos e vídeos deixados pelo cliente e limpa os dados dos apps de demonstração (login do YouTube, histórico do navegador). No horário local da loja.",
-    "cleanupLast": "Última faxina"
+    "cleanupLast": "Última faxina",
+    "updateBlocked": "Atualização automática parada"
   },
   "campaigns": {
     "title": "Campanhas",

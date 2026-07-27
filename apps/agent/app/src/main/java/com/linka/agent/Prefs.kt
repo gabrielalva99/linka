@@ -67,6 +67,35 @@ object Prefs {
         e.apply()
     }
 
+    // ── Atualização automática: tentativas e desistência ─────────────────────
+    private const val KEY_UPD_VERSION = "update_try_version"
+    private const val KEY_UPD_COUNT = "update_try_count"
+    private const val KEY_UPD_ERROR = "update_error"
+
+    /** Tentativas já feitas para ESTA versão (zera quando a versão alvo muda). */
+    fun updateAttempts(ctx: Context, version: String): Int {
+        val p = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        return if (p.getString(KEY_UPD_VERSION, null) == version) {
+            p.getInt(KEY_UPD_COUNT, 0)
+        } else 0
+    }
+
+    fun setUpdateAttempt(ctx: Context, version: String, count: Int) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_UPD_VERSION, version).putInt(KEY_UPD_COUNT, count).apply()
+
+    fun updateError(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_UPD_ERROR, null)
+
+    fun setUpdateError(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_UPD_ERROR, value).apply()
+
+    /** Atualizou com sucesso: some o histórico de falha e o aviso do painel. */
+    fun clearUpdateFailure(ctx: Context) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR).apply()
+
     private const val KEY_PUBLISHED = "published_version"
 
     /**
