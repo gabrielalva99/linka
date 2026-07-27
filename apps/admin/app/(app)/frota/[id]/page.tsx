@@ -13,6 +13,7 @@ import {
 import { AutoRefresh } from "../../auto-refresh";
 import { ContentManager } from "./content-manager";
 import { DeviceFit } from "./device-fit";
+import { CleanupPanel } from "./cleanup-panel";
 import { KioskPanel } from "./kiosk-panel";
 import { PinNotice } from "./pin-notice";
 
@@ -57,7 +58,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -101,6 +102,10 @@ export default async function DeviceDetailPage({
     idle_return_seconds: number;
     adb_enabled: boolean | null;
     last_command_result: string | null;
+    cleanup_enabled: boolean;
+    cleanup_time: string;
+    last_cleanup_at: string | null;
+    last_cleanup_result: string | null;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -229,6 +234,14 @@ export default async function DeviceDetailPage({
           idleReturnSeconds={d.idle_return_seconds}
           adbEnabled={d.adb_enabled}
           lastCommandResult={d.last_command_result}
+        />
+        <CleanupPanel
+          deviceId={d.id}
+          enabled={d.cleanup_enabled}
+          time={d.cleanup_time}
+          lastAt={d.last_cleanup_at}
+          lastResult={d.last_cleanup_result}
+          pendingCommand={d.pending_command}
         />
       </section>
 

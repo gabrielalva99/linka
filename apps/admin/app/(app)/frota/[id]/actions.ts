@@ -11,12 +11,22 @@ import type { ContentFit } from "@linka/shared";
  */
 export async function sendCommand(
   deviceId: string,
-  command: "deprovision" | "debug_off" | "debug_on" | "debug_probe",
+  command: "deprovision" | "debug_off" | "debug_on" | "debug_probe" | "cleanup_now",
 ) {
   const supabase = await createSupabaseServerClient();
   await supabase
     .from("devices")
     .update({ pending_command: command })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
+/** Horário e liga/desliga da faxina diária (horário local do aparelho). */
+export async function setCleanup(deviceId: string, enabled: boolean, time: string) {
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ cleanup_enabled: enabled, cleanup_time: time })
     .eq("id", deviceId);
   revalidatePath(`/frota/${deviceId}`);
 }

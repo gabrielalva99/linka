@@ -110,7 +110,14 @@
     "upload": "Enviar novo vídeo",
     "uploading": "Enviando…",
     "uploaded": "enviado e aplicado",
-    "uploadError": "Falha no envio do vídeo."
+    "uploadError": "Falha no envio do vídeo.",
+    "cleanupEvery": "Faxina diária às",
+    "cleanupOn": "Ligada",
+    "cleanupOff": "Desligada",
+    "cleanNow": "Limpar agora",
+    "cleaningNow": "Limpando…",
+    "cleanupHint": "Apaga fotos e vídeos deixados pelo cliente e limpa os dados dos apps de demonstração (login do YouTube, histórico do navegador). No horário local da loja.",
+    "cleanupLast": "Última faxina"
   },
   "campaigns": {
     "title": "Campanhas",
