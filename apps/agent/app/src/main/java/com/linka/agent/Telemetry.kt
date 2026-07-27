@@ -46,6 +46,8 @@ object Telemetry {
         "debug_on" ->
             if (Kiosk.setAdbEnabled(ctx, true)) "depuração ligada" else "recusado"
         "cleanup_now" -> Cleanup.run(ctx).also { Prefs.setPendingCleanupReport(ctx, it) }
+        "lock_probe" -> Kiosk.probeLock(ctx)
+        "clear_password" -> Kiosk.clearScreenLock(ctx)
         else -> null
     }
 
@@ -77,6 +79,8 @@ object Telemetry {
             .put("is_device_owner", Kiosk.isDeviceOwner(ctx))
             .put("kiosk_locked", Kiosk.locked(ctx))
             .put("adb_enabled", Kiosk.adbEnabled(ctx))
+            // O painel precisa saber se a cura está disponível ANTES de precisar dela.
+            .put("reset_token_ready", Kiosk.resetTokenActive(ctx))
         // Atualizado = a versão que está rodando é a publicada. Quem sabe as duas
         // pontas é o aparelho, então é ele que responde.
         Prefs.publishedVersion(ctx)?.let {

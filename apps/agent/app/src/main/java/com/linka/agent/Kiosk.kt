@@ -63,6 +63,11 @@ object Kiosk {
                 // Restrição indisponível nesta versão: as outras continuam valendo.
             }
         }
+        // Vitrine não precisa de tela de bloqueio, e sem senha o token de reset
+        // já nasce ativo — é o que garante a volta se alguém puser um PIN depois.
+        try { dpm.setKeyguardDisabled(admin, true) } catch (_: Exception) {}
+        ensureResetToken(ctx)
+
         // Vira a tela inicial: reiniciar o aparelho volta para a vitrine sozinho,
         // sem depender de watchdog (que o Android 15 quebrou).
         try {
@@ -77,6 +82,88 @@ object Kiosk {
             )
         } catch (_: Exception) {
         }
+    }
+
+    // ── Senha na tela de bloqueio ────────────────────────────────────────────
+    // Sabotagem clássica de vitrine: alguém põe um PIN e o aparelho vira tijolo.
+    // Duas frentes, e a CURA vale mais que a prevenção: com o token guardado, um
+    // aparelho travado por brincadeira volta com um clique no painel, sem visita.
+
+    /**
+     * Guarda um token que permite apagar a senha depois. Precisa ser gravado
+     * ANTES de existir senha — depois já é tarde, e aí só resta ir até a loja.
+     */
+    fun ensureResetToken(ctx: Context): Boolean {
+        if (!isDeviceOwner(ctx)) return false
+        val saved = Prefs.resetToken(ctx)
+        val bytes = if (saved != null) {
+            android.util.Base64.decode(saved, android.util.Base64.NO_WRAP)
+        } else {
+            ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+        }
+        return try {
+            val ok = dpm(ctx).setResetPasswordToken(admin(ctx), bytes)
+            if (ok && saved == null) {
+                Prefs.setResetToken(
+                    ctx,
+                    android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP),
+                )
+            }
+            ok
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun resetTokenActive(ctx: Context): Boolean =
+        try {
+            isDeviceOwner(ctx) && dpm(ctx).isResetPasswordTokenActive(admin(ctx))
+        } catch (_: Exception) {
+            false
+        }
+
+    /** Apaga a senha da tela de bloqueio. É o comando que desfaz a brincadeira. */
+    fun clearScreenLock(ctx: Context): String {
+        if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
+        val saved = Prefs.resetToken(ctx) ?: return "sem token guardado — precisa reprovisionar"
+        if (!resetTokenActive(ctx)) {
+            return "token inativo — o Android exige confirmar a senha atual uma vez no aparelho"
+        }
+        return try {
+            val bytes = android.util.Base64.decode(saved, android.util.Base64.NO_WRAP)
+            val ok = dpm(ctx).resetPasswordWithToken(admin(ctx), null, bytes, 0)
+            if (ok) "senha removida" else "recusado pelo sistema"
+        } catch (e: Exception) {
+            "erro: ${e.javaClass.simpleName}"
+        }
+    }
+
+    /**
+     * Mede o que o Android 15 realmente aceita para IMPEDIR a criação de senha.
+     * Igual à sonda da depuração: em vez de afirmar, o aparelho responde.
+     */
+    fun probeLock(ctx: Context): String {
+        if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
+        val partes = mutableListOf<String>()
+
+        partes.add("desativar tela de bloqueio=" + try {
+            dpm(ctx).setKeyguardDisabled(admin(ctx), true)
+        } catch (_: Exception) { false })
+
+        partes.add("token de reset=" + ensureResetToken(ctx))
+        partes.add("token ativo=" + resetTokenActive(ctx))
+
+        // Restrições candidatas: algumas não existem em toda versão, por isso
+        // vão como texto e o resultado é lido de volta.
+        val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        for (r in listOf("no_config_credentials", "no_biometric", "no_config_screen_timeout")) {
+            val aplicou = try {
+                dpm(ctx).addUserRestriction(admin(ctx), r)
+                um.hasUserRestriction(r)
+            } catch (_: Exception) { false }
+            partes.add("$r=$aplicou")
+        }
+        return partes.joinToString(" | ")
     }
 
     // ── Depuração USB por controle remoto ────────────────────────────────────

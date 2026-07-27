@@ -96,6 +96,20 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR).apply()
 
+    private const val KEY_RESET_TOKEN = "reset_token"
+
+    /**
+     * Token que permite apagar a senha da tela remotamente. Fica aqui porque
+     * precisa sobreviver a reinício — e sem ele um aparelho com PIN de
+     * brincadeira só volta com visita à loja.
+     */
+    fun resetToken(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_RESET_TOKEN, null)
+
+    fun setResetToken(ctx: Context, value: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_RESET_TOKEN, value).apply()
+
     private const val KEY_PUBLISHED = "published_version"
 
     /**

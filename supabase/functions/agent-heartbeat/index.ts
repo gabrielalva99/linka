@@ -30,6 +30,8 @@ const COMMANDS = new Set([
   "debug_off",
   "debug_on",
   "cleanup_now",
+  "lock_probe",
+  "clear_password",
 ]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
@@ -119,6 +121,9 @@ Deno.serve(async (req) => {
   }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
   if (typeof payload.adb_enabled === "boolean") update.adb_enabled = payload.adb_enabled;
+  if (typeof payload.reset_token_ready === "boolean") {
+    update.reset_token_ready = payload.reset_token_ready;
+  }
 
   // O comando só sai da fila quando o aparelho confirma ter executado.
   const done = payload.command_done ? String(payload.command_done) : null;
