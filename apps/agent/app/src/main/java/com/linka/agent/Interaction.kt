@@ -30,6 +30,24 @@ object Interaction {
     /** Nunca reportamos o próprio LINKA como "uso do cliente". */
     private const val NOSSO_PACOTE = "com.linka.agent"
 
+    /**
+     * Telas do sistema que aparecem POR CIMA de um app (pedido de permissão,
+     * painel de volume). Elas não são "o que o cliente foi usar": são do app que
+     * as abriu. Medido no aparelho: o YouTube abriu, o pedido de permissão cobriu
+     * a tela por 11s e o relatório dizia "cliente usou o permissioncontroller".
+     *
+     * O Android guarda o dono da tela, mas não expõe isso em API pública
+     * (`taskRootPackageName` não compila) — então tratamos como transparentes: não
+     * encerram a sessão de quem está embaixo.
+     */
+    private val TRANSPARENTES = setOf(
+        "com.google.android.permissioncontroller",
+        "com.android.permissioncontroller",
+        "com.android.systemui",
+        "com.google.android.packageinstaller",
+        "com.android.packageinstaller",
+    )
+
     private val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
@@ -70,8 +88,10 @@ object Interaction {
                 eventos.getNextEvent(e)
                 when (e.eventType) {
                     UsageEvents.Event.ACTIVITY_RESUMED -> {
-                        if (e.packageName != atual) {
-                            // Trocou de app: fecha o anterior e abre o novo.
+                        // Diálogo do sistema não troca de app: o tempo continua
+                        // sendo de quem está embaixo.
+                        if (e.packageName !in TRANSPARENTES && e.packageName != atual) {
+                            // Trocou de app de verdade: fecha o anterior e abre o novo.
                             if (atual != null) {
                                 gravados += enfileirar(
                                     queue, "app_usage", atual, atualDesde, e.timeStamp,
