@@ -85,7 +85,10 @@ object Cleanup {
     private fun clearApp(ctx: Context, pkg: String): Boolean {
         if (!Kiosk.isDeviceOwner(ctx)) return false
         return try {
-            ctx.packageManager.getPackageInfo(pkg, 0)
+            // Não perguntamos antes "esse app existe?": desde o Android 11 um app
+            // não enxerga os outros e a pergunta falhava, fazendo a limpeza
+            // desistir de tudo (só o Play Store, que é exceção na regra, passava).
+            // Quem responde se deu certo é o próprio sistema, no retorno abaixo.
             val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE)
                 as android.app.admin.DevicePolicyManager
             val done = CountDownLatch(1)

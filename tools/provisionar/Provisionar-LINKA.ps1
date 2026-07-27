@@ -5,7 +5,11 @@
 # assume o controle do aparelho e VERIFICA se as travas pegaram de fato.
 # Se algo falhar, ele diz em portugues o que fazer.
 
-$ErrorActionPreference = "Stop"
+# "Continue" de proposito: o adb escreve avisos e falhas esperadas na saida de
+# erro (assinatura incompativel, por exemplo). Com "Stop", o PowerShell matava o
+# programa com um monte de vermelho ANTES da mensagem em portugues que o tecnico
+# precisa ler. Cada passo aqui e conferido explicitamente.
+$ErrorActionPreference = "Continue"
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 $adb = Join-Path $base "adb.exe"
 if (-not (Test-Path $adb)) { $adb = "adb" }
@@ -189,19 +193,21 @@ Se insistir, separe o aparelho e avise o suporte.
 }
 Ok "Controle assumido"
 
-# Sem esta permissao o Android proibe o app de voltar sozinho para a frente
-# quando o cliente deixa o aparelho em outra tela.
-& $adb shell appops set com.linka.agent SYSTEM_ALERT_WINDOW allow 2>&1 | Out-Null
-Ok "Permissao de retorno automatico concedida"
-
-# Medicao de uso (quais telas o cliente abriu e por quanto tempo). Sem isto o
-# Android nao entrega esse dado a nenhum app comum.
-& $adb shell appops set com.linka.agent GET_USAGE_STATS allow 2>&1 | Out-Null
-Ok "Permissao de medicao de uso concedida"
-
-# Faxina diaria: apagar fotos e videos que o cliente deixou no aparelho.
-& $adb shell appops set com.linka.agent MANAGE_EXTERNAL_STORAGE allow 2>&1 | Out-Null
-Ok "Permissao de limpeza de arquivos concedida"
+# Permissoes que so existem por aqui. CONFERIR e obrigatorio: o comando de
+# concessao roda sem erro mesmo quando nao surte efeito (foi o que aconteceu com
+# a medicao de uso, que ficava "default" e o script dizia OK).
+$permissoes = @(
+  @{ op = "SYSTEM_ALERT_WINDOW";     nome = "Retorno automatico a vitrine" }
+  @{ op = "GET_USAGE_STATS";         nome = "Medicao de uso (telemetria)" }
+  @{ op = "MANAGE_EXTERNAL_STORAGE"; nome = "Limpeza de fotos e videos" }
+)
+$permFaltando = @()
+foreach ($p in $permissoes) {
+  & $adb shell appops set com.linka.agent $($p.op) allow 2>&1 | Out-Null
+  $estado = (& $adb shell appops get com.linka.agent $($p.op) 2>&1) -join " "
+  if ($estado -match "allow") { Ok $p.nome }
+  else { Falha "$($p.nome) - nao foi concedida"; $permFaltando += $p.nome }
+}
 
 # 5. Verificacao (o que vale e o que o aparelho confirma) ---------------------
 Titulo "Conferindo se as travas pegaram"
@@ -232,9 +238,10 @@ if ($aviao -eq "0") {
   Falha "Teste pratico: o modo aviao LIGOU (nao deveria)"
 }
 
+$faltando += $permFaltando
 if ($faltando.Count -gt 0) {
   Fim $false @"
-O controle foi assumido, mas estas travas nao confirmaram:
+O controle foi assumido, mas estes itens nao confirmaram:
  - $($faltando -join "`n - ")
 
 Tire foto desta tela e avise o suporte ANTES de devolver o aparelho a vitrine.
