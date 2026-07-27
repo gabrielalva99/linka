@@ -110,6 +110,9 @@ export default async function FrotaPage({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t.fleet.title}</h1>
         <div className="flex items-center gap-3">
+          <Link href="/frota/versoes" className="text-sm text-muted hover:underline">
+            Versões do agente
+          </Link>
           <Link href="/frota/modelos" className="text-sm text-muted hover:underline">
             {t.models.manage}
           </Link>
