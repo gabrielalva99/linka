@@ -121,6 +121,9 @@ Deno.serve(async (req) => {
   }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
   if (typeof payload.adb_enabled === "boolean") update.adb_enabled = payload.adb_enabled;
+  if (typeof payload.blocked_apps === "string") {
+    update.blocked_apps = payload.blocked_apps.slice(0, 200);
+  }
   if (typeof payload.reset_token_ready === "boolean") {
     update.reset_token_ready = payload.reset_token_ready;
   }

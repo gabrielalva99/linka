@@ -96,6 +96,16 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR).apply()
 
+    private const val KEY_BLOCK_SETTINGS = "block_settings"
+
+    /** Bloquear Ajustes e Play Store (decidido no painel, por aparelho). */
+    fun blockSettings(ctx: Context): Boolean =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_BLOCK_SETTINGS, false)
+
+    fun setBlockSettings(ctx: Context, value: Boolean) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_BLOCK_SETTINGS, value).apply()
+
     private const val KEY_RESET_TOKEN = "reset_token"
 
     /**

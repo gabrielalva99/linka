@@ -67,6 +67,8 @@ object Kiosk {
         // já nasce ativo — é o que garante a volta se alguém puser um PIN depois.
         try { dpm.setKeyguardDisabled(admin, true) } catch (_: Exception) {}
         ensureResetToken(ctx)
+        // Reaplica o bloqueio a cada início: atualização não pode reabrir a porta.
+        applyAppBlocks(ctx, Prefs.blockSettings(ctx))
 
         // Vira a tela inicial: reiniciar o aparelho volta para a vitrine sozinho,
         // sem depender de watchdog (que o Android 15 quebrou).
@@ -82,6 +84,55 @@ object Kiosk {
             )
         } catch (_: Exception) {
         }
+    }
+
+    // ── Bloqueio de apps de sabotagem ────────────────────────────────────────
+    /**
+     * Ajustes e Play Store.
+     *
+     * Ajustes é o caminho para criar senha de tela — e o Android **não tem** trava
+     * específica para isso (medido no aparelho: o token de reset é recusado neste
+     * hardware, então não existe cura depois do estrago). Fechar a porta é o que
+     * sobra. Play Store impede instalar app qualquer numa vitrine.
+     *
+     * Câmera, YouTube, navegador e o resto continuam livres: o cliente ainda testa
+     * o aparelho de verdade, que é o ponto da demonstração.
+     */
+    private val BLOCKABLE = listOf("com.android.settings", "com.android.vending")
+
+    /** Devolve o que foi realmente bloqueado — o painel não deve supor. */
+    fun applyAppBlocks(ctx: Context, blocked: Boolean): String {
+        if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
+        val dpm = dpm(ctx)
+        val admin = admin(ctx)
+        val efetivos = mutableListOf<String>()
+        for (pkg in BLOCKABLE) {
+            val ok = try {
+                dpm.setApplicationHidden(admin, pkg, blocked)
+            } catch (_: Exception) {
+                false
+            }
+            // Confere o estado real em vez de confiar no retorno.
+            val agora = try {
+                dpm.isApplicationHidden(admin, pkg)
+            } catch (_: Exception) {
+                false
+            }
+            if (ok && agora == blocked && blocked) efetivos.add(pkg.substringAfterLast('.'))
+        }
+        return if (!blocked) "" else efetivos.joinToString(", ")
+    }
+
+    /** O que está bloqueado neste momento (para o heartbeat). */
+    fun blockedApps(ctx: Context): String {
+        if (!isDeviceOwner(ctx)) return ""
+        return BLOCKABLE.filter {
+            try {
+                dpm(ctx).isApplicationHidden(admin(ctx), it)
+            } catch (_: Exception) {
+                false
+            }
+        }.joinToString(", ") { it.substringAfterLast('.') }
     }
 
     // ── Senha na tela de bloqueio ────────────────────────────────────────────

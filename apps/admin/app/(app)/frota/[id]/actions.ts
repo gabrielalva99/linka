@@ -21,6 +21,16 @@ export async function sendCommand(
   revalidatePath(`/frota/${deviceId}`);
 }
 
+/** Bloquear Ajustes e Play Store — fecha o caminho para criar senha de tela. */
+export async function setBlockSettings(deviceId: string, blocked: boolean) {
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ block_settings: blocked })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
 /** Horário e liga/desliga da faxina diária (horário local do aparelho). */
 export async function setCleanup(deviceId: string, enabled: boolean, time: string) {
   const supabase = await createSupabaseServerClient();

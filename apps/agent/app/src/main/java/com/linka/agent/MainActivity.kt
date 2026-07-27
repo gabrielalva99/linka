@@ -173,6 +173,14 @@ class MainActivity : Activity() {
                 if (!body.isNull("cleanup_time")) {
                     Prefs.setCleanupTime(this@MainActivity, body.optString("cleanup_time"))
                 }
+                if (!body.isNull("block_settings")) {
+                    val bloquear = body.optBoolean("block_settings", false)
+                    if (bloquear != Prefs.blockSettings(this@MainActivity)) {
+                        Prefs.setBlockSettings(this@MainActivity, bloquear)
+                        Kiosk.applyAppBlocks(this@MainActivity, bloquear)
+                        Telemetry.beatAsync(this@MainActivity)
+                    }
+                }
                 if (!body.isNull("cleanup_enabled")) {
                     Prefs.setCleanupEnabled(
                         this@MainActivity, body.optBoolean("cleanup_enabled", true),

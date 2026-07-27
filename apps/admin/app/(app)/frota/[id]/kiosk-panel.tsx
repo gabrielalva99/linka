@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
-import { sendCommand } from "./actions";
+import { sendCommand, setBlockSettings } from "./actions";
 import { IdleReturn } from "./idle-return";
 
 /**
@@ -19,6 +19,8 @@ export function KioskPanel({
   idleReturnSeconds,
   adbEnabled,
   lastCommandResult,
+  blockSettings,
+  blockedApps,
 }: {
   deviceId: string;
   isDeviceOwner: boolean;
@@ -27,6 +29,8 @@ export function KioskPanel({
   idleReturnSeconds: number;
   adbEnabled: boolean | null;
   lastCommandResult: string | null;
+  blockSettings: boolean;
+  blockedApps: string | null;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -100,6 +104,33 @@ export function KioskPanel({
             {adbEnabled ? t.device.usbDebugDisable : t.device.usbDebugEnable}
           </button>
           <span className="w-full text-xs text-muted">{t.device.usbDebugHint}</span>
+        </div>
+      )}
+
+      {isDeviceOwner && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          <span className="text-xs text-muted">{t.device.blockApps}</span>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                await setBlockSettings(deviceId, !blockSettings);
+                router.refresh();
+              })
+            }
+            className={`rounded-md px-3 py-1 text-xs font-medium ${
+              blockSettings
+                ? "bg-success/15 text-success"
+                : "border border-line text-muted"
+            }`}
+          >
+            {blockSettings ? t.device.blocked : t.device.notBlocked}
+          </button>
+          {blockedApps && (
+            <span className="text-xs text-muted">({blockedApps})</span>
+          )}
+          <span className="w-full text-xs text-muted">{t.device.blockAppsHint}</span>
         </div>
       )}
 

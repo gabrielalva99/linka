@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time")
+    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
     idle_return_seconds: device.idle_return_seconds ?? 30,
     volume_percent: device.volume_percent ?? 0,
+    block_settings: device.block_settings ?? false,
     cleanup_enabled: device.cleanup_enabled ?? true,
     cleanup_time: String(device.cleanup_time ?? "23:00").slice(0, 5),
     // Quem decide "estou atualizado" é o aparelho (ele conhece as duas pontas);

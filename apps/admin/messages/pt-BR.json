@@ -118,7 +118,11 @@
     "cleaningNow": "Limpando…",
     "cleanupHint": "Apaga fotos e vídeos deixados pelo cliente e limpa os dados dos apps de demonstração (login do YouTube, histórico do navegador). No horário local da loja.",
     "cleanupLast": "Última faxina",
-    "updateBlocked": "Atualização automática parada"
+    "updateBlocked": "Atualização automática parada",
+    "blockApps": "Ajustes e Play Store",
+    "blocked": "Bloqueados",
+    "notBlocked": "Liberados",
+    "blockAppsHint": "Bloqueia o caminho para criar senha de tela e instalar apps. Câmera, navegador e o resto continuam livres para o cliente testar."
   },
   "campaigns": {
     "title": "Campanhas",

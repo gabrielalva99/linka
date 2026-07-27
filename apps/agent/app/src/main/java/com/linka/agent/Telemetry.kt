@@ -81,6 +81,7 @@ object Telemetry {
             .put("adb_enabled", Kiosk.adbEnabled(ctx))
             // O painel precisa saber se a cura está disponível ANTES de precisar dela.
             .put("reset_token_ready", Kiosk.resetTokenActive(ctx))
+            .put("blocked_apps", Kiosk.blockedApps(ctx))
         // Atualizado = a versão que está rodando é a publicada. Quem sabe as duas
         // pontas é o aparelho, então é ele que responde.
         Prefs.publishedVersion(ctx)?.let {
