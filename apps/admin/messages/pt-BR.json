@@ -48,7 +48,17 @@
     "colMode": "Modo",
     "colBattery": "Bateria",
     "colVersion": "Versão",
-    "colLastSeen": "Últ. contato"
+    "colLastSeen": "Últ. contato",
+    "searchPlaceholder": "Buscar por código, nome, loja ou modelo",
+    "allStores": "Todas as lojas",
+    "noStoreFilter": "Sem loja definida",
+    "anyStatus": "Qualquer situação",
+    "withProblem": "Com problema",
+    "offlineOnly": "Fora do ar",
+    "unlockedOnly": "Sem travas",
+    "outdatedOnly": "App desatualizado",
+    "clearFilters": "Limpar",
+    "noResults": "Nenhum aparelho encontrado com esses filtros."
   },
   "device": {
     "back": "Frota",
@@ -245,7 +255,12 @@
     "error": "Não foi possível salvar.",
     "opensAt": "Abre às",
     "closesAt": "Fecha às",
-    "hoursHint": "Usado nos relatórios: só o tempo dentro do expediente conta como exposição da vitrine."
+    "hoursHint": "Usado nos relatórios: só o tempo dentro do expediente conta como exposição da vitrine.",
+    "devicesHere": "Aparelhos nesta loja ({n})",
+    "noDevicesHere": "Nenhum aparelho nesta loja ainda.",
+    "deviceOnline": "no ar",
+    "deviceOffline": "fora do ar",
+    "deviceNoVideo": "sem vídeo na tela"
   },
   "positions": {
     "title": "Posições",

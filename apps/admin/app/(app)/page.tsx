@@ -14,6 +14,7 @@ type Issue = {
   detalhe: string;
   aberta: boolean;
   exclude_from_reports: boolean;
+  store_id: string | null;
 };
 
 /**
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
       supabase
         .from("v_device_issues")
         .select(
-          "device_id, code, name, loja, tipo, gravidade, detalhe, aberta, exclude_from_reports",
+          "device_id, code, name, loja, store_id, tipo, gravidade, detalhe, aberta, exclude_from_reports",
         ),
       supabase.from("devices").select("id", { count: "exact", head: true }),
     ]);
@@ -68,10 +69,17 @@ export default async function DashboardPage() {
   const total = totalDevices ?? 0;
 
   // Por loja, com os críticos primeiro: é a ordem em que alguém vai agir.
-  const porLoja = new Map<string, Issue[]>();
+  // Agrupa por id da loja, não pelo nome: duas lojas homônimas de redes
+  // diferentes colapsariam no mesmo bloco e a pessoa iria ao endereço errado.
+  const porLoja = new Map<string, { nome: string; lojaId: string | null; itens: Issue[] }>();
   for (const i of [...criticos, ...atencao]) {
-    const chave = i.loja ?? t.home.noStore;
-    porLoja.set(chave, [...(porLoja.get(chave) ?? []), i]);
+    const chave = i.store_id ?? "sem-loja";
+    const atual = porLoja.get(chave);
+    porLoja.set(chave, {
+      nome: i.loja ?? t.home.noStore,
+      lojaId: i.store_id,
+      itens: [...(atual?.itens ?? []), i],
+    });
   }
 
   const rotulo: Record<string, string> = {
@@ -126,11 +134,22 @@ export default async function DashboardPage() {
           </div>
 
           <div className="mt-6 flex flex-col gap-4">
-            {[...porLoja.entries()].map(([loja, lista]) => (
-              <section key={loja} className="rounded-xl border border-line bg-surface p-5">
-                <h2 className="text-sm font-medium">{loja}</h2>
+            {[...porLoja.entries()].map(([chave, grupo]) => (
+              <section key={chave} className="rounded-xl border border-line bg-surface p-5">
+                <h2 className="text-sm font-medium">
+                  {grupo.lojaId ? (
+                    <Link
+                      href={`/lojas/${grupo.lojaId}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {grupo.nome}
+                    </Link>
+                  ) : (
+                    grupo.nome
+                  )}
+                </h2>
                 <ul className="mt-3 flex flex-col gap-2">
-                  {lista.map((i) => (
+                  {grupo.itens.map((i) => (
                     <li
                       key={`${i.device_id}-${i.tipo}`}
                       className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-line pb-2 last:border-0 last:pb-0"

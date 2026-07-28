@@ -11,6 +11,7 @@ import {
 import { modelLabel } from "@/lib/device-display";
 import { StatusBadge } from "./status-badge";
 import { TypeTabs } from "./type-tabs";
+import { Filters } from "./filters";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 type DeviceRow = {
@@ -70,9 +71,15 @@ function Kpi({ label, value, total }: { label: string; value: number; total: num
 export default async function FrotaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string }>;
+  searchParams: Promise<{
+    tipo?: string;
+    q?: string;
+    loja?: string;
+    situacao?: string;
+  }>;
 }) {
-  const { tipo } = await searchParams;
+  const { tipo, q, loja, situacao } = await searchParams;
+  const busca = (q ?? "").trim().toLowerCase();
   const activeType = (DEVICE_TYPE as readonly string[]).includes(tipo ?? "")
     ? (tipo as DeviceType)
     : null;
@@ -93,6 +100,10 @@ export default async function FrotaPage({
     .select("version")
     .eq("is_current", true)
     .maybeSingle();
+  const { data: lojasData } = await supabase
+    .from("stores")
+    .select("id, name")
+    .order("name");
   const { data } = await supabase
     .from("devices")
     .select(
@@ -106,25 +117,61 @@ export default async function FrotaPage({
   const counts: Record<string, number> = {};
   for (const d of all) counts[d.device_type] = (counts[d.device_type] ?? 0) + 1;
 
-  const devices = activeType
+  // Os KPIs seguem a ABA, não a busca: um filtro de texto não pode fazer o
+  // painel dizer que a frota inteira está no ar porque sobrou um aparelho.
+  const daAba = activeType
     ? all.filter((d) => d.device_type === activeType)
     : all;
 
-  const total = devices.length;
-  const online = devices.filter(
+  const publicadaAgora = release?.version ?? null;
+  const devices = daAba.filter((d) => {
+    if (busca) {
+      const alvo = `${d.code ?? ""} ${d.name} ${relName(d.stores)} ${
+        d.hardware_model ?? ""
+      }`.toLowerCase();
+      if (!alvo.includes(busca)) return false;
+    }
+    if (loja === "sem") {
+      if (d.store_id) return false;
+    } else if (loja) {
+      if (d.store_id !== loja) return false;
+    }
+    if (situacao) {
+      const fora = effectiveStatus(d.status, d.last_seen_at) !== "online";
+      if (situacao === "offline" && !fora) return false;
+      if (situacao === "sem_travas" && d.kiosk_locked) return false;
+      if (
+        situacao === "desatualizado" &&
+        (!publicadaAgora || d.agent_version === publicadaAgora)
+      ) {
+        return false;
+      }
+      // "Com problema" é o guarda-chuva: qualquer um dos anteriores, mais
+      // aparelho sem loja, que é o que impede campanha de alcançar.
+      if (situacao === "problema") {
+        const desatualizado =
+          publicadaAgora != null && d.agent_version !== publicadaAgora;
+        if (!fora && d.kiosk_locked && !desatualizado && d.store_id) return false;
+      }
+    }
+    return true;
+  });
+
+  const total = daAba.length;
+  const online = daAba.filter(
     (d) => effectiveStatus(d.status, d.last_seen_at) === "online",
   ).length;
-  const synced = devices.filter((d) => d.synced).length;
-  const publicada = release?.version ?? null;
+  const synced = daAba.filter((d) => d.synced).length;
+  const publicada = publicadaAgora;
   const updated = publicada
-    ? devices.filter((d) => d.agent_version === publicada).length
+    ? daAba.filter((d) => d.agent_version === publicada).length
     : 0;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
-  const locked = devices.filter((d) => d.kiosk_locked).length;
+  const locked = daAba.filter((d) => d.kiosk_locked).length;
   // Aparelho que se cadastrou sozinho chega sem loja. É o único dado que ele
   // não tem como descobrir, e sem ele nenhuma campanha alcança o aparelho.
-  const semLoja = devices.filter((d) => !d.store_id);
+  const semLoja = daAba.filter((d) => !d.store_id);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -147,6 +194,16 @@ export default async function FrotaPage({
       </div>
 
       <TypeTabs active={activeType} counts={counts} />
+
+      <Filters
+        lojas={(lojasData ?? []).map((l) => ({
+          id: l.id as string,
+          nome: l.name as string,
+        }))}
+        busca={q ?? ""}
+        loja={loja ?? ""}
+        situacao={situacao ?? ""}
+      />
 
       {/* O código do cliente inteiro, não um por aparelho: é ele que vai no kit
           do técnico e faz o aparelho se cadastrar sozinho. */}
@@ -175,8 +232,16 @@ export default async function FrotaPage({
               : `${semLoja.length} aparelhos chegaram e ainda não têm loja.`}{" "}
             Sem loja definida, nenhuma campanha alcança o aparelho.
           </p>
-          <p className="mt-1 text-xs text-muted">
-            {semLoja.map((d) => d.name).join(" · ")}
+          <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
+            {semLoja.map((d) => (
+              <Link
+                key={d.id}
+                href={`/frota/${d.id}/editar`}
+                className="hover:text-primary hover:underline"
+              >
+                {d.name}
+              </Link>
+            ))}
           </p>
         </div>
       )}
@@ -225,7 +290,18 @@ export default async function FrotaPage({
                       t.device.detected,
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted">{relName(d.stores)}</td>
+                  <td className="px-4 py-3 text-muted">
+                    {d.store_id ? (
+                      <Link
+                        href={`/lojas/${d.store_id}`}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {relName(d.stores)}
+                      </Link>
+                    ) : (
+                      relName(d.stores)
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-muted">
                     {d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"}
                   </td>
@@ -243,7 +319,10 @@ export default async function FrotaPage({
           </table>
         ) : (
           <p className="bg-surface px-4 py-8 text-center text-sm text-muted">
-            {t.fleet.empty}
+            {/* Lista vazia por causa de filtro não é frota vazia. Dizer
+                "nenhum aparelho cadastrado" com 250 no banco faz a pessoa achar
+                que perdeu tudo. */}
+            {busca || loja || situacao ? t.fleet.noResults : t.fleet.empty}
           </p>
         )}
       </div>
