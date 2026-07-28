@@ -393,8 +393,8 @@
   "reports": {
     "title": "Relatórios",
     "days": "{n} dias",
-    "export": "Planilha de uso",
-    "exportContent": "Planilha de vídeos",
+    "export": "Baixar planilha",
+    "exportContent": "Baixar esta tabela",
     "empty": "Ainda não há interação registrada neste período.",
     "readFailed": "Não consegui montar o relatório. Recarregue a página.",
     "visits": "Visitas",

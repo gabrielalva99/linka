@@ -250,20 +250,16 @@ export default async function RelatoriosPage({
               {t.reports.days.replace("{n}", String(d))}
             </Link>
           ))}
-          {/* Duas planilhas porque são dois grãos diferentes. Uma só, com as
-              duas coisas, convida a somar tempo de uso com tempo de vídeo — que
-              se sobrepõem e não somam. */}
+          {/* Um botão só aqui em cima. O download de vídeos vive dentro da
+              seção de vídeos: dois botões iguais lado a lado eram eu empurrando
+              para quem lê uma decisão que é minha — as duas planilhas têm grãos
+              diferentes (recurso × vídeo) e não podem virar um arquivo só, mas
+              isso não é problema de quem clica. */}
           <a
             href={`/relatorios/exportar?dias=${periodo}${filtroUrl}`}
             className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
           >
             {t.reports.export}
-          </a>
-          <a
-            href={`/relatorios/exportar?tipo=conteudo&dias=${periodo}${filtroUrl}`}
-            className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
-          >
-            {t.reports.exportContent}
           </a>
         </div>
       </div>
@@ -599,7 +595,17 @@ export default async function RelatoriosPage({
           )}
 
           <section className="mt-8">
-            <h2 className="text-sm font-medium text-muted">{t.reports.byContent}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byContent}</h2>
+              {(r.por_conteudo?.length ?? 0) > 0 && (
+                <a
+                  href={`/relatorios/exportar?tipo=conteudo&dias=${periodo}${filtroUrl}`}
+                  className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+                >
+                  {t.reports.exportContent}
+                </a>
+              )}
+            </div>
             <div className="mt-3 overflow-x-auto rounded-xl border border-line">
               {(r.por_conteudo?.length ?? 0) > 0 ? (
                 <table className="w-full min-w-[480px] text-sm">
