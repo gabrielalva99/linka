@@ -130,7 +130,7 @@ export function PublishForm() {
       )}
       {state.ok === true && (
         <p className="mt-3 text-xs text-success">
-          {state.version} publicada — a frota atualiza sozinha.
+          {state.version} publicada. Os aparelhos atualizam sozinhos.
         </p>
       )}
     </form>

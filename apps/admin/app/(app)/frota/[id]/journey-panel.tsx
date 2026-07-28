@@ -207,8 +207,8 @@ export function JourneyPanel({
                       style={{ height: `${altura}px` }}
                       title={
                         dado
-                          ? `${h}h — ${dado.visitas} visita(s), ${tempo(dado.segundos)}`
-                          : `${h}h — sem movimento`
+                          ? `${h}h · ${dado.visitas} visita(s), ${tempo(dado.segundos)}`
+                          : `${h}h · sem movimento`
                       }
                     />
                     <span className="text-[10px] text-muted">{h}</span>

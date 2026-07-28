@@ -114,7 +114,7 @@ export function ContentManager({
         {uploading && <span className="text-xs text-muted">{t.device.uploading}</span>}
         {uploaded && (
           <span className="text-xs text-success">
-            ✓ {uploaded} — {t.device.uploaded}
+            ✓ {uploaded} · {t.device.uploaded}
           </span>
         )}
         {error && <span className="text-xs text-danger">{error}</span>}

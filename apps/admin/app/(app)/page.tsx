@@ -31,14 +31,35 @@ export default async function DashboardPage() {
   const t = getMessages();
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: issuesData }, { count: totalDevices }] = await Promise.all([
-    supabase
-      .from("v_device_issues")
-      .select(
-        "device_id, code, name, loja, tipo, gravidade, detalhe, aberta, exclude_from_reports",
-      ),
-    supabase.from("devices").select("id", { count: "exact", head: true }),
-  ]);
+  const [{ data: issuesData, error: issuesError }, { count: totalDevices }] =
+    await Promise.all([
+      supabase
+        .from("v_device_issues")
+        .select(
+          "device_id, code, name, loja, tipo, gravidade, detalhe, aberta, exclude_from_reports",
+        ),
+      supabase.from("devices").select("id", { count: "exact", head: true }),
+    ]);
+
+  // Falha de leitura NÃO pode virar "tudo certo". Esta tela existe para avisar
+  // que algo caiu; se ela mesma cair em silêncio, mente exatamente na hora em
+  // que mais importa: sessão expirada, banco fora do ar e frota saudável
+  // produziam a mesma tela verde.
+  if (issuesError) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <h1 className="text-xl font-semibold">
+          {t.dashboard.welcome}
+          {ctx?.fullName ? `, ${ctx.fullName}` : ""}
+        </h1>
+        <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-6">
+          <p className="text-lg font-semibold text-warning">{t.home.readFailed}</p>
+          <p className="mt-1 text-sm text-muted">{t.home.readFailedHint}</p>
+        </div>
+        <AutoRefresh ms={30000} />
+      </div>
+    );
+  }
 
   const issues = (issuesData ?? []) as Issue[];
   const criticos = issues.filter((i) => i.gravidade === "critico");

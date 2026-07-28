@@ -32,7 +32,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LINKA — Painel",
+  title: "LINKA · Painel",
   description:
     "Gestão, conteúdo e analytics para dispositivos de demonstração no varejo.",
 };

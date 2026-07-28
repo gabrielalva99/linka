@@ -309,6 +309,8 @@
     "updateStuck": "atualização travada",
     "lowBattery": "bateria baixa",
     "hot": "quente",
-    "noStoreSet": "sem loja"
+    "noStoreSet": "sem loja",
+    "readFailed": "Não consegui ler a situação dos aparelhos",
+    "readFailedHint": "Isso não quer dizer que está tudo bem nem que está tudo mal: quer dizer que o painel não conseguiu consultar agora. Recarregue a página; se continuar, saia e entre de novo."
   }
 }
