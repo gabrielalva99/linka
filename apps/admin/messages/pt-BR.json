@@ -377,8 +377,6 @@
     "hourHint": "Horário da loja, somado no período.",
     "noVisits": "{n} aparelho(s) sem nenhuma visita no período",
     "noVisitsHint": "Pode ser ponto ruim na loja, pode ser aparelho com problema. Nos dois casos alguém precisa olhar.",
-    "blockedUsed": "Alguém abriu um app que deveria estar bloqueado",
-    "blockedHint": "Ajustes e Play Store são bloqueados porque é por ali que se cria senha de tela e se instala qualquer coisa num aparelho de vitrine. Se aparecem aqui, o bloqueio não estava valendo nesse aparelho.",
     "times": "{n} vez(es)",
     "allChains": "Todas as redes",
     "allStores": "Todas as lojas",
@@ -386,6 +384,11 @@
     "clearFilters": "Limpar",
     "byDevice": "Por aparelho",
     "device": "Aparelho",
-    "excluded": "{n} aparelho(s) marcado(s) como teste ficam fora deste relatório."
+    "excluded": "{n} aparelho(s) marcado(s) como teste ficam fora deste relatório.",
+    "blockedOpen": "Aparelho com Ajustes ou Play Store liberados agora",
+    "blockedOpenHint": "É por ali que se cria senha de tela e se instala qualquer coisa. Abra o aparelho e ligue o bloqueio; o aviso some sozinho quando o aparelho confirmar que bloqueou.",
+    "blockedFixed": "{n} caso(s) de app bloqueado aberto no passado, já corrigidos",
+    "blockedFixedHint": "Aconteceu no período, e o aparelho já confirma que Ajustes e Play Store estão bloqueados agora. Fica registrado, não pede ação.",
+    "lastTime": "última vez em"
   }
 }

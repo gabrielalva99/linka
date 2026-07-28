@@ -3,6 +3,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { ReportFilters } from "./report-filters";
 
+type Proibido = {
+  loja: string;
+  aparelho: string;
+  codigo: string | null;
+  app: string;
+  vezes: number;
+  ultima_vez: string;
+};
+
 type Report = {
   dias: number;
   visitas: number;
@@ -32,13 +41,8 @@ type Report = {
     segundos: number;
   }[];
   por_dia: { dia: string; visitas: number; segundos: number }[];
-  apps_proibidos: {
-    loja: string;
-    aparelho: string;
-    codigo: string | null;
-    app: string;
-    vezes: number;
-  }[];
+  proibidos_abertos: Proibido[];
+  proibidos_corrigidos: Proibido[];
   por_hora: { hora: number; visitas: number }[];
   aparelhos_sem_visita: { aparelho: string; codigo: string | null; loja: string }[];
 };
@@ -172,22 +176,46 @@ export default async function RelatoriosPage({
         </div>
       ) : (
         <>
-          {r.apps_proibidos?.length > 0 && (
+          {/* Aberto pede ação hoje. Corrigido é história, e história em caixa
+              amarela ensina a pessoa a ignorar caixa amarela. */}
+          {r.proibidos_abertos?.length > 0 && (
             <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
               <p className="text-sm font-semibold text-warning">
-                {t.reports.blockedUsed}
+                {t.reports.blockedOpen}
               </p>
-              <p className="mt-1 text-xs text-muted">{t.reports.blockedHint}</p>
+              <p className="mt-1 text-xs text-muted">{t.reports.blockedOpenHint}</p>
               <ul className="mt-2 flex flex-col gap-1 text-xs">
-                {r.apps_proibidos.map((a) => (
+                {r.proibidos_abertos.map((a) => (
                   <li key={`${a.codigo}-${a.app}`} className="text-muted">
                     <span className="text-warning">{a.app}</span>
                     {` · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
                     {t.reports.times.replace("{n}", String(a.vezes))}
+                    {` · ${a.ultima_vez}`}
                   </li>
                 ))}
               </ul>
             </div>
+          )}
+
+          {r.proibidos_corrigidos?.length > 0 && (
+            <details className="mt-6 rounded-xl border border-line bg-surface p-5">
+              <summary className="cursor-pointer text-sm text-muted">
+                {t.reports.blockedFixed.replace(
+                  "{n}",
+                  String(r.proibidos_corrigidos.length),
+                )}
+              </summary>
+              <p className="mt-2 text-xs text-muted">{t.reports.blockedFixedHint}</p>
+              <ul className="mt-2 flex flex-col gap-1 text-xs text-muted">
+                {r.proibidos_corrigidos.map((a) => (
+                  <li key={`${a.codigo}-${a.app}`}>
+                    {`${a.app} · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
+                    {t.reports.times.replace("{n}", String(a.vezes))}
+                    {` · ${t.reports.lastTime} ${a.ultima_vez}`}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
 
           <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
