@@ -453,6 +453,13 @@
     "storesWith": "{n} de {t} lojas com aparelho",
     "withoutStore": "{n} sem loja definida",
     "coverage": "Cobertura por linha",
-    "coverageHint": "Lojas que têm a linha instalada, sobre o total de lojas do recorte. Sai do cadastro da frota, não do movimento: linha instalada e nunca tocada continua instalada — e é esse o caso que precisa aparecer."
+    "coverageHint": "Lojas que têm a linha instalada, sobre o total de lojas do recorte. Sai do cadastro da frota, não do movimento: linha instalada e nunca tocada continua instalada — e é esse o caso que precisa aparecer.",
+    "lastDay": "Último dia contra a média",
+    "lastDayColumn": "Último dia",
+    "average": "Média dos outros dias",
+    "change": "Variação",
+    "lastDayHint": "O dia de hoje fica de fora: ainda está correndo, e comparado com dias inteiros todo modelo apareceria em queda toda manhã.",
+    "profile": "Perfil por hora, por linha",
+    "profileHint": "Cada barra é a fatia das visitas daquela linha naquela hora. O traço claro é a mesma fatia na operação inteira — barra acima do traço quer dizer que a linha atrai naquele horário mais do que o resto."
   }
 }

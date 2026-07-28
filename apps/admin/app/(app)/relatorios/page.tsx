@@ -58,7 +58,12 @@ type Report = {
     visitas: number;
     segundos: number;
     segundos_vitrine: number;
+    ultimo_dia: number | null;
+    ultimo_dia_data: string | null;
+    media_dia: number | null;
+    dias_base: number;
   }[];
+  perfil_hora: { linha: string; hora: number; visitas: number }[];
   por_recurso_modelo: {
     modelo: string;
     recurso: string;
@@ -238,6 +243,41 @@ export default async function RelatoriosPage({
   const maiorCelula = Math.max(1, ...(r.mapa ?? []).map((c) => c.visitas));
   const canais = [...new Set((r.por_canal_hora ?? []).map((c) => c.tipo_local))];
   const maiorCanal = Math.max(1, ...(r.por_canal_hora ?? []).map((c) => c.visitas));
+
+  // Modelos com pelo menos um outro dia completo para servir de base. Sem isso
+  // a seção seria uma tabela de traços.
+  const comparaveis = (r.por_modelo ?? []).filter(
+    (m) => m.dias_base > 0 && m.ultimo_dia != null && m.media_dia != null,
+  );
+
+  /**
+   * Perfil horário: a fatia das visitas de cada linha em cada hora, contra a
+   * mesma fatia na operação inteira.
+   *
+   * Em fatia e não em contagem de propósito — a linha com mais aparelhos na rua
+   * ganharia todas as horas, e a pergunta aqui não é volume, é HORÁRIO.
+   */
+  const totalGeralHora = (r.por_hora ?? []).reduce((s, h) => s + h.visitas, 0);
+  const linhas = [...new Set((r.perfil_hora ?? []).map((x) => x.linha))];
+  const perfis = linhas.map((linha) => {
+    const dela = (r.perfil_hora ?? []).filter((x) => x.linha === linha);
+    const total = dela.reduce((s, x) => s + x.visitas, 0) || 1;
+    return {
+      linha,
+      horas: HORAS.map((h) => ({
+        hora: h,
+        linhaPct: (dela.find((x) => x.hora === h)?.visitas ?? 0) / total,
+        geralPct:
+          totalGeralHora > 0
+            ? (r.por_hora.find((x) => x.hora === h)?.visitas ?? 0) / totalGeralHora
+            : 0,
+      })),
+    };
+  });
+  const maiorPct = Math.max(
+    0.01,
+    ...perfis.flatMap((p) => p.horas.flatMap((h) => [h.linhaPct, h.geralPct])),
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -531,6 +571,60 @@ export default async function RelatoriosPage({
                 </table>
               </div>
               <p className="mt-2 text-xs text-muted">{t.reports.modelHint}</p>
+            </section>
+          )}
+
+          {comparaveis.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.lastDay}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.lastDayColumn}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.average}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.change}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {comparaveis.map((m) => {
+                      const v = variacao(m.ultimo_dia!, m.media_dia!);
+                      return (
+                        <tr key={m.modelo} className="bg-surface">
+                          <td className="px-4 py-3 font-medium">{m.modelo}</td>
+                          <td className="px-4 py-3">
+                            {m.ultimo_dia}
+                            <span className="ml-2 text-xs text-muted">
+                              {m.ultimo_dia_data}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-muted">
+                            {m.media_dia}
+                            <span className="ml-2 text-xs text-muted">
+                              {plural(m.dias_base, "dia", "dias")}
+                            </span>
+                          </td>
+                          <td
+                            className={`px-4 py-3 font-medium ${
+                              v ? (v.subiu ? "text-success" : "text-warning") : "text-muted"
+                            }`}
+                          >
+                            {v?.texto ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-muted">{t.reports.lastDayHint}</p>
             </section>
           )}
 
@@ -886,6 +980,51 @@ export default async function RelatoriosPage({
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted">{t.reports.channelHint}</p>
+              </div>
+            </section>
+          )}
+
+          {/* Perfil horário por linha. Com uma linha só, a barra e o traço
+              coincidem em todas as horas — desenho bonito dizendo nada. */}
+          {linhas.length > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.profile}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface p-5">
+                <div className="min-w-[420px] space-y-4">
+                  {perfis.map((p) => (
+                    <div key={p.linha}>
+                      <p className="text-xs text-muted">{p.linha}</p>
+                      <div className="mt-1 flex items-end gap-1">
+                        {p.horas.map((h) => (
+                          <span
+                            key={h.hora}
+                            title={`${p.linha} ${h.hora}h · ${Math.round(h.linhaPct * 100)}% (operação ${Math.round(h.geralPct * 100)}%)`}
+                            className="relative flex-1"
+                            style={{ height: "44px" }}
+                          >
+                            <span
+                              className="absolute bottom-0 left-0 w-full rounded-sm bg-brand-500"
+                              style={{ height: `${(h.linhaPct / maiorPct) * 44}px` }}
+                            />
+                            {/* A operação inteira, para comparar sem sair da linha. */}
+                            <span
+                              className="absolute left-0 h-px w-full bg-muted"
+                              style={{ bottom: `${(h.geralPct / maiorPct) * 44}px` }}
+                            />
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1">
+                    {HORAS.map((h) => (
+                      <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-muted">{t.reports.profileHint}</p>
               </div>
             </section>
           )}
