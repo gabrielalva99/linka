@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { ReportFilters } from "./report-filters";
 
 type Proibido = {
@@ -85,6 +86,7 @@ export default async function RelatoriosPage({
   const { dias, rede, loja, aparelho } = await searchParams;
   const periodo = PERIODOS.includes(Number(dias)) ? Number(dias) : 7;
   const t = getMessages();
+  const podeOperar = await podeOperarAgora();
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("fleet_report", {
@@ -121,13 +123,29 @@ export default async function RelatoriosPage({
   }
 
   const semDado = r.visitas === 0;
+
+  // Período escrito por extenso. Um print de relatório sem data não serve de
+  // nada dali a duas semanas.
+  const fim = new Date();
+  const inicio = new Date();
+  inicio.setDate(fim.getDate() - (periodo - 1));
+  const dia = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  const periodoTexto = `${dia(inicio)} a ${dia(fim)}`;
+
+  /** "1 aparelho" e não "1 aparelho(s)". Relatório de cliente não tem parêntese. */
+  const plural = (n: number, um: string, muitos: string) =>
+    `${n} ${n === 1 ? um : muitos}`;
   const maiorHora = Math.max(1, ...r.por_hora.map((h) => h.visitas));
   const maiorRecurso = Math.max(1, ...r.por_recurso.map((x) => x.segundos));
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t.reports.title}</h1>
+        <div>
+          <h1 className="text-xl font-semibold">{t.reports.title}</h1>
+          <p className="mt-0.5 text-xs text-muted">{periodoTexto}</p>
+        </div>
         <div className="flex items-center gap-2">
           {PERIODOS.map((d) => (
             <Link
@@ -165,9 +183,12 @@ export default async function RelatoriosPage({
 
       {/* Aparelho de bancada sai do relatório de propósito. Sem dizer isso, o
           número some e ninguém confia mais no resto da tela. */}
-      {r.aparelhos_fora > 0 && (
+      {podeOperar && r.aparelhos_fora > 0 && (
         <p className="mt-3 text-xs text-muted">
-          {t.reports.excluded.replace("{n}", String(r.aparelhos_fora))}
+          {t.reports.excluded.replace(
+            "{n}",
+            plural(r.aparelhos_fora, "aparelho marcado", "aparelhos marcados"),
+          )}
         </p>
       )}
 
@@ -190,7 +211,7 @@ export default async function RelatoriosPage({
                   <li key={`${a.codigo}-${a.app}`} className="text-muted">
                     <span className="text-warning">{a.app}</span>
                     {` · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
-                    {t.reports.times.replace("{n}", String(a.vezes))}
+                    {plural(a.vezes, "vez", "vezes")}
                     {` · ${a.ultima_vez}`}
                   </li>
                 ))}
@@ -203,7 +224,7 @@ export default async function RelatoriosPage({
               <summary className="cursor-pointer text-sm text-muted">
                 {t.reports.blockedFixed.replace(
                   "{n}",
-                  String(r.proibidos_corrigidos.length),
+                  plural(r.proibidos_corrigidos.length, "caso", "casos"),
                 )}
               </summary>
               <p className="mt-2 text-xs text-muted">{t.reports.blockedFixedHint}</p>
@@ -211,7 +232,7 @@ export default async function RelatoriosPage({
                 {r.proibidos_corrigidos.map((a) => (
                   <li key={`${a.codigo}-${a.app}`}>
                     {`${a.app} · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
-                    {t.reports.times.replace("{n}", String(a.vezes))}
+                    {plural(a.vezes, "vez", "vezes")}
                     {` · ${t.reports.lastTime} ${a.ultima_vez} · `}
                     {t.reports.leavesOn.replace("{d}", a.sai_em)}
                   </li>
@@ -379,7 +400,7 @@ export default async function RelatoriosPage({
               <h2 className="text-sm font-medium text-muted">
                 {t.reports.noVisits.replace(
                   "{n}",
-                  String(r.aparelhos_sem_visita.length),
+                  plural(r.aparelhos_sem_visita.length, "aparelho", "aparelhos"),
                 )}
               </h2>
               <div className="mt-3 rounded-xl border border-warning/40 bg-warning/5 p-5">

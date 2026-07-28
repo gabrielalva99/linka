@@ -306,13 +306,14 @@ export default async function DeviceDetailPage({
         deviceId={d.id}
         apps={(appsData ?? []) as DeviceApp[]}
         pendingCommand={d.pending_command}
+        podeOperar={podeOperar}
       />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.content}</h2>
 
         <div className="mt-3 rounded-xl border border-line bg-surface p-5">
-          {d.content_url && <PinNotice deviceId={d.id} />}
+          {podeOperar && d.content_url && <PinNotice deviceId={d.id} />}
 
           <div className="mb-5 flex items-center justify-between gap-3 border-b border-line pb-4">
             <div className="min-w-0">
@@ -331,7 +332,7 @@ export default async function DeviceDetailPage({
             </span>
           </div>
 
-          {!assignedUrl && (
+          {podeOperar && !assignedUrl && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
               <span className="text-xs text-warning">{t.device.noContentWarning}</span>
               <Link
@@ -343,7 +344,7 @@ export default async function DeviceDetailPage({
             </div>
           )}
 
-          {assigned && (
+          {podeOperar && assigned && (
             <div className="mb-5 flex flex-col gap-2 border-b border-line pb-5">
               <span className="text-xs text-muted">{t.device.fit}</span>
               <DeviceFit
@@ -357,12 +358,14 @@ export default async function DeviceDetailPage({
             </div>
           )}
 
+          {podeOperar && (
           <ContentManager
             deviceId={d.id}
             tenantId={tenant?.id ?? ""}
             currentUrl={d.content_url}
             media={media}
           />
+          )}
         </div>
       </section>
 

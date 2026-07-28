@@ -24,10 +24,12 @@ export function AppsPanel({
   deviceId,
   apps,
   pendingCommand,
+  podeOperar,
 }: {
   deviceId: string;
   apps: DeviceApp[];
   pendingCommand: string | null;
+  podeOperar: boolean;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -73,14 +75,14 @@ export function AppsPanel({
             {t.device.appsConfirm}
           </button>
         </span>
-      ) : (
+      ) : podeOperar ? (
         <button
           onClick={() => setConfirmando(a.package)}
           className="shrink-0 rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
         >
           {a.is_system ? t.device.appsHide : t.device.appsRemove}
         </button>
-      )}
+      ) : null}
     </li>
   );
 
@@ -88,6 +90,7 @@ export function AppsPanel({
     <section className="mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-medium text-muted">{t.device.apps}</h2>
+        {podeOperar && (
         <button
           onClick={() =>
             startTransition(async () => {
@@ -100,6 +103,7 @@ export function AppsPanel({
         >
           {t.device.appsRefresh}
         </button>
+        )}
       </div>
 
       <div className="mt-3 rounded-xl border border-line bg-surface p-5">

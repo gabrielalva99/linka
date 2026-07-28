@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { getMessages } from "@/lib/i18n";
 import { LinkaLogo } from "../../linka-logo";
 import { login, type LoginState } from "./actions";
+import { MagicLink } from "./magic-link";
 
 const initialState: LoginState = { error: null };
 
@@ -24,6 +25,8 @@ export default function LoginPage() {
         <div className="mb-8">
 <LinkaLogo className="h-8 w-auto" />
         </div>
+
+        <MagicLink />
 
         <h1 className="text-lg font-semibold">{t.login.title}</h1>
         <p className="mt-1 text-sm text-muted">{t.login.subtitle}</p>
