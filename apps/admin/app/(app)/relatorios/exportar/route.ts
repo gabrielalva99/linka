@@ -32,10 +32,22 @@ export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
   // RLS vale aqui igual à tela: quem baixa leva o que enxerga, não a base toda.
-  const { data, error } = await supabase
+  // A planilha respeita o MESMO recorte da tela. Baixar a frota inteira quando
+  // a tela mostra uma loja é o caminho mais curto para alguém mandar o número
+  // errado para a marca.
+  let consulta = supabase
     .from("v_bi_interaction_hourly")
     .select("rede, loja, cidade, uf, codigo, aparelho, hora_local, recurso, categoria, sessoes, segundos")
-    .gte("hora_local", desde.toISOString())
+    .gte("hora_local", desde.toISOString());
+
+  const rede = url.searchParams.get("rede");
+  const loja = url.searchParams.get("loja");
+  const aparelho = url.searchParams.get("aparelho");
+  if (rede) consulta = consulta.eq("rede", rede);
+  if (loja) consulta = consulta.eq("loja", loja);
+  if (aparelho) consulta = consulta.eq("codigo", aparelho);
+
+  const { data, error } = await consulta
     .order("hora_local", { ascending: true })
     .limit(50000);
 

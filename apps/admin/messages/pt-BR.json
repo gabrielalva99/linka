@@ -379,6 +379,13 @@
     "noVisitsHint": "Pode ser ponto ruim na loja, pode ser aparelho com problema. Nos dois casos alguém precisa olhar.",
     "blockedUsed": "Alguém abriu um app que deveria estar bloqueado",
     "blockedHint": "Ajustes e Play Store são bloqueados porque é por ali que se cria senha de tela e se instala qualquer coisa num aparelho de vitrine. Se aparecem aqui, o bloqueio não estava valendo nesse aparelho.",
-    "times": "{n} vez(es)"
+    "times": "{n} vez(es)",
+    "allChains": "Todas as redes",
+    "allStores": "Todas as lojas",
+    "allDevices": "Todos os aparelhos",
+    "clearFilters": "Limpar",
+    "byDevice": "Por aparelho",
+    "device": "Aparelho",
+    "excluded": "{n} aparelho(s) marcado(s) como teste ficam fora deste relatório."
   }
 }

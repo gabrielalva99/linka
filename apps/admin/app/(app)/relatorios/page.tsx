@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { ReportFilters } from "./report-filters";
 
 type Report = {
   dias: number;
@@ -8,6 +9,14 @@ type Report = {
   segundos_uso: number;
   segundos_vitrine: number;
   lojas_com_dado: number;
+  aparelhos_fora: number;
+  por_aparelho: {
+    codigo: string;
+    aparelho: string;
+    loja: string;
+    visitas: number;
+    segundos: number;
+  }[];
   por_loja: {
     loja: string;
     rede: string;
@@ -61,14 +70,38 @@ const PERIODOS = [7, 30, 90];
 export default async function RelatoriosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string }>;
+  searchParams: Promise<{
+    dias?: string;
+    rede?: string;
+    loja?: string;
+    aparelho?: string;
+  }>;
 }) {
-  const { dias } = await searchParams;
+  const { dias, rede, loja, aparelho } = await searchParams;
   const periodo = PERIODOS.includes(Number(dias)) ? Number(dias) : 7;
   const t = getMessages();
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("fleet_report", { p_days: periodo });
+  const { data, error } = await supabase.rpc("fleet_report", {
+    p_days: periodo,
+    p_rede: rede || null,
+    p_loja: loja || null,
+    p_aparelho: aparelho || null,
+  });
+
+  // As opções dos filtros vêm do cadastro, não do resultado: uma loja que ficou
+  // sem movimento no período tem que continuar selecionável, senão a pessoa não
+  // consegue perguntar justamente sobre a loja que parou.
+  const [{ data: redesData }, { data: lojasData }, { data: aparelhosData }] =
+    await Promise.all([
+      supabase.from("retail_chains").select("name").order("name"),
+      supabase.from("stores").select("name").order("name"),
+      supabase
+        .from("devices")
+        .select("code, name")
+        .eq("exclude_from_reports", false)
+        .order("code"),
+    ]);
   const r = data as Report | null;
 
   if (error || !r) {
@@ -105,13 +138,33 @@ export default async function RelatoriosPage({
             </Link>
           ))}
           <a
-            href={`/relatorios/exportar?dias=${periodo}`}
+            href={`/relatorios/exportar?dias=${periodo}${rede ? `&rede=${encodeURIComponent(rede)}` : ""}${loja ? `&loja=${encodeURIComponent(loja)}` : ""}${aparelho ? `&aparelho=${encodeURIComponent(aparelho)}` : ""}`}
             className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
           >
             {t.reports.export}
           </a>
         </div>
       </div>
+
+      <ReportFilters
+        redes={(redesData ?? []).map((r) => r.name as string)}
+        lojas={(lojasData ?? []).map((l) => l.name as string)}
+        aparelhos={(aparelhosData ?? []).map((a) => ({
+          codigo: (a.code as string) ?? "",
+          nome: a.name as string,
+        }))}
+        rede={rede ?? ""}
+        loja={loja ?? ""}
+        aparelho={aparelho ?? ""}
+      />
+
+      {/* Aparelho de bancada sai do relatório de propósito. Sem dizer isso, o
+          número some e ninguém confia mais no resto da tela. */}
+      {r.aparelhos_fora > 0 && (
+        <p className="mt-3 text-xs text-muted">
+          {t.reports.excluded.replace("{n}", String(r.aparelhos_fora))}
+        </p>
+      )}
 
       {semDado ? (
         <div className="mt-6 rounded-xl border border-line bg-surface p-6">
@@ -202,6 +255,41 @@ export default async function RelatoriosPage({
             </div>
             <p className="mt-2 text-xs text-muted">{t.reports.rateHint}</p>
           </section>
+
+          {r.por_aparelho?.length > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byDevice}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.device}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.store}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.visits}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.usage}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_aparelho.map((a) => (
+                      <tr key={a.codigo + a.aparelho} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">
+                          {a.codigo ? `${a.codigo} · ` : ""}
+                          {a.aparelho}
+                        </td>
+                        <td className="px-4 py-3 text-muted">{a.loja}</td>
+                        <td className="px-4 py-3">{a.visitas}</td>
+                        <td className="px-4 py-3 text-muted">{tempo(a.segundos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           <section className="mt-8">
             <h2 className="text-sm font-medium text-muted">{t.reports.byFeature}</h2>
