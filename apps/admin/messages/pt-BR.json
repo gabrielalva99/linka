@@ -437,6 +437,14 @@
     "media": "Vídeo",
     "onAir": "Tempo no ar",
     "contentHint": "A visita entra no vídeo que estava na tela no instante em que a pessoa pegou o aparelho. Só aparece a partir da versão 0.29 do agente — antes disso o vídeo exibido não era guardado.",
-    "contentEmpty": "Ainda sem exibição registrada. Os aparelhos passam a mandar isso quando atualizarem para a versão 0.29."
+    "contentEmpty": "Ainda sem exibição registrada. Os aparelhos passam a mandar isso quando atualizarem para a versão 0.29.",
+    "vsPrevious": "vs. período anterior",
+    "noBaseline": "sem período anterior para comparar",
+    "byWeekday": "Por dia da semana",
+    "weekdayHint": "Média de visitas por dia. Média, e não total: num período de 10 dias cabem dois sábados e um domingo, e o total premiaria o sábado por calendário.",
+    "heatmap": "Concentração dia × hora",
+    "heatmapHint": "Onde o movimento se junta. É o que separa \"movimento de sábado\" de \"movimento de sábado à tarde\".",
+    "byChannel": "Rua e shopping, hora a hora",
+    "channelHint": "As duas curvas são diferentes. Somadas, viram uma curva que não descreve nenhuma das duas."
   }
 }

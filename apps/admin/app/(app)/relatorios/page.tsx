@@ -69,6 +69,20 @@ type Report = {
     visitas: number;
     segundos_uso: number;
   }[];
+  anterior: {
+    visitas: number;
+    segundos_uso: number;
+    segundos_vitrine: number;
+    tem_base: boolean;
+  };
+  por_dia_semana: {
+    dia: number;
+    visitas: number;
+    segundos: number;
+    dias: number;
+  }[];
+  mapa: { dia: number; hora: number; visitas: number }[];
+  por_canal_hora: { tipo_local: string; hora: number; visitas: number }[];
   por_dia: { dia: string; visitas: number; segundos: number }[];
   proibidos_abertos: Proibido[];
   proibidos_corrigidos: Proibido[];
@@ -90,6 +104,20 @@ function taxa(visitas: number, segundosVitrine: number): string {
   if (segundosVitrine <= 0) return "—";
   return (visitas / (segundosVitrine / 3600)).toFixed(1);
 }
+
+/**
+ * Variação contra o período anterior.
+ *
+ * Devolve null quando não havia base: crescer 100% em cima de zero é uma frase
+ * sem significado, e o painel prefere não dizer nada a dizer isso.
+ */
+function variacao(agora: number, antes: number) {
+  if (antes <= 0) return null;
+  const pct = Math.round(((agora - antes) / antes) * 100);
+  return { texto: `${pct > 0 ? "+" : ""}${pct}%`, subiu: pct >= 0 };
+}
+
+const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 
 const PERIODOS = [7, 30, 90];
 
@@ -172,6 +200,34 @@ export default async function RelatoriosPage({
     (rede ? `&rede=${encodeURIComponent(rede)}` : "") +
     (loja ? `&loja=${encodeURIComponent(loja)}` : "") +
     (aparelho ? `&aparelho=${encodeURIComponent(aparelho)}` : "");
+
+  /** Variação só aparece quando havia base. Sem base, nada. */
+  const Variacao = ({ agora, antes }: { agora: number; antes: number }) => {
+    if (!r.anterior?.tem_base) return null;
+    const v = variacao(agora, antes);
+    if (!v) return null;
+    return (
+      <dd className={`mt-0.5 text-xs ${v.subiu ? "text-success" : "text-warning"}`}>
+        {v.texto} <span className="text-muted">{t.reports.vsPrevious}</span>
+      </dd>
+    );
+  };
+
+  // Horas visíveis nos gráficos: o expediente padrão, não as 24 do dia. Meia
+  // dúzia de colunas vazias de madrugada só empurram o que importa para o canto.
+  const HORAS = Array.from({ length: 15 }, (_, i) => i + 8);
+  const semana = DIAS_SEMANA.map((nome, i) => {
+    const d = (r.por_dia_semana ?? []).find((x) => x.dia === i + 1);
+    return {
+      nome,
+      media: d && d.dias > 0 ? d.visitas / d.dias : 0,
+      visitas: d?.visitas ?? 0,
+    };
+  });
+  const maiorMedia = Math.max(0.01, ...semana.map((s) => s.media));
+  const maiorCelula = Math.max(1, ...(r.mapa ?? []).map((c) => c.visitas));
+  const canais = [...new Set((r.por_canal_hora ?? []).map((c) => c.tipo_local))];
+  const maiorCanal = Math.max(1, ...(r.por_canal_hora ?? []).map((c) => c.visitas));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -288,6 +344,7 @@ export default async function RelatoriosPage({
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.visits}</dt>
               <dd className="mt-1 text-2xl font-semibold text-brand-500">{r.visitas}</dd>
+              <Variacao agora={r.visitas} antes={r.anterior?.visitas ?? 0} />
             </div>
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.usage}</dt>
@@ -299,10 +356,18 @@ export default async function RelatoriosPage({
                     tempo(Math.round(r.segundos_uso / r.visitas)),
                   )}
               </dd>
+              <Variacao
+                agora={r.segundos_uso}
+                antes={r.anterior?.segundos_uso ?? 0}
+              />
             </div>
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.showcase}</dt>
               <dd className="mt-1 text-2xl font-semibold">{tempo(r.segundos_vitrine)}</dd>
+              <Variacao
+                agora={r.segundos_vitrine}
+                antes={r.anterior?.segundos_vitrine ?? 0}
+              />
             </div>
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.rate}</dt>
@@ -312,6 +377,10 @@ export default async function RelatoriosPage({
               </dd>
             </div>
           </dl>
+
+          {!r.anterior?.tem_base && (
+            <p className="mt-2 text-xs text-muted">{t.reports.noBaseline}</p>
+          )}
 
           <section className="mt-8">
             <h2 className="text-sm font-medium text-muted">{t.reports.byStore}</h2>
@@ -598,6 +667,114 @@ export default async function RelatoriosPage({
               <p className="mt-3 text-xs text-muted">{t.reports.hourHint}</p>
             </div>
           </section>
+
+          <section className="mt-8">
+            <h2 className="text-sm font-medium text-muted">{t.reports.byWeekday}</h2>
+            <div className="mt-3 rounded-xl border border-line bg-surface p-5">
+              <div className="flex items-end gap-2">
+                {semana.map((s) => (
+                  <div key={s.nome} className="flex flex-1 flex-col items-center gap-1">
+                    <span className="text-[10px] text-brand-500">
+                      {s.media > 0 ? s.media.toFixed(1) : ""}
+                    </span>
+                    {/* Largura fixa, como no gráfico por hora. Barra que estica
+                        com o container vira bloco e some a leitura de altura. */}
+                    <span
+                      className={`w-6 rounded-sm ${s.media > 0 ? "bg-brand-500" : "bg-surface-2"}`}
+                      style={{
+                        height: `${s.media > 0 ? Math.max(8, Math.round((s.media / maiorMedia) * 56)) : 2}px`,
+                      }}
+                    />
+                    <span className="text-[10px] text-muted">{s.nome}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted">{t.reports.weekdayHint}</p>
+            </div>
+          </section>
+
+          <section className="mt-8">
+            <h2 className="text-sm font-medium text-muted">{t.reports.heatmap}</h2>
+            <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface p-5">
+              <div className="min-w-[420px]">
+                {DIAS_SEMANA.map((nome, i) => (
+                  <div key={nome} className="flex items-center gap-1">
+                    <span className="w-8 shrink-0 text-[10px] text-muted">{nome}</span>
+                    {HORAS.map((h) => {
+                      const c = (r.mapa ?? []).find(
+                        (x) => x.dia === i + 1 && x.hora === h,
+                      );
+                      return (
+                        <span
+                          key={h}
+                          title={`${nome} ${h}h · ${c?.visitas ?? 0}`}
+                          className={`h-5 flex-1 rounded-sm ${c ? "bg-brand-500" : "bg-surface-2"}`}
+                          // Intensidade proporcional, com piso: uma célula com
+                          // uma visita só não pode ficar invisível.
+                          style={
+                            c
+                              ? { opacity: 0.25 + (c.visitas / maiorCelula) * 0.75 }
+                              : undefined
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+                <div className="mt-1 flex items-center gap-1">
+                  <span className="w-8 shrink-0" />
+                  {HORAS.map((h) => (
+                    <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-muted">{t.reports.heatmapHint}</p>
+            </div>
+          </section>
+
+          {/* Só com os dois canais na base. Com um só, são duas linhas dizendo
+              a mesma coisa que o gráfico de cima. */}
+          {canais.length > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byChannel}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface p-5">
+                <div className="min-w-[420px] space-y-3">
+                  {canais.map((canal) => (
+                    <div key={canal}>
+                      <p className="text-xs text-muted">{canal}</p>
+                      <div className="mt-1 flex items-end gap-1">
+                        {HORAS.map((h) => {
+                          const c = (r.por_canal_hora ?? []).find(
+                            (x) => x.tipo_local === canal && x.hora === h,
+                          );
+                          return (
+                            <span
+                              key={h}
+                              title={`${canal} ${h}h · ${c?.visitas ?? 0}`}
+                              className={`flex-1 rounded-sm ${c ? "bg-brand-500" : "bg-surface-2"}`}
+                              style={{
+                                height: `${c ? Math.max(6, Math.round((c.visitas / maiorCanal) * 40)) : 2}px`,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1">
+                    {HORAS.map((h) => (
+                      <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-muted">{t.reports.channelHint}</p>
+              </div>
+            </section>
+          )}
 
           {r.aparelhos_sem_visita.length > 0 && (
             <section className="mt-8">
