@@ -1,10 +1,68 @@
+import Link from "next/link";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
-import { ROLE_LABELS } from "@linka/shared";
+import { AutoRefresh } from "./auto-refresh";
 
+type Issue = {
+  device_id: string;
+  code: string | null;
+  name: string;
+  loja: string | null;
+  tipo: string;
+  gravidade: string;
+  detalhe: string;
+  aberta: boolean;
+  exclude_from_reports: boolean;
+};
+
+/**
+ * A primeira tela responde uma pergunta só: o que está errado agora.
+ *
+ * Antes ela mostrava o papel do usuário e a lista de clientes, coisas que
+ * ninguém precisa saber duas vezes. Com 250 aparelhos em 15 lojas, ninguém vai
+ * abrir aparelho por aparelho para descobrir que a vitrine de uma loja apagou.
+ *
+ * Agrupa por LOJA porque é assim que a operação age: quem resolve vai até uma
+ * loja, não até um aparelho.
+ */
 export default async function DashboardPage() {
   const ctx = await getSessionContext();
   const t = getMessages();
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: issuesData }, { count: totalDevices }] = await Promise.all([
+    supabase
+      .from("v_device_issues")
+      .select(
+        "device_id, code, name, loja, tipo, gravidade, detalhe, aberta, exclude_from_reports",
+      ),
+    supabase.from("devices").select("id", { count: "exact", head: true }),
+  ]);
+
+  const issues = (issuesData ?? []) as Issue[];
+  const criticos = issues.filter((i) => i.gravidade === "critico");
+  const atencao = issues.filter((i) => i.gravidade !== "critico");
+  const aparelhosComProblema = new Set(issues.map((i) => i.device_id)).size;
+  const total = totalDevices ?? 0;
+
+  // Por loja, com os críticos primeiro: é a ordem em que alguém vai agir.
+  const porLoja = new Map<string, Issue[]>();
+  for (const i of [...criticos, ...atencao]) {
+    const chave = i.loja ?? t.home.noStore;
+    porLoja.set(chave, [...(porLoja.get(chave) ?? []), i]);
+  }
+
+  const rotulo: Record<string, string> = {
+    fora_do_ar: t.home.offline,
+    tela_vazia: t.home.blankScreen,
+    sem_travas: t.home.unlocked,
+    senha_de_tela: t.home.screenLock,
+    atualizacao_travada: t.home.updateStuck,
+    bateria_baixa: t.home.lowBattery,
+    quente: t.home.hot,
+    sem_loja: t.home.noStoreSet,
+  };
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -13,37 +71,79 @@ export default async function DashboardPage() {
         {ctx?.fullName ? `, ${ctx.fullName}` : ""}
       </h1>
 
-      {ctx?.isSuperadmin ? (
-        <p className="mt-2 text-sm text-muted">{t.dashboard.superadminNote}</p>
-      ) : null}
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <section className="rounded-xl border border-line bg-surface p-5">
-          <h2 className="text-sm font-medium text-muted">{t.dashboard.role}</h2>
-          <p className="mt-1 text-lg">
-            {ctx?.isSuperadmin
-              ? ROLE_LABELS.superadmin
-              : (ROLE_LABELS[ctx?.memberships[0]?.role ?? "client"] ?? "—")}
+      {issues.length === 0 ? (
+        <div className="mt-6 rounded-xl border border-success/40 bg-success/5 p-6">
+          <p className="text-lg font-semibold text-success">{t.home.allWell}</p>
+          <p className="mt-1 text-sm text-muted">
+            {t.home.allWellDetail.replace("{n}", String(total))}
           </p>
-        </section>
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <section className="rounded-xl border border-line bg-surface p-5">
+              <h2 className="text-sm font-medium text-muted">{t.home.critical}</h2>
+              <p
+                className={`mt-1 text-2xl font-semibold ${
+                  criticos.length > 0 ? "text-warning" : ""
+                }`}
+              >
+                {criticos.length}
+              </p>
+            </section>
+            <section className="rounded-xl border border-line bg-surface p-5">
+              <h2 className="text-sm font-medium text-muted">{t.home.attention}</h2>
+              <p className="mt-1 text-2xl font-semibold">{atencao.length}</p>
+            </section>
+            <section className="rounded-xl border border-line bg-surface p-5">
+              <h2 className="text-sm font-medium text-muted">{t.home.devicesAffected}</h2>
+              <p className="mt-1 text-2xl font-semibold">
+                {aparelhosComProblema}
+                <span className="text-base font-normal text-muted"> / {total}</span>
+              </p>
+            </section>
+          </div>
 
-        <section className="rounded-xl border border-line bg-surface p-5">
-          <h2 className="text-sm font-medium text-muted">{t.dashboard.tenants}</h2>
-          {ctx && ctx.memberships.length > 0 ? (
-            <ul className="mt-1 flex flex-col gap-1">
-              {ctx.memberships.map((m) => (
-                <li key={m.tenant_id} className="text-lg">
-                  {m.tenant_name ?? m.tenant_id}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-1 text-sm text-muted">
-              {ctx?.isSuperadmin ? "—" : t.dashboard.noTenants}
-            </p>
-          )}
-        </section>
-      </div>
+          <div className="mt-6 flex flex-col gap-4">
+            {[...porLoja.entries()].map(([loja, lista]) => (
+              <section key={loja} className="rounded-xl border border-line bg-surface p-5">
+                <h2 className="text-sm font-medium">{loja}</h2>
+                <ul className="mt-3 flex flex-col gap-2">
+                  {lista.map((i) => (
+                    <li
+                      key={`${i.device_id}-${i.tipo}`}
+                      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-line pb-2 last:border-0 last:pb-0"
+                    >
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          i.gravidade === "critico"
+                            ? "bg-warning/15 text-warning"
+                            : "bg-surface-2 text-muted"
+                        }`}
+                      >
+                        {rotulo[i.tipo] ?? i.tipo}
+                      </span>
+                      <Link
+                        href={`/frota/${i.device_id}`}
+                        className="text-sm font-medium hover:text-primary hover:underline"
+                      >
+                        {i.code ? `${i.code} · ` : ""}
+                        {i.name}
+                      </Link>
+                      <span className="text-xs text-muted">{i.detalhe}</span>
+                      {i.exclude_from_reports && (
+                        <span className="text-xs text-muted">({t.home.testDevice})</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </>
+      )}
+
+      <AutoRefresh ms={30000} />
     </div>
   );
 }

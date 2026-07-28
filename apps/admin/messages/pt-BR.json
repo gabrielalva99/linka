@@ -293,5 +293,22 @@
     "testDevice": "Aparelho de teste, fora dos relatórios",
     "testDeviceHint": "Continua sendo medido normalmente, mas não entra em relatório de cliente nem no BI. Desmarque quando o aparelho for para a loja.",
     "createdHint": "Aparelho cadastrado. O código de pareamento está na ficha dele."
+  },
+  "home": {
+    "allWell": "Tudo no ar",
+    "allWellDetail": "Os {n} aparelhos estão reportando, com vídeo na tela e travados.",
+    "critical": "Precisa de ação agora",
+    "attention": "Para olhar",
+    "devicesAffected": "Aparelhos afetados",
+    "noStore": "Sem loja",
+    "testDevice": "aparelho de teste",
+    "offline": "fora do ar",
+    "blankScreen": "tela sem vídeo",
+    "unlocked": "sem travas",
+    "screenLock": "senha de tela",
+    "updateStuck": "atualização travada",
+    "lowBattery": "bateria baixa",
+    "hot": "quente",
+    "noStoreSet": "sem loja"
   }
 }
