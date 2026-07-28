@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings")
+    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -80,8 +80,15 @@ Deno.serve(async (req) => {
     ? { version: release.version, url: release.url }
     : null;
 
+  // Horário da loja vai para o aparelho: com a loja aberta, tela apagada é
+  // vitrine morta e ele precisa acordar sozinho. Com a loja fechada, ninguém
+  // vai passar na frente e insistir só gasta bateria e queima a tela.
+  const loja = Array.isArray(device.stores) ? device.stores[0] : device.stores;
+
   return json({
     content_url: contentUrl,
+    store_opens_at: String(loja?.opens_at ?? "09:00").slice(0, 5),
+    store_closes_at: String(loja?.closes_at ?? "22:00").slice(0, 5),
     fit: resolved?.out_fit ?? "zoom",
     prefetch,
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.

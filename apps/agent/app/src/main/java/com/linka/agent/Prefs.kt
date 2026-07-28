@@ -47,6 +47,26 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_CLEANUP_TIME, value).apply()
 
+    private const val KEY_ABRE = "store_opens_at"
+    private const val KEY_FECHA = "store_closes_at"
+
+    /**
+     * Expediente da loja, hora local ("09:00"/"22:00"), vindo do painel.
+     *
+     * O aparelho precisa disso na mão: com a loja aberta ele acende a tela
+     * sozinha se apagar, e com a loja fechada deixa quieto. Guardado localmente
+     * porque a decisão é tomada a cada 5 segundos, inclusive sem rede.
+     */
+    fun storeOpensAt(ctx: Context): String =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_ABRE, "09:00")!!
+
+    fun storeClosesAt(ctx: Context): String =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_FECHA, "22:00")!!
+
+    fun setStoreHours(ctx: Context, abre: String, fecha: String) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_ABRE, abre).putString(KEY_FECHA, fecha).apply()
+
     /** Dia da última faxina ("2026-07-27"): impede repetir no mesmo dia. */
     fun lastCleanupDay(ctx: Context): String? =
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_CLEANUP_DAY, null)

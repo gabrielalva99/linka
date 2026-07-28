@@ -66,6 +66,21 @@ object Kiosk {
         // Vitrine não precisa de tela de bloqueio, e sem senha o token de reset
         // já nasce ativo — é o que garante a volta se alguém puser um PIN depois.
         try { dpm.setKeyguardDisabled(admin, true) } catch (_: Exception) {}
+        // Tempo até a tela apagar: 30 minutos.
+        //
+        // Enquanto a vitrine está na frente ela segura a tela acesa sozinha, então
+        // isto só vale quando o CLIENTE está mexendo em outro app. Com o padrão de
+        // fábrica (30 segundos) a tela apagava na mão da pessoa. Só o dono do
+        // aparelho consegue mudar isso, e a partir do Android 9.
+        if (Build.VERSION.SDK_INT >= 28) {
+            try {
+                dpm.setSystemSetting(
+                    admin, android.provider.Settings.System.SCREEN_OFF_TIMEOUT, "1800000",
+                )
+            } catch (_: Exception) {
+                // Fabricante que não permite: o retorno automático continua cobrindo.
+            }
+        }
         ensureResetToken(ctx)
         // Reaplica o bloqueio a cada início: atualização não pode reabrir a porta.
         applyAppBlocks(ctx, Prefs.blockSettings(ctx))

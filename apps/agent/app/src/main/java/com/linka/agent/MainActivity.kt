@@ -55,6 +55,13 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         Api.init(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Deixa esta tela ACENDER o aparelho, não só mantê-lo aceso. Sem isto,
+        // uma vitrine que apagou durante o expediente ficava preta até alguém
+        // encostar nela, que é o oposto do que a loja precisa.
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
         drawBehindCutout()
         // Reaplica as travas a cada início: atualização do app ou do Android não
         // pode destravar a vitrine sem ninguém perceber. É inócuo se não somos dono.
@@ -189,6 +196,14 @@ class MainActivity : Activity() {
                 }
                 if (!body.isNull("volume_percent")) {
                     Prefs.setVolumePercent(this@MainActivity, body.optInt("volume_percent", 0))
+                }
+                // Expediente da loja: manda a decisão de acender a tela.
+                if (!body.isNull("store_opens_at") && !body.isNull("store_closes_at")) {
+                    Prefs.setStoreHours(
+                        this@MainActivity,
+                        body.optString("store_opens_at", "09:00"),
+                        body.optString("store_closes_at", "22:00"),
+                    )
                 }
                 if (!body.isNull("cleanup_time")) {
                     Prefs.setCleanupTime(this@MainActivity, body.optString("cleanup_time"))

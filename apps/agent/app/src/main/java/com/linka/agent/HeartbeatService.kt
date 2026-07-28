@@ -37,7 +37,9 @@ class HeartbeatService : Service() {
         }
         if (idleTimer == null) {
             idleTimer = Timer().also {
-                it.scheduleAtFixedRate(timerTask { checkIdle() }, 5_000L, 5_000L)
+                it.scheduleAtFixedRate(
+                    timerTask { checkIdle(); checkScreen() }, 5_000L, 5_000L,
+                )
             }
         }
         return START_STICKY
@@ -87,13 +89,62 @@ class HeartbeatService : Service() {
         }
     }
 
+    /**
+     * Está dentro do expediente da loja? Hora local do aparelho, que é a hora
+     * da loja onde ele está. Expediente que não vira a noite (loja de shopping).
+     */
+    private fun lojaAberta(): Boolean {
+        val agora = java.util.Calendar.getInstance()
+        val minutos = agora.get(java.util.Calendar.HOUR_OF_DAY) * 60 +
+            agora.get(java.util.Calendar.MINUTE)
+        fun paraMinutos(hhmm: String): Int? {
+            val p = hhmm.split(":")
+            val h = p.getOrNull(0)?.toIntOrNull() ?: return null
+            val m = p.getOrNull(1)?.toIntOrNull() ?: return null
+            return h * 60 + m
+        }
+        val abre = paraMinutos(Prefs.storeOpensAt(this)) ?: return true
+        val fecha = paraMinutos(Prefs.storeClosesAt(this)) ?: return true
+        return minutos in abre until fecha
+    }
+
+    /**
+     * Vitrine apagada com a loja aberta é vitrine morta.
+     *
+     * Não basta cuidar de quem sai do app: qualquer pessoa aperta o botão de
+     * ligar e apaga a tela, e aí o aparelho fica preto no meio da loja até
+     * alguém encostar nele. Com a loja aberta, a vitrine acende de volta em até
+     * 5 segundos. Com a loja fechada não faz nada, para não gastar bateria nem
+     * queimar a tela a noite inteira.
+     */
+    private fun checkScreen() {
+        if (Prefs.token(this) == null) return
+        if (Health.screenOn(this)) return
+        if (!lojaAberta()) return
+        try {
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                },
+            )
+        } catch (_: Exception) {
+            // Sem permissão de abrir em segundo plano: o provisionamento concede.
+        }
+    }
+
     private fun checkIdle() {
         val leftAt = Prefs.leftAt(this)
         if (leftAt == 0L || Prefs.token(this) == null) return
         val limitMs = Prefs.idleReturnSeconds(this) * 1000L
         if (System.currentTimeMillis() - leftAt < limitMs) return
-        // Tela apagada: não é hora de acordar a loja no meio da madrugada.
-        if (!Health.screenOn(this)) return
+        // Tela apagada com a loja FECHADA: deixa quieto, ninguém vai passar na
+        // frente e insistir só gasta bateria e queima a tela.
+        //
+        // Com a loja ABERTA é o contrário: vitrine preta é vitrine morta. Isso
+        // acontece quando o cliente larga o aparelho dentro de outro app e o
+        // Android apaga a tela pelo tempo limite do sistema. Antes o aparelho
+        // ficava escuro até alguém encostar; agora a vitrine volta e acende.
+        if (!Health.screenOn(this) && !lojaAberta()) return
 
         Prefs.setLeftAt(this, 0L)
         val intent = Intent(this, MainActivity::class.java).apply {
