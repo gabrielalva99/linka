@@ -14,6 +14,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.media3.common.MediaItem
@@ -77,16 +78,35 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(56, 120, 56, 56)
+            setBackgroundColor(getColor(R.color.marca_preto))
         }
-        val title = TextView(this).apply { text = "LINKA — Agente"; textSize = 26f }
-        val status = TextView(this).apply { textSize = 16f; setPadding(0, 40, 0, 0) }
+        // O técnico que instala vê esta tela antes de qualquer outra coisa.
+        // Logotipo em vez de texto: é o primeiro sinal de que o aparelho é nosso.
+        val logo = ImageView(this).apply {
+            setImageResource(R.drawable.logo_linka)
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, 120,
+            )
+        }
+        val status = TextView(this).apply {
+            textSize = 16f
+            setPadding(0, 40, 0, 0)
+            setTextColor(getColor(R.color.marca_claro))
+        }
         val input = EditText(this).apply {
             hint = "Código de pareamento"
+            setTextColor(getColor(R.color.marca_claro))
+            setHintTextColor(getColor(R.color.marca_cinza))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
-        val button = Button(this).apply { text = "Parear" }
+        val button = Button(this).apply {
+            text = "Parear"
+            setBackgroundColor(getColor(R.color.marca_verde))
+            setTextColor(getColor(R.color.marca_preto))
+        }
 
         button.setOnClickListener {
             val code = input.text.toString().trim().uppercase()
@@ -116,7 +136,7 @@ class MainActivity : Activity() {
             }.start()
         }
 
-        root.addView(title); root.addView(input); root.addView(button); root.addView(status)
+        root.addView(logo); root.addView(input); root.addView(button); root.addView(status)
         setContentView(root)
     }
 
@@ -283,14 +303,32 @@ class MainActivity : Activity() {
         if (fit == FIT_FIT) AspectRatioFrameLayout.RESIZE_MODE_FIT
         else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
 
-    /** Tela de espera: preta e discreta. Fundo branco numa vitrine parece app quebrado. */
-    private fun waitingView(text: String) = TextView(this).apply {
-        this.text = text
-        textSize = 16f
-        setBackgroundColor(0xFF000000.toInt())
-        setTextColor(0xFF666666.toInt())
+    /**
+     * Tela de espera: preta, com o logotipo e a mensagem embaixo.
+     *
+     * Fundo branco numa vitrine parece app quebrado, e texto cinza sozinho numa
+     * loja parece aparelho travado. Com a marca, um aparelho esperando conteúdo
+     * ainda comunica alguma coisa para quem passa.
+     */
+    private fun waitingView(text: String) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
         gravity = android.view.Gravity.CENTER
+        setBackgroundColor(getColor(R.color.marca_preto))
         setPadding(56, 56, 56, 56)
+        addView(ImageView(context).apply {
+            setImageResource(R.drawable.logo_linka)
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, 110,
+            )
+        })
+        addView(TextView(context).apply {
+            this.text = text
+            textSize = 15f
+            setTextColor(getColor(R.color.marca_cinza))
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 48, 0, 0)
+        })
     }
 
     /** Arquivo local quando existe; nuvem só como último recurso. */

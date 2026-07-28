@@ -61,7 +61,7 @@ object SelfUpdate {
         if (tentativas >= MAX_TENTATIVAS) {
             Prefs.setUpdateError(
                 ctx,
-                "Instalação da versão $version recusada $tentativas vezes — " +
+                "Instalação da versão $version recusada $tentativas vezes. " +
                     "provável assinatura diferente. Precisa de passagem por cabo.",
             )
             return

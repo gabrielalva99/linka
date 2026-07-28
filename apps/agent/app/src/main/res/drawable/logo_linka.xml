@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gerado a partir de branding/Logotipo/*.ai. Não editar à mão: reexportar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1585dp"
+    android:height="419dp"
+    android:viewportWidth="1585"
+    android:viewportHeight="419">
+    <path
+        android:fillColor="@color/marca_claro"
+        android:pathData="M312.71,335.56 L312.71,418.77 L0,418.77 L0,0 L109.92,0 L109.92,335.56 Z" />
+    <path
+        android:fillColor="@color/marca_claro"
+        android:pathData="M329.63,0 L439.55,0 L439.55,418.77 L329.63,418.77 Z" />
+    <path
+        android:fillColor="@color/marca_claro"
+        android:pathData="M638.24,0 L485.17,0 L485.17,418.77 L595.09,418.77 L595.09,165.73 L731.54,418.77 L773.21,418.77 L773.21,254.67 Z" />
+    <path
+        android:fillColor="@color/marca_verde"
+        android:pathData="M924.1,287.66 L883.13,339.07 L883.13,418.77 L773.21,418.77 L773.21,0 L883.13,0 L883.13,180.99 L884.19,180.99 L1028.43,0 L1153.36,0 L988.93,206.33 L1158.24,418.77 L1028.6,418.77 Z" />
+    <path
+        android:fillColor="@color/marca_verde"
+        android:pathData="M1419.58,251.03 L1363.57,83.04 L1307.57,251.03 Z M1447.32,334.23 L1279.83,334.23 L1251.65,418.77 L1141.73,418.77 L1281.33,0 L1445.81,0 L1585.42,418.77 L1475.5,418.77 Z" />
+</vector>

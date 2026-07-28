@@ -110,7 +110,7 @@ class HeartbeatService : Service() {
         val channelId = "linka_agent"
         if (Build.VERSION.SDK_INT >= 26) {
             val channel = NotificationChannel(
-                channelId, "LINKA Agente", NotificationManager.IMPORTANCE_LOW
+                channelId, "LINKA", NotificationManager.IMPORTANCE_LOW
             )
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(channel)
@@ -123,7 +123,7 @@ class HeartbeatService : Service() {
         }
         val notification = builder
             .setContentTitle("LINKA")
-            .setContentText("Agente ativo")
+            .setContentText("Vitrine ativa")
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .build()
 

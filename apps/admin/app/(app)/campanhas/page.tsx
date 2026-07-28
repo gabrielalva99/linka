@@ -86,7 +86,7 @@ export default async function CampanhasPage() {
     }
     const start = hhmm(c.start_time);
     const end = hhmm(c.end_time);
-    if (start && end) parts.push(`${start}–${end}`);
+    if (start && end) parts.push(`${start} às ${end}`);
     return parts.length > 0 ? parts.join(" · ") : t.campaigns.always;
   }
 

@@ -26,7 +26,7 @@
     "role": "Papel",
     "tenants": "Clientes",
     "signout": "Sair",
-    "superadminNote": "Você é operador da plataforma — vê todos os clientes.",
+    "superadminNote": "Você é operador da plataforma e vê todos os clientes.",
     "noTenants": "Nenhum cliente vinculado ainda."
   },
   "fleet": {
@@ -66,7 +66,7 @@
     "kioskOff": "Sem bloqueio",
     "kioskLocked": "Wi-Fi e modo avião bloqueados ✓",
     "kioskPartial": "Dono do aparelho, travas não confirmadas",
-    "kioskHintOn": "O cliente da loja usa tudo — menos desligar o Wi-Fi ou ligar o modo avião.",
+    "kioskHintOn": "O cliente da loja usa tudo, menos desligar o Wi-Fi ou ligar o modo avião.",
     "kioskHintOff": "Sem ser dono do aparelho, o Android não permite impedir que desliguem o Wi-Fi. Exige procedimento por cabo, com o aparelho sem contas.",
     "usbDebug": "Depuração USB",
     "usbDebugOn": "ligada",
@@ -94,13 +94,13 @@
     "contentCurrent": "Conteúdo atual",
     "fromCampaign": "Vindo da campanha",
     "fromDevice": "Fixado neste aparelho (exceção)",
-    "noContentWarning": "Nenhuma campanha cobre este aparelho agora — a tela dele está vazia. Crie uma campanha ou fixe um vídeo abaixo.",
+    "noContentWarning": "Nenhuma campanha cobre este aparelho agora, então a tela dele está vazia. Crie uma campanha ou fixe um vídeo abaixo.",
     "createCampaign": "Criar campanha",
-    "pinnedWarning": "Este aparelho tem um vídeo fixado — enquanto isso valer, ele ignora todas as campanhas.",
+    "pinnedWarning": "Este aparelho tem um vídeo fixado. Enquanto isso valer, ele ignora todas as campanhas.",
     "unpin": "Voltar a seguir campanhas",
     "contentNone": "Nenhum",
     "contentLive": "No ar ✓",
-    "contentPending": "Aplicado — aguardando o aparelho (~20s)",
+    "contentPending": "Aplicado, aguardando o aparelho (~20s)",
     "fit": "Enquadramento nesta tela",
     "fitDefault": "Padrão do vídeo",
     "pickMedia": "Fixar vídeo só neste aparelho (vence a campanha)",
@@ -134,7 +134,7 @@
     "journeyHint": "Visita = bloco de uso que termina quando a vitrine volta à tela. Tempo de vitrine e horas contam só o expediente da loja.",
     "journeyShowcase": "Vitrine no expediente",
     "journeyRate": "parada:",
-    "journeyTestBadge": "aparelho de teste · fora dos relatórios"
+    "journeyTestBadge": "aparelho de teste, fora dos relatórios"
   },
   "campaigns": {
     "title": "Campanhas",
@@ -144,7 +144,7 @@
     "empty": "Nenhuma campanha ainda. Sem campanha, o aparelho exibe só o que estiver fixado nele.",
     "noFallback": "Nenhuma campanha cobre todos os aparelhos o tempo todo. Aparelho descoberto = vitrine com a tela vazia na loja.",
     "createFallback": "Criar campanha padrão",
-    "fallbackHint": "Dica: deixe uma campanha com alvo \"Todos os aparelhos\" e sem data/horário. Ela é a rede de segurança — só entra quando nenhuma outra vale.",
+    "fallbackHint": "Dica: deixe uma campanha com alvo \"Todos os aparelhos\" e sem data/horário. Ela é a rede de segurança e só entra quando nenhuma outra vale.",
     "name": "Nome da campanha",
     "playlist": "Vídeos, na ordem",
     "addVideo": "Adicionar vídeo",
@@ -182,7 +182,7 @@
   },
   "library": {
     "title": "Biblioteca",
-    "subtitle": "Vídeos disponíveis para exibição. O enquadramento aqui é o padrão do arquivo — cada aparelho pode ter o seu, na tela dele.",
+    "subtitle": "Vídeos disponíveis para exibição. O enquadramento aqui é o padrão do arquivo; cada aparelho pode ter o seu, na tela dele.",
     "empty": "Nenhum vídeo enviado ainda. Envie pela página do aparelho.",
     "inUse": "Em uso",
     "unused": "Sem uso",
@@ -271,7 +271,7 @@
     "back": "Voltar",
     "dup": "Já existe um dispositivo com esse código.",
     "error": "Não foi possível salvar.",
-    "testDevice": "Aparelho de teste — fora dos relatórios",
+    "testDevice": "Aparelho de teste, fora dos relatórios",
     "testDeviceHint": "Continua sendo medido normalmente, mas não entra em relatório de cliente nem no BI. Desmarque quando o aparelho for para a loja."
   }
 }

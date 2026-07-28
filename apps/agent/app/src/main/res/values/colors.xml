@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Paleta da marca (branding/, board v03). Igual aos tokens do painel:
+     a mesma cor tem que sair igual na vitrine e no relatório. -->
+<resources>
+    <color name="marca_preto">#FF07080D</color>
+    <color name="marca_verde">#FF00F24F</color>
+    <color name="marca_claro">#FFD9F9E3</color>
+    <color name="marca_cinza">#FF8A938C</color>
+</resources>

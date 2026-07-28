@@ -176,9 +176,9 @@ object Kiosk {
     /** Apaga a senha da tela de bloqueio. É o comando que desfaz a brincadeira. */
     fun clearScreenLock(ctx: Context): String {
         if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
-        val saved = Prefs.resetToken(ctx) ?: return "sem token guardado — precisa reprovisionar"
+        val saved = Prefs.resetToken(ctx) ?: return "sem token guardado, precisa reprovisionar"
         if (!resetTokenActive(ctx)) {
-            return "token inativo — o Android exige confirmar a senha atual uma vez no aparelho"
+            return "token inativo: o Android exige confirmar a senha atual uma vez no aparelho"
         }
         return try {
             val bytes = android.util.Base64.decode(saved, android.util.Base64.NO_WRAP)

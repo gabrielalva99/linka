@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gerado a partir de branding/Logotipo/*.ai. Não editar à mão: reexportar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="382dp"
+    android:height="315dp"
+    android:viewportWidth="382"
+    android:viewportHeight="315">
+    <path
+        android:fillColor="@color/marca_claro"
+        android:pathData="M86.82,77.96 L0,77.96 L0,315.49 L62.35,315.49 L62.35,171.96 L139.74,315.49 L163.38,315.49 L163.38,222.41 Z" />
+    <path
+        android:fillColor="@color/marca_verde"
+        android:pathData="M248.97,241.12 L225.73,270.28 L225.73,315.49 L163.38,315.49 L163.38,77.96 L225.73,77.96 L225.73,180.62 L226.33,180.62 L308.15,77.96 L379.01,77.96 L285.74,194.99 L381.78,315.49 L308.24,315.49 Z" />
+    <path
+        android:fillColor="@color/marca_verde"
+        android:pathData="M57.64,28.81 C57.64,44.73,44.74,57.63,28.82,57.63 C12.91,57.63,0,44.73,0,28.81 C0,12.9,12.91,0,28.82,0 C44.74,0,57.64,12.9,57.64,28.81" />
+</vector>
