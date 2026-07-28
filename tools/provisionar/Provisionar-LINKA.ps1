@@ -223,6 +223,15 @@ O QUE FAZER:
   }
 }
 
+# Aparelho com uma versao MAIS NOVA que a publicada: nao e erro, e um aparelho
+# que ja tinha o app. O Android recusa a instalacao para baixo, e o kit tratava
+# isso como falha e parava o provisionamento no meio.
+if ($saidaInstall -match "INSTALL_FAILED_VERSION_DOWNGRADE") {
+  $instalada = ((& $adb shell dumpsys package com.linka.agent) -join " ") -replace ".*versionName=([0-9.]+).*", '$1'
+  Aviso "O aparelho ja tem uma versao mais nova ($instalada). Mantendo a que esta."
+  $saidaInstall = "Success"
+}
+
 if ($saidaInstall -match "Success") { Ok "Aplicativo instalado" }
 else { Fim $false "Falha ao instalar o aplicativo:`n$saidaInstall" }
 
@@ -313,7 +322,9 @@ if (-not $codigo) {
 }
 
 if ($codigo) {
-  & $adb shell am start -n com.linka.agent/.MainActivity -e enroll $codigo 2>&1 | Out-Null
+  # -S para o app antes de abrir. Sem isso o Android entrega o codigo a uma tela
+  # que ja esta aberta, e o pareamento nao acontece.
+  & $adb shell am start -S -n com.linka.agent/.MainActivity -e enroll $codigo 2>&1 | Out-Null
   Start-Sleep -Seconds 8
   Ok "Codigo enviado ao aparelho"
   Fim $true @"

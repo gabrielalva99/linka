@@ -83,6 +83,22 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * O código também chega com o app já aberto.
+     *
+     * Depois do provisionamento a vitrine vira a tela inicial e sobe sozinha, então
+     * quando o kit manda o código o app JÁ ESTÁ na frente: o Android entrega o
+     * intent aqui e não em onCreate. Sem este método o código era descartado em
+     * silêncio e o aparelho ficava esperando alguém digitar.
+     */
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (Prefs.token(this) != null) return
+        val code = intent?.getStringExtra("enroll")?.trim()?.uppercase()
+        if (!code.isNullOrEmpty()) showPairing(code)
+    }
+
     // ── Pareamento ────────────────────────────────────────────────────────
     private fun showPairing(autoCode: String? = null) {
         val root = LinearLayout(this).apply {
