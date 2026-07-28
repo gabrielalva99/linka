@@ -272,12 +272,45 @@ Tire foto desta tela e avise o suporte ANTES de devolver o aparelho a vitrine.
 "@
 }
 
+# 6. Entrada na frota ---------------------------------------------------------
+# O aparelho se cadastra sozinho: o codigo vai pelo cabo, o tecnico nao digita.
+# E um codigo so para o cliente inteiro, guardado em codigo-de-inscricao.txt no
+# kit. Se o arquivo nao existir, o script pergunta uma vez por visita.
+Titulo "Entrando na frota"
+$arquivoCodigo = Join-Path $base "codigo-de-inscricao.txt"
+$codigo = ""
+if (Test-Path $arquivoCodigo) {
+  $codigo = (Get-Content $arquivoCodigo -Raw).Trim().ToUpper()
+}
+if (-not $codigo) {
+  Write-Host ""
+  $codigo = (Read-Host "  Codigo de inscricao (aparece no painel, em Dispositivos)").Trim().ToUpper()
+}
+
+if ($codigo) {
+  & $adb shell am start -n com.linka.agent/.MainActivity -e enroll $codigo 2>&1 | Out-Null
+  Start-Sleep -Seconds 8
+  Ok "Codigo enviado ao aparelho"
+  Fim $true @"
+Aparelho: $modelo (Android $android)
+
+O aparelho ja entrou na frota sozinho. Ele aparece no painel em
+Dispositivos, em ate 1 minuto, com modelo e versao do Android
+preenchidos.
+
+NO ESCRITORIO: falta so dizer em que loja ele fica.
+
+Se a tela ainda pedir codigo, digite $codigo nela e aguarde.
+"@
+}
+
 Fim $true @"
 Aparelho: $modelo (Android $android)
 
 O QUE FALTA (no proprio aparelho):
- 1. Abra o app LINKA Agente.
- 2. Digite o CODIGO DE PAREAMENTO da etiqueta deste aparelho.
+ 1. Abra o app LINKA.
+ 2. Digite o CODIGO DE INSCRICAO (o mesmo para todos os aparelhos
+    deste cliente; esta no painel, em Dispositivos).
  3. Aguarde ate o video comecar a tocar sozinho.
 
 Nao precisa mexer em mais nada. O aparelho ja aparece no painel.

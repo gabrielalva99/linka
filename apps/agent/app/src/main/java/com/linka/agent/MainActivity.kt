@@ -76,12 +76,15 @@ class MainActivity : Activity() {
             startHeartbeat()
             showContent(token)
         } else {
-            showPairing()
+            // O kit de campo passa o código pelo cabo: o técnico não digita nada.
+            // Se não vier, cai na tela de sempre, com o campo para digitar.
+            val doCabo = intent?.getStringExtra("enroll")?.trim()?.uppercase()
+            showPairing(doCabo?.takeIf { it.isNotEmpty() })
         }
     }
 
     // ── Pareamento ────────────────────────────────────────────────────────
-    private fun showPairing() {
+    private fun showPairing(autoCode: String? = null) {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(56, 120, 56, 56)
@@ -145,6 +148,13 @@ class MainActivity : Activity() {
 
         root.addView(logo); root.addView(input); root.addView(button); root.addView(status)
         setContentView(root)
+
+        // Código entregue pelo provisionamento: pareia sozinho, sem toque humano.
+        if (autoCode != null) {
+            input.setText(autoCode)
+            status.text = "Entrando na frota…"
+            button.performClick()
+        }
     }
 
     // ── Conteúdo (player) ─────────────────────────────────────────────────

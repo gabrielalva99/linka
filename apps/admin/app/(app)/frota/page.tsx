@@ -27,6 +27,7 @@ type DeviceRow = {
   device_type: DeviceType;
   hardware_model: string | null;
   kiosk_locked: boolean;
+  store_id: string | null;
   device_models: Rel;
   stores: Rel;
 };
@@ -81,6 +82,12 @@ export default async function FrotaPage({
   // servidor, comparando o que está instalado com o que foi publicado. Antes
   // esse fato vinha do próprio aparelho e chegava atrasado, então a tela dizia
   // "1 de 2" com os dois já na versão nova.
+  // Código de inscrição do cliente: é o que vai no kit de campo.
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("enrollment_code")
+    .limit(1)
+    .maybeSingle();
   const { data: release } = await supabase
     .from("agent_releases")
     .select("version")
@@ -89,7 +96,7 @@ export default async function FrotaPage({
   const { data } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, device_models(name), stores(name)",
     )
     .order("code", { ascending: true });
   const t = getMessages();
@@ -115,6 +122,9 @@ export default async function FrotaPage({
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
   const locked = devices.filter((d) => d.kiosk_locked).length;
+  // Aparelho que se cadastrou sozinho chega sem loja. É o único dado que ele
+  // não tem como descobrir, e sem ele nenhuma campanha alcança o aparelho.
+  const semLoja = devices.filter((d) => !d.store_id);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -138,12 +148,38 @@ export default async function FrotaPage({
 
       <TypeTabs active={activeType} counts={counts} />
 
+      {/* O código do cliente inteiro, não um por aparelho: é ele que vai no kit
+          do técnico e faz o aparelho se cadastrar sozinho. */}
+      {tenant?.enrollment_code && (
+        <p className="mt-4 text-xs text-muted">
+          Código de inscrição para o kit de campo:{" "}
+          <span className="rounded bg-surface-2 px-2 py-1 font-mono text-sm text-foreground">
+            {tenant.enrollment_code}
+          </span>{" "}
+          o aparelho entra na frota sozinho e você só define a loja.
+        </p>
+      )}
+
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <Kpi label={t.fleet.active} value={online} total={total} />
         <Kpi label={t.fleet.locked} value={locked} total={total} />
         <Kpi label={t.fleet.synced} value={synced} total={total} />
         <Kpi label={t.fleet.updated} value={updated} total={total} />
       </div>
+
+      {semLoja.length > 0 && (
+        <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3">
+          <p className="text-xs text-primary">
+            {semLoja.length === 1
+              ? "1 aparelho chegou e ainda não tem loja."
+              : `${semLoja.length} aparelhos chegaram e ainda não têm loja.`}{" "}
+            Sem loja definida, nenhuma campanha alcança o aparelho.
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {semLoja.map((d) => d.name).join(" · ")}
+          </p>
+        </div>
+      )}
 
       {locked < total && (
         <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
