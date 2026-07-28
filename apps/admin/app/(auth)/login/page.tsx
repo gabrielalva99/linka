@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState } from "react";
 import { getMessages } from "@/lib/i18n";
 import { login, type LoginState } from "./actions";
@@ -20,9 +21,15 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-full flex-1 items-center justify-center p-8">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-2.5">
-          <span className="inline-block h-3.5 w-3.5 rounded-full bg-primary" />
-          <span className="text-2xl font-bold tracking-tight">{t.app.name}</span>
+        <div className="mb-8">
+          <Image
+            src="/linka-logo.png"
+            alt={t.app.name}
+            width={1645}
+            height={531}
+            priority
+            className="h-9 w-auto"
+          />
         </div>
 
         <h1 className="text-lg font-semibold">{t.login.title}</h1>

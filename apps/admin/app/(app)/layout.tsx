@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
@@ -29,9 +30,17 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-full flex-1">
       <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface p-4 sm:flex">
-        <div className="mb-8 flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-full bg-primary" />
-          <span className="text-lg font-bold tracking-tight">{t.app.name}</span>
+        {/* Logotipo da marca no lugar do texto. Largura fixa e altura
+            automática: o arquivo é o mesmo entregue pelo design, sem recorte. */}
+        <div className="mb-8">
+          <Image
+            src="/linka-logo.png"
+            alt={t.app.name}
+            width={1645}
+            height={531}
+            priority
+            className="h-6 w-auto"
+          />
         </div>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
