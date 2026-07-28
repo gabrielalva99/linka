@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { CreateModelForm } from "./create-form";
 import { ModelRow } from "./model-row";
 
@@ -12,6 +13,7 @@ export default async function ModelosPage() {
     .order("line", { ascending: true })
     .order("name", { ascending: true });
   const t = getMessages();
+  const podeEditar = await podeOperarAgora();
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -20,9 +22,11 @@ export default async function ModelosPage() {
       </Link>
       <h1 className="mt-2 text-xl font-semibold">{t.models.title}</h1>
 
-      <div className="mt-6">
-        <CreateModelForm />
-      </div>
+      {podeEditar && (
+        <div className="mt-6">
+          <CreateModelForm />
+        </div>
+      )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-line">
         {models && models.length > 0 ? (
@@ -44,6 +48,7 @@ export default async function ModelosPage() {
                   aparelhos={
                     (m.devices as unknown as { count: number }[] | null)?.[0]?.count ?? 0
                   }
+                  podeEditar={podeEditar}
                 />
               ))}
             </tbody>

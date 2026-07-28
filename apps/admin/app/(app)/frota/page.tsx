@@ -9,6 +9,8 @@ import {
   type DeviceType,
 } from "@linka/shared";
 import { modelLabel } from "@/lib/device-display";
+import { getSessionContext } from "@/lib/auth";
+import { podeOperar, ehOperadorDaPlataforma } from "@/lib/perms";
 import { StatusBadge } from "./status-badge";
 import { TypeTabs } from "./type-tabs";
 import { Filters } from "./filters";
@@ -111,6 +113,9 @@ export default async function FrotaPage({
     )
     .order("code", { ascending: true });
   const t = getMessages();
+  const ctx = await getSessionContext();
+  const podeMexer = podeOperar(ctx);
+  const ehPlataforma = ehOperadorDaPlataforma(ctx);
   const all = (data ?? []) as DeviceRow[];
 
   // Contagem por tipo sai da lista completa; as abas não podem depender do filtro.
@@ -178,18 +183,24 @@ export default async function FrotaPage({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t.fleet.title}</h1>
         <div className="flex items-center gap-3">
-          <Link href="/frota/versoes" className="text-sm text-muted hover:underline">
-            Versões do agente
-          </Link>
-          <Link href="/frota/modelos" className="text-sm text-muted hover:underline">
-            {t.models.manage}
-          </Link>
+          {ehPlataforma && (
+            <Link href="/frota/versoes" className="text-sm text-muted hover:underline">
+              Versões do agente
+            </Link>
+          )}
+          {podeMexer && (
+            <Link href="/frota/modelos" className="text-sm text-muted hover:underline">
+              {t.models.manage}
+            </Link>
+          )}
+          {podeMexer && (
           <Link
             href="/frota/novo"
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             {t.deviceForm.new}
           </Link>
+          )}
         </div>
       </div>
 
@@ -207,7 +218,7 @@ export default async function FrotaPage({
 
       {/* O código do cliente inteiro, não um por aparelho: é ele que vai no kit
           do técnico e faz o aparelho se cadastrar sozinho. */}
-      {tenant?.enrollment_code && (
+      {podeMexer && tenant?.enrollment_code && (
         <p className="mt-4 text-xs text-muted">
           Código de inscrição para o kit de campo:{" "}
           <span className="rounded bg-surface-2 px-2 py-1 font-mono text-sm text-foreground">

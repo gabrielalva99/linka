@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { CONTENT_FIT_LABELS, type ContentFit } from "@linka/shared";
 import { CampaignActions } from "./campaign-row";
 
@@ -41,6 +42,7 @@ export default async function CampanhasPage() {
 
   const t = getMessages();
   const campaigns = (data ?? []) as CampaignRow[];
+  const podeOperar = await podeOperarAgora();
 
   // Rede de segurança: campanha ativa, para todos, sem data e sem horário.
   // Sem ela, qualquer aparelho não coberto fica com a tela vazia na loja.
@@ -97,12 +99,14 @@ export default async function CampanhasPage() {
           <h1 className="text-xl font-semibold">{t.campaigns.title}</h1>
           <p className="mt-1 text-sm text-muted">{t.campaigns.subtitle}</p>
         </div>
+        {podeOperar && (
         <Link
           href="/campanhas/nova"
           className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
         >
           {t.campaigns.new}
         </Link>
+        )}
       </div>
 
       {!hasFallback && (

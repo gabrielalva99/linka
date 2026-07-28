@@ -278,7 +278,9 @@
     "hoursTitle": "Horário de funcionamento",
     "hoursEffect": "Os {n} aparelho(s) desta loja seguem este horário: com a loja aberta, a vitrine acende sozinha se a tela apagar; com a loja fechada, fica quieta para não gastar bateria nem queimar a tela. É também o que recorta o tempo de vitrine nos relatórios.",
     "hoursError": "Não foi possível salvar. Confira se o horário de abertura é antes do de fechamento.",
-    "hoursLine": "Funciona das {abre} às {fecha}. Os aparelhos desta loja seguem este horário."
+    "hoursLine": "Funciona das {abre} às {fecha}. Os aparelhos desta loja seguem este horário.",
+    "colHours": "Horário",
+    "colDevices": "Aparelhos"
   },
   "positions": {
     "title": "Posições",

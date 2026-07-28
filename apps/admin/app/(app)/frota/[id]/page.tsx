@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { modelLabel } from "@/lib/device-display";
 import {
   CONTENT_FIT_HINTS,
@@ -94,6 +95,7 @@ export default async function DeviceDetailPage({
     ]);
 
   const t = getMessages();
+  const podeOperar = await podeOperarAgora();
   const media = (mediaData ?? []) as Media[];
   const d = device as {
     id: string;
@@ -219,12 +221,14 @@ export default async function DeviceDetailPage({
       </Link>
       <div className="mt-2 flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{d.name}</h1>
+        {podeOperar && (
         <Link
           href={`/frota/${d.id}/editar`}
           className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
         >
           {t.device.edit}
         </Link>
+        )}
       </div>
 
       {/* Aparelho que nunca reportou: a instrução de pareamento vem antes de
@@ -273,6 +277,8 @@ export default async function DeviceDetailPage({
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.kiosk}</h2>
+        {podeOperar && (
+        <>
         <KioskPanel
           deviceId={d.id}
           isDeviceOwner={d.is_device_owner}
@@ -292,6 +298,8 @@ export default async function DeviceDetailPage({
           lastResult={d.last_cleanup_result}
           pendingCommand={d.pending_command}
         />
+        </>
+        )}
       </section>
 
       <AppsPanel

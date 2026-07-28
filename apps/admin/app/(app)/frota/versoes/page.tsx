@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
+import { getSessionContext } from "@/lib/auth";
+import { ehOperadorDaPlataforma } from "@/lib/perms";
 import { PublishForm } from "./publish-form";
 import { RollbackButton } from "./rollback-button";
 
@@ -15,6 +18,9 @@ type Release = {
 export default async function VersoesPage() {
   const supabase = await createSupabaseServerClient();
   const t = getMessages();
+  // Publicar APK muda o software de TODA a frota, de todos os clientes.
+  // Não é permissão de agência: é da plataforma.
+  if (!ehOperadorDaPlataforma(await getSessionContext())) redirect("/frota");
 
   const [{ data: releases }, { data: devices }] = await Promise.all([
     supabase

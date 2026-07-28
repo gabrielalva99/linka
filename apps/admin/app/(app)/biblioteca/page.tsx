@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
@@ -36,6 +37,7 @@ export default async function BibliotecaPage() {
   ]);
 
   const t = getMessages();
+  const podeOperar = await podeOperarAgora();
   const media = (mediaData ?? []) as MediaRow[];
   const devices = (deviceData ?? []) as { name: string; content_url: string }[];
 
@@ -78,7 +80,7 @@ export default async function BibliotecaPage() {
                       <p className="mt-2 text-xs text-muted">{t.library.unused}</p>
                     )}
                   </div>
-                  <DeleteButton mediaId={m.id} name={m.name} />
+                  {podeOperar && <DeleteButton mediaId={m.id} name={m.name} />}
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">

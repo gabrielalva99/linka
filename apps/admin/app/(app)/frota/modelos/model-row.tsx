@@ -17,11 +17,13 @@ export function ModelRow({
   nome,
   linha,
   aparelhos,
+  podeEditar,
 }: {
   id: string;
   nome: string;
   linha: string | null;
   aparelhos: number;
+  podeEditar: boolean;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -108,6 +110,7 @@ export function ModelRow({
             </button>
           </>
         ) : (
+          podeEditar && (
           <>
             <button
               onClick={() => setEditando(true)}
@@ -125,6 +128,7 @@ export function ModelRow({
               {t.models.delete}
             </button>
           </>
+          )
         )}
       </td>
     </tr>

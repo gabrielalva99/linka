@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { podeOperarAgora } from "@/lib/perms";
 import { CreateChainForm } from "./create-form";
 import { ChainRow } from "./chain-row";
 
@@ -12,14 +13,17 @@ export default async function RedesPage() {
     .select("id, name, stores(count)")
     .order("name", { ascending: true });
   const t = getMessages();
+  const podeEditar = await podeOperarAgora();
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-xl font-semibold">{t.chains.title}</h1>
 
-      <div className="mt-6">
-        <CreateChainForm />
-      </div>
+      {podeEditar && (
+        <div className="mt-6">
+          <CreateChainForm />
+        </div>
+      )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-line">
         {chains && chains.length > 0 ? (
@@ -32,6 +36,7 @@ export default async function RedesPage() {
                 lojas={
                   (c.stores as unknown as { count: number }[] | null)?.[0]?.count ?? 0
                 }
+                podeEditar={podeEditar}
               />
             ))}
           </ul>

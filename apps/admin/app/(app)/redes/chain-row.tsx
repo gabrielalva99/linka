@@ -19,10 +19,12 @@ export function ChainRow({
   id,
   nome,
   lojas,
+  podeEditar,
 }: {
   id: string;
   nome: string;
   lojas: number;
+  podeEditar: boolean;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -104,6 +106,7 @@ export function ChainRow({
           </button>
         </>
       ) : (
+        podeEditar && (
         <>
           <button
             onClick={() => setEditando(true)}
@@ -121,6 +124,7 @@ export function ChainRow({
             {t.chains.delete}
           </button>
         </>
+        )
       )}
     </li>
   );
