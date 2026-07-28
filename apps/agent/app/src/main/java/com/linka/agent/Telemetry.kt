@@ -81,6 +81,9 @@ object Telemetry {
             .put("adb_enabled", Kiosk.adbEnabled(ctx))
             // O painel precisa saber se a cura está disponível ANTES de precisar dela.
             .put("reset_token_ready", Kiosk.resetTokenActive(ctx))
+            // Senha de tela: não dá para apagar neste hardware, mas o painel
+            // tem que saber antes de o aparelho ir para a prateleira.
+            .put("screen_lock_set", Kiosk.screenLockSet(ctx))
             .put("blocked_apps", Kiosk.blockedApps(ctx))
         // "Está atualizado?" não é mais respondido aqui. O aparelho só sabia a
         // versão publicada por um valor em cache, então respondia com atraso e o

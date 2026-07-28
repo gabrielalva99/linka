@@ -139,7 +139,8 @@
     "pairingIntro": "Digite o código abaixo no aplicativo LINKA do celular. Ele aparece na primeira tela, logo depois de instalar.",
     "pairingStep1": "Abra o LINKA no celular (ícone verde e preto).",
     "pairingStep2": "Digite este código e toque em Parear.",
-    "pairingStep3": "Em poucos segundos esta tela se atualiza sozinha e o código some."
+    "pairingStep3": "Em poucos segundos esta tela se atualiza sozinha e o código some.",
+    "screenLockWarning": "Este aparelho tem senha na tela de bloqueio. Não dá para apagar à distância neste modelo, e depois de qualquer reinício a loja fica com a tela pedindo o PIN. Remova em Ajustes, Segurança, Bloqueio de tela, Nenhum."
   },
   "campaigns": {
     "title": "Campanhas",

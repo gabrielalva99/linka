@@ -38,6 +38,23 @@ object Kiosk {
 
     fun admin(ctx: Context) = ComponentName(ctx, LinkaDeviceAdminReceiver::class.java)
 
+    /**
+     * O aparelho tem senha/PIN de tela?
+     *
+     * Este hardware recusa o token de reset do Android, então apagar a senha
+     * remotamente não é possível: o que dá para fazer é DENUNCIAR. Um aparelho
+     * com senha desconhecida vira uma vitrine pedindo PIN no primeiro reinício,
+     * e isso não pode ser descoberto pela loja.
+     */
+    fun screenLockSet(ctx: Context): Boolean =
+        try {
+            val km = ctx.getSystemService(Context.KEYGUARD_SERVICE)
+                as android.app.KeyguardManager
+            km.isDeviceSecure
+        } catch (_: Exception) {
+            false
+        }
+
     fun isDeviceOwner(ctx: Context): Boolean =
         try {
             dpm(ctx).isDeviceOwnerApp(ctx.packageName)

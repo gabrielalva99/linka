@@ -144,6 +144,31 @@ O QUE FAZER:
 }
 Ok "Um unico usuario no aparelho"
 
+# Senha de tela: este hardware recusa o token de reset do Android, entao NAO ha
+# como apagar a senha remotamente. Se o aparelho for para a prateleira com uma
+# senha que ninguem sabe, no primeiro reinicio a loja fica com uma vitrine
+# pedindo PIN. Melhor parar aqui do que descobrir na loja.
+#
+# A checagem nao gasta tentativa de senha: "clear" sem credencial devolve erro
+# quando existe senha, e simplesmente remove o bloqueio por deslizar quando nao.
+$saidaLock = (& $adb shell locksettings clear 2>&1) -join " "
+if ($saidaLock -match "Credential can't be null|didn't match|IllegalArgumentException") {
+  Fim $false @"
+O aparelho tem SENHA (PIN, padrao ou digital) na tela de bloqueio.
+
+Nao da para remover pelo computador, e um aparelho de vitrine nao pode ter
+senha: depois de qualquer reinicio a loja fica com a tela pedindo o PIN.
+
+O QUE FAZER:
+ 1. No aparelho: Ajustes > Seguranca > Bloqueio de tela.
+ 2. Escolher NENHUM (vai pedir o PIN atual uma vez).
+ 3. Rode este programa de novo.
+
+Se ninguem souber o PIN, separe o aparelho e avise o suporte.
+"@
+}
+Ok "Sem senha na tela de bloqueio"
+
 # 3. Instalacao ---------------------------------------------------------------
 Titulo "Instalando o aplicativo LINKA"
 

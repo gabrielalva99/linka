@@ -130,6 +130,9 @@ Deno.serve(async (req) => {
   if (typeof payload.reset_token_ready === "boolean") {
     update.reset_token_ready = payload.reset_token_ready;
   }
+  if (typeof payload.screen_lock_set === "boolean") {
+    update.screen_lock_set = payload.screen_lock_set;
+  }
 
   // O comando só sai da fila quando o aparelho confirma ter executado.
   const done = payload.command_done ? String(payload.command_done) : null;

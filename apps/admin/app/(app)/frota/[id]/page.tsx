@@ -60,7 +60,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, exclude_from_reports, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -115,6 +115,7 @@ export default async function DeviceDetailPage({
     update_error: string | null;
     block_settings: boolean;
     blocked_apps: string | null;
+    screen_lock_set: boolean | null;
     exclude_from_reports: boolean;
     device_models: Rel;
     stores: Rel;
@@ -237,6 +238,14 @@ export default async function DeviceDetailPage({
           ))}
         </dl>
       </section>
+
+      {/* Senha de tela: não dá para apagar neste hardware, então o painel
+          precisa gritar antes de o aparelho ir para a loja. */}
+      {d.screen_lock_set && (
+        <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
+          {t.device.screenLockWarning}
+        </p>
+      )}
 
       {d.update_error && (
         <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">

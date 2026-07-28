@@ -138,6 +138,17 @@ class MainActivity : Activity() {
                         val t = JSONObject(result.body).optString("device_token")
                         if (t.isNotEmpty()) {
                             Prefs.setToken(this, t)
+                            // Faxina de entrada: o aparelho entra na frota limpo.
+                            //
+                            // A faxina diária só roda de madrugada, então um
+                            // aparelho provisionado de manhã passava o dia inteiro
+                            // na loja com as fotos e as contas de quem mexeu nele
+                            // antes. Aqui é a única vez que ela roda fora de hora.
+                            Thread {
+                                val relato = Cleanup.run(this)
+                                Prefs.setPendingCleanupReport(this, "entrada: $relato")
+                                Telemetry.beatAsync(this)
+                            }.start()
                             startHeartbeat()
                             showContent(t)
                         } else status.text = "Resposta inválida do servidor."
