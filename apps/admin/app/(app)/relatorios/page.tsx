@@ -42,9 +42,19 @@ type Report = {
     sessoes: number;
     segundos: number;
   }[];
+  frota: {
+    aparelhos: number;
+    lojas_com_aparelho: number;
+    lojas_total: number;
+    modelos: number;
+    sem_loja: number;
+  };
+  cobertura: { linha: string; lojas_com: number; lojas_total: number }[];
   por_modelo: {
     modelo: string;
     linha: string;
+    unidades: number;
+    lojas: number;
     visitas: number;
     segundos: number;
     segundos_vitrine: number;
@@ -378,6 +388,28 @@ export default async function RelatoriosPage({
             <p className="mt-2 text-xs text-muted">{t.reports.noBaseline}</p>
           )}
 
+          {/* Tamanho da operação, em uma linha. Sai da frota e não do movimento:
+              é o denominador de tudo que vem abaixo, e loja sem interação
+              continua sendo loja. */}
+          {r.frota && (
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <span>{plural(r.frota.aparelhos, "aparelho ativo", "aparelhos ativos")}</span>
+              <span>·</span>
+              <span>
+                {t.reports.storesWith
+                  .replace("{n}", String(r.frota.lojas_com_aparelho))
+                  .replace("{t}", String(r.frota.lojas_total))}
+              </span>
+              <span>·</span>
+              <span>{plural(r.frota.modelos, "modelo", "modelos")}</span>
+              {r.frota.sem_loja > 0 && (
+                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">
+                  {t.reports.withoutStore.replace("{n}", String(r.frota.sem_loja))}
+                </span>
+              )}
+            </p>
+          )}
+
           <section className="mt-8">
             <h2 className="text-sm font-medium text-muted">{t.reports.byStore}</h2>
             <div className="mt-3 overflow-x-auto rounded-xl border border-line">
@@ -415,22 +447,64 @@ export default async function RelatoriosPage({
             <p className="mt-2 text-xs text-muted">{t.reports.rateHint}</p>
           </section>
 
-          {/* O corte de venda. Vem antes do corte por aparelho de propósito:
-              "aparelho 109" é inventário, "Razr" é decisão. */}
-          {(r.por_modelo?.length ?? 0) > 0 && (
+          {/* Engajamento por rede. Com uma rede só, repete o total. */}
+          {(r.por_rede?.length ?? 0) > 1 && (
             <section className="mt-8">
-              <h2 className="text-sm font-medium text-muted">{t.reports.byModel}</h2>
-              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
-                <table className="w-full min-w-[520px] text-sm">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byChain}</h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-line">
+                <table className="w-full text-sm">
                   <thead className="bg-surface-2 text-left text-muted">
                     <tr>
-                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
-                      <th className="px-4 py-2 font-medium">{t.reports.line}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.chain}</th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium">
                         {t.reports.visits}
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium">
                         {t.reports.usage}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_rede.map((c) => (
+                      <tr key={c.rede} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">{c.rede}</td>
+                        <td className="px-4 py-3">{c.visitas}</td>
+                        <td className="px-4 py-3 text-muted">{tempo(c.segundos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* O corte de venda. Vem antes do corte por aparelho de propósito:
+              "aparelho 109" é inventário, "Razr" é decisão.
+
+              Unidades e lojas entram na MESMA tabela porque é a comparação que
+              não pode ser separada: "o Moto G lidera" costuma ser só "o Moto G
+              está em 40 lojas e o Razr em 6". Quem responde isso é a coluna
+              "por aparelho". */}
+          {(r.por_modelo?.length ?? 0) > 0 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byModel}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[680px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.line}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.units}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.presence}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.visits}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.perUnit}
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium">
                         {t.reports.rate}
@@ -442,8 +516,12 @@ export default async function RelatoriosPage({
                       <tr key={`${m.modelo}-${m.linha}`} className="bg-surface">
                         <td className="px-4 py-3 font-medium">{m.modelo}</td>
                         <td className="px-4 py-3 text-muted">{m.linha}</td>
+                        <td className="px-4 py-3 text-muted">{m.unidades}</td>
+                        <td className="px-4 py-3 text-muted">{m.lojas}</td>
                         <td className="px-4 py-3">{m.visitas}</td>
-                        <td className="px-4 py-3 text-muted">{tempo(m.segundos)}</td>
+                        <td className="px-4 py-3 font-medium text-brand-500">
+                          {m.unidades > 0 ? (m.visitas / m.unidades).toFixed(1) : "—"}
+                        </td>
                         <td className="px-4 py-3 text-muted">
                           {taxa(m.visitas, m.segundos_vitrine)}/h
                         </td>
@@ -453,6 +531,36 @@ export default async function RelatoriosPage({
                 </table>
               </div>
               <p className="mt-2 text-xs text-muted">{t.reports.modelHint}</p>
+            </section>
+          )}
+
+          {/* Cobertura: quantas lojas do recorte têm cada linha. Sai da frota,
+              não do movimento — linha instalada e nunca tocada continua
+              instalada, e é isso que a marca precisa enxergar. */}
+          {(r.cobertura?.length ?? 0) > 0 && r.frota?.lojas_total > 0 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.coverage}</h2>
+              <div className="mt-3 rounded-xl border border-line bg-surface p-5">
+                <ul className="space-y-2">
+                  {r.cobertura.map((c) => (
+                    <li key={c.linha} className="flex items-center gap-3">
+                      <span className="w-28 shrink-0 truncate text-sm">{c.linha}</span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                        <span
+                          className="block h-full rounded-full bg-brand-500"
+                          style={{
+                            width: `${Math.round((c.lojas_com / Math.max(1, c.lojas_total)) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="w-32 shrink-0 text-right text-xs text-muted">
+                        {c.lojas_com} de {c.lojas_total}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-muted">{t.reports.coverageHint}</p>
+              </div>
             </section>
           )}
 

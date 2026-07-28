@@ -445,6 +445,14 @@
     "heatmap": "Concentração dia × hora",
     "heatmapHint": "Onde o movimento se junta. É o que separa \"movimento de sábado\" de \"movimento de sábado à tarde\".",
     "byChannel": "Rua e shopping, hora a hora",
-    "channelHint": "As duas curvas são diferentes. Somadas, viram uma curva que não descreve nenhuma das duas."
+    "channelHint": "As duas curvas são diferentes. Somadas, viram uma curva que não descreve nenhuma das duas.",
+    "byChain": "Por rede",
+    "units": "Unidades",
+    "presence": "Lojas",
+    "perUnit": "Por aparelho",
+    "storesWith": "{n} de {t} lojas com aparelho",
+    "withoutStore": "{n} sem loja definida",
+    "coverage": "Cobertura por linha",
+    "coverageHint": "Lojas que têm a linha instalada, sobre o total de lojas do recorte. Sai do cadastro da frota, não do movimento: linha instalada e nunca tocada continua instalada — e é esse o caso que precisa aparecer."
   }
 }
