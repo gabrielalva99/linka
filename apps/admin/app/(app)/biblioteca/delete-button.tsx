@@ -25,6 +25,10 @@ export function DeleteButton({ mediaId, name }: { mediaId: string; name: string 
             if (result.ok) router.refresh();
             else if (result.reason === "in_use") {
               setError(t.library.inUseBlock.replace("{n}", String(result.count)));
+            } else if (result.reason === "in_campaign") {
+              setError(
+                t.library.inCampaignBlock.replace("{n}", String(result.count)),
+              );
             } else setError(t.library.deleteError);
           });
         }}

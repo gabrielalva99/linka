@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logAction } from "@/lib/audit";
 
 export type PublishState =
   | { ok: true; version: string }
@@ -53,6 +54,7 @@ export async function publishRelease(
     };
   }
 
+  await logAction("publicar_versao", "agent_release", undefined, { versao: version });
   revalidatePath("/frota/versoes");
   return { ok: true, version };
 }

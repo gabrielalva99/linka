@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logAction } from "@/lib/audit";
 import { getActiveTenant } from "@/lib/tenant";
 import type { ContentFit } from "@linka/shared";
 
@@ -18,6 +19,7 @@ export async function sendCommand(
     .from("devices")
     .update({ pending_command: command })
     .eq("id", deviceId);
+  await logAction("comando", "device", deviceId, { comando: command });
   revalidatePath(`/frota/${deviceId}`);
 }
 
@@ -35,6 +37,7 @@ export async function uninstallApp(deviceId: string, pkg: string) {
     .from("devices")
     .update({ pending_command: `uninstall:${pkg}` })
     .eq("id", deviceId);
+  await logAction("remover_app", "device", deviceId, { app: pkg });
   revalidatePath(`/frota/${deviceId}`);
 }
 

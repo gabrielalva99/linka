@@ -210,7 +210,8 @@
     "deleting": "Excluindo…",
     "confirmDelete": "Excluir \"{name}\" da biblioteca? Não dá para desfazer.",
     "inUseBlock": "Está em uso em {n} aparelho(s). Troque o conteúdo deles antes de excluir.",
-    "deleteError": "Não foi possível excluir."
+    "deleteError": "Não foi possível excluir. Recarregue a página e tente de novo.",
+    "inCampaignBlock": "Este vídeo está em {n} campanha(s). Tire ele da playlist da campanha antes de excluir; o arquivo não foi apagado."
   },
   "chains": {
     "title": "Redes",

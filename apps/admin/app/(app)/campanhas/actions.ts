@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logAction } from "@/lib/audit";
 import { getActiveTenant } from "@/lib/tenant";
 
 export type CampaignState = { status: "idle" | "error" };
@@ -155,6 +156,7 @@ export async function toggleCampaign(id: string, active: boolean) {
 }
 
 export async function deleteCampaign(id: string) {
+  await logAction("excluir_campanha", "campaign", id);
   const supabase = await createSupabaseServerClient();
   await supabase.from("campaigns").delete().eq("id", id);
   revalidatePath("/campanhas");
