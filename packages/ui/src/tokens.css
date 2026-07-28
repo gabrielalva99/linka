@@ -55,7 +55,9 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Tipografia */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Tipografia — New Black Typeface é a fonte da marca (board v03).
+     A pilha do sistema fica atrás como rede: se o arquivo não carregar, o
+     painel continua legível em vez de cair numa serifada qualquer. */
+  --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
