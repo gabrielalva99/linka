@@ -376,6 +376,9 @@
     "rateHint": "Taxa de parada é visitas por hora de vitrine exposta. É ela que compara lojas de tamanhos diferentes; a contagem crua premia a loja que fica mais tempo aberta.",
     "hourHint": "Horário da loja, somado no período.",
     "noVisits": "{n} aparelho(s) sem nenhuma visita no período",
-    "noVisitsHint": "Pode ser ponto ruim na loja, pode ser aparelho com problema. Nos dois casos alguém precisa olhar."
+    "noVisitsHint": "Pode ser ponto ruim na loja, pode ser aparelho com problema. Nos dois casos alguém precisa olhar.",
+    "blockedUsed": "Alguém abriu um app que deveria estar bloqueado",
+    "blockedHint": "Ajustes e Play Store são bloqueados porque é por ali que se cria senha de tela e se instala qualquer coisa num aparelho de vitrine. Se aparecem aqui, o bloqueio não estava valendo nesse aparelho.",
+    "times": "{n} vez(es)"
   }
 }

@@ -23,6 +23,13 @@ type Report = {
     segundos: number;
   }[];
   por_dia: { dia: string; visitas: number; segundos: number }[];
+  apps_proibidos: {
+    loja: string;
+    aparelho: string;
+    codigo: string | null;
+    app: string;
+    vezes: number;
+  }[];
   por_hora: { hora: number; visitas: number }[];
   aparelhos_sem_visita: { aparelho: string; codigo: string | null; loja: string }[];
 };
@@ -112,6 +119,24 @@ export default async function RelatoriosPage({
         </div>
       ) : (
         <>
+          {r.apps_proibidos?.length > 0 && (
+            <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
+              <p className="text-sm font-semibold text-warning">
+                {t.reports.blockedUsed}
+              </p>
+              <p className="mt-1 text-xs text-muted">{t.reports.blockedHint}</p>
+              <ul className="mt-2 flex flex-col gap-1 text-xs">
+                {r.apps_proibidos.map((a) => (
+                  <li key={`${a.codigo}-${a.app}`} className="text-muted">
+                    <span className="text-warning">{a.app}</span>
+                    {` · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
+                    {t.reports.times.replace("{n}", String(a.vezes))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.visits}</dt>
@@ -184,7 +209,9 @@ export default async function RelatoriosPage({
               <ul className="space-y-2">
                 {r.por_recurso.map((x) => (
                   <li key={x.recurso} className="flex items-center gap-3">
-                    <span className="w-32 shrink-0 truncate text-sm">{x.recurso}</span>
+                    <span className="w-44 shrink-0 truncate text-sm" title={x.recurso}>
+                      {x.recurso}
+                    </span>
                     <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
                       <span
                         className="block h-full rounded-full bg-brand-500"

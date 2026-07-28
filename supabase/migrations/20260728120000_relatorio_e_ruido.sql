@@ -170,3 +170,6 @@ end;
 $fn$;
 
 comment on function public.fleet_report is 'Relatório agregado da frota por período. Lê as mesmas views do BI, para a tela e a planilha nunca discordarem.';
+
+
+-- Complemento aplicado depois do primeiro relatório real (ver 20260728130000).
