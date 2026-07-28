@@ -133,6 +133,20 @@ object Kiosk {
     private val BLOCKABLE = listOf("com.android.settings", "com.android.vending")
 
     /** Devolve o que foi realmente bloqueado — o painel não deve supor. */
+    /**
+     * Some com um app da gaveta sem desinstalar.
+     *
+     * Serve para app de fábrica, que o Android não deixa remover: escondido, o
+     * cliente não abre e o ferro continua íntegro para quando o aparelho voltar
+     * a ser um celular comum.
+     */
+    fun esconder(ctx: Context, pacote: String, esconder: Boolean): Boolean =
+        try {
+            dpm(ctx).setApplicationHidden(admin(ctx), pacote, esconder)
+        } catch (_: Exception) {
+            false
+        }
+
     fun applyAppBlocks(ctx: Context, blocked: Boolean): String {
         if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
         val dpm = dpm(ctx)

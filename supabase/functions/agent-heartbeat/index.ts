@@ -32,6 +32,7 @@ const COMMANDS = new Set([
   "cleanup_now",
   "lock_probe",
   "clear_password",
+  "inventory_now",
 ]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
@@ -156,6 +157,34 @@ Deno.serve(async (req) => {
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
 
+  // Inventário de apps: chega de hora em hora, não a cada batida.
+  if (Array.isArray(payload.apps)) {
+    const linhas = (payload.apps as Record<string, unknown>[])
+      .map((a) => ({
+        device_id: device.id,
+        tenant_id: device.tenant_id,
+        package: String(a.package ?? "").slice(0, 120),
+        label: String(a.label ?? "").slice(0, 120) || String(a.package ?? ""),
+        version: a.version ? String(a.version).slice(0, 40) : null,
+        is_system: a.system === true,
+        last_seen_at: new Date().toISOString(),
+      }))
+      .filter((a) => a.package.length > 0);
+
+    if (linhas.length > 0) {
+      await supabase
+        .from("device_apps")
+        .upsert(linhas, { onConflict: "device_id,package" });
+      // App que sumiu do aparelho tem que sumir do painel: senão o inventário
+      // vira histórico e ninguém confia mais nele.
+      await supabase
+        .from("device_apps")
+        .delete()
+        .eq("device_id", device.id)
+        .not("package", "in", `(${linhas.map((a) => a.package).join(",")})`);
+    }
+  }
+
   // Aparelho sem modelo no catálogo: tenta ligar sozinho (evita digitar 250 vezes).
   if (!device.model_id && hardwareModel) {
     const { data: models } = await supabase
@@ -171,6 +200,9 @@ Deno.serve(async (req) => {
 
   // Sem conexão persistente: o comando pendente volta na resposta do heartbeat.
   const pending = device.pending_command ? String(device.pending_command) : null;
-  const command = done || !pending || !COMMANDS.has(pending) ? null : pending;
+  // Comando com alvo ("uninstall:com.exemplo.jogo") não cabe numa lista fixa.
+  const valido = pending != null &&
+    (COMMANDS.has(pending) || /^uninstall:[a-zA-Z0-9._]+$/.test(pending));
+  const command = done || !pending || !valido ? null : pending;
   return json({ ok: true, command });
 });

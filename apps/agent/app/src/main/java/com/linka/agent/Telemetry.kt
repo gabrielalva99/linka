@@ -48,7 +48,18 @@ object Telemetry {
         "cleanup_now" -> Cleanup.run(ctx).also { Prefs.setPendingCleanupReport(ctx, it) }
         "lock_probe" -> Kiosk.probeLock(ctx)
         "clear_password" -> Kiosk.clearScreenLock(ctx)
-        else -> null
+        "inventory_now" -> {
+            // Força o envio do inventário na próxima batida, em vez de esperar a hora.
+            Prefs.setLastInventoryAt(ctx, 0L)
+            "inventário será enviado agora"
+        }
+        else ->
+            // Comando com alvo: "uninstall:com.exemplo.jogo".
+            if (command.startsWith("uninstall:")) {
+                val pacote = command.removePrefix("uninstall:")
+                Prefs.setLastInventoryAt(ctx, 0L)
+                Inventory.desinstalar(ctx, pacote)
+            } else null
     }
 
     private fun send(
@@ -89,6 +100,13 @@ object Telemetry {
         // versão publicada por um valor em cache, então respondia com atraso e o
         // painel contava errado. Quem compara agora é o servidor, que tem as duas
         // pontas: a versão instalada e a publicada.
+        // Inventário de apps a cada hora, não a cada minuto: a lista muda pouco e
+        // são dezenas de itens. O que precisa ser rápido é bateria e status.
+        val agora = System.currentTimeMillis()
+        if (agora - Prefs.lastInventoryAt(ctx) > 3_600_000) {
+            body.put("apps", Inventory.json(ctx))
+            Prefs.setLastInventoryAt(ctx, agora)
+        }
         if (commandDone != null) body.put("command_done", commandDone)
         if (commandResult != null) body.put("command_result", commandResult)
         // Faxina que rodou sozinha precisa aparecer no painel na mesma batida.

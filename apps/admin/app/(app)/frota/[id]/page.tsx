@@ -16,6 +16,7 @@ import { DeviceFit } from "./device-fit";
 import { CleanupPanel } from "./cleanup-panel";
 import { KioskPanel } from "./kiosk-panel";
 import { JourneyPanel, type Journey } from "./journey-panel";
+import { AppsPanel, type DeviceApp } from "./apps-panel";
 import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 
@@ -66,7 +67,13 @@ export default async function DeviceDetailPage({
     .single();
   if (!device) notFound();
 
-  const [{ data: mediaData }, tenant, { data: resolvedRows }, { data: journeyData }] =
+  const [
+    { data: mediaData },
+    tenant,
+    { data: resolvedRows },
+    { data: journeyData },
+    { data: appsData },
+  ] =
     await Promise.all([
       supabase
         .from("media_assets")
@@ -78,6 +85,12 @@ export default async function DeviceDetailPage({
       // O dia é o da loja: em fuso do servidor, loja fora de SP teria o
       // expediente cortado no meio.
       supabase.rpc("device_journey", { p_device_id: id }),
+      // O que está instalado: o aparelho reporta, o painel não adivinha.
+      supabase
+        .from("device_apps")
+        .select("package, label, version, is_system")
+        .eq("device_id", id)
+        .order("label"),
     ]);
 
   const t = getMessages();
@@ -280,6 +293,12 @@ export default async function DeviceDetailPage({
           pendingCommand={d.pending_command}
         />
       </section>
+
+      <AppsPanel
+        deviceId={d.id}
+        apps={(appsData ?? []) as DeviceApp[]}
+        pendingCommand={d.pending_command}
+      />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.content}</h2>

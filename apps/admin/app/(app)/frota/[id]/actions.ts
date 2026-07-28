@@ -21,6 +21,33 @@ export async function sendCommand(
   revalidatePath(`/frota/${deviceId}`);
 }
 
+/**
+ * Remove um app do aparelho.
+ *
+ * O comando carrega o alvo ("uninstall:com.exemplo.jogo") em vez de existir um
+ * comando por app. App de fábrica o Android não deixa remover: nesse caso o
+ * aparelho esconde da gaveta e responde dizendo o que fez, em vez de fingir.
+ */
+export async function uninstallApp(deviceId: string, pkg: string) {
+  if (!/^[a-zA-Z0-9._]+$/.test(pkg)) return;
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ pending_command: `uninstall:${pkg}` })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
+/** Pede a lista de apps agora, sem esperar a próxima hora. */
+export async function refreshApps(deviceId: string) {
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("devices")
+    .update({ pending_command: "inventory_now" })
+    .eq("id", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+}
+
 /** Bloquear Ajustes e Play Store — fecha o caminho para criar senha de tela. */
 export async function setBlockSettings(deviceId: string, blocked: boolean) {
   const supabase = await createSupabaseServerClient();

@@ -140,7 +140,20 @@
     "pairingStep1": "Abra o LINKA no celular (ícone verde e preto).",
     "pairingStep2": "Digite este código e toque em Parear.",
     "pairingStep3": "Em poucos segundos esta tela se atualiza sozinha e o código some.",
-    "screenLockWarning": "Este aparelho tem senha na tela de bloqueio. Não dá para apagar à distância neste modelo, e depois de qualquer reinício a loja fica com a tela pedindo o PIN. Remova em Ajustes, Segurança, Bloqueio de tela, Nenhum."
+    "screenLockWarning": "Este aparelho tem senha na tela de bloqueio. Não dá para apagar à distância neste modelo, e depois de qualquer reinício a loja fica com a tela pedindo o PIN. Remova em Ajustes, Segurança, Bloqueio de tela, Nenhum.",
+    "apps": "Apps no aparelho",
+    "appsRefresh": "Atualizar lista",
+    "appsEmpty": "O aparelho ainda não reportou a lista. Ela chega de hora em hora.",
+    "appsInstalled": "{n} instalado(s) depois de sair da fábrica",
+    "appsClean": "Nenhum app instalado depois da fábrica. Aparelho limpo.",
+    "appsShowFactory": "Ver os {n} apps de fábrica",
+    "appsHideFactory": "Esconder os apps de fábrica",
+    "appsRemove": "Remover",
+    "appsHide": "Esconder",
+    "appsRemoveHint": "Desinstala do aparelho.",
+    "appsHideHint": "App de fábrica não se desinstala; some da gaveta.",
+    "appsConfirm": "Confirmar",
+    "appsRemoving": "aguardando o aparelho…"
   },
   "campaigns": {
     "title": "Campanhas",

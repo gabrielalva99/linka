@@ -24,6 +24,7 @@ object Cleanup {
     private val MEDIA_DIRS = listOf("DCIM", "Pictures", "Movies", "Download")
 
     /** Apps de demonstração que guardam sessão/histórico. Nunca o nosso. */
+    /** Rede de segurança: se a consulta ao aparelho falhar, ainda limpa o básico. */
     private val APPS = listOf(
         "com.android.chrome",
         "com.google.android.youtube",
@@ -56,7 +57,12 @@ object Cleanup {
             partes.add("SEM PERMISSÃO de arquivos (reprovisionar por cabo)")
         }
 
-        val limpos = APPS.filter { clearApp(ctx, it) }.map { it.substringAfterLast('.') }
+        // Limpa o que o APARELHO tem, não uma lista escrita à mão dentro do app.
+        // A lista fixa foi montada olhando um Razr: num modelo com outro nome de
+        // pacote para a câmera, a faxina passava por cima sem limpar e o relato
+        // dizia que tinha funcionado.
+        val alvos = Inventory.paraLimpar(ctx).ifEmpty { APPS }
+        val limpos = alvos.filter { clearApp(ctx, it) }.map { it.substringAfterLast('.') }
         partes.add(if (limpos.isEmpty()) "nenhum app limpo" else "apps: ${limpos.joinToString(", ")}")
 
         Prefs.setLastCleanupDay(ctx, today())

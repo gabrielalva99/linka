@@ -47,6 +47,16 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_CLEANUP_TIME, value).apply()
 
+    private const val KEY_INVENTARIO = "last_inventory_at"
+
+    /** Quando o inventário de apps foi enviado pela última vez. */
+    fun lastInventoryAt(ctx: Context): Long =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_INVENTARIO, 0L)
+
+    fun setLastInventoryAt(ctx: Context, value: Long) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_INVENTARIO, value).apply()
+
     private const val KEY_ABRE = "store_opens_at"
     private const val KEY_FECHA = "store_closes_at"
 

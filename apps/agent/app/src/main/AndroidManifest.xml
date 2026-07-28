@@ -20,6 +20,14 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Ver o que está instalado no aparelho. A partir do Android 11 um app só
+         enxerga a si mesmo, então sem isto a lista chega VAZIA e a faxina volta a
+         depender de uma lista escrita à mão.
+         É permissão ampla e existe de propósito: somos dono do aparelho e o app
+         não é distribuído pela Play Store. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
