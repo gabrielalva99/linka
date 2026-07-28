@@ -1,8 +1,8 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
 import { ROLE_LABELS } from "@linka/shared";
+import { LinkaLogo } from "../linka-logo";
 import { NavLink } from "./nav-link";
 
 export default async function AppLayout({
@@ -33,14 +33,7 @@ export default async function AppLayout({
         {/* Logotipo da marca no lugar do texto. Largura fixa e altura
             automática: o arquivo é o mesmo entregue pelo design, sem recorte. */}
         <div className="mb-8">
-          <Image
-            src="/linka-logo.png"
-            alt={t.app.name}
-            width={1645}
-            height={531}
-            priority
-            className="h-6 w-auto"
-          />
+<LinkaLogo className="h-5 w-auto" />
         </div>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
