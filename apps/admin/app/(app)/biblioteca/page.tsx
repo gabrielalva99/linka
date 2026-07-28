@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
@@ -28,12 +29,18 @@ const dateFmt = new Intl.DateTimeFormat("pt-BR", {
 
 export default async function BibliotecaPage() {
   const supabase = await createSupabaseServerClient();
+  const filtro = await tenantFilter();
   const [{ data: mediaData }, { data: deviceData }] = await Promise.all([
-    supabase
-      .from("media_assets")
-      .select("id, name, url, size_bytes, created_at, fit_mode")
-      .order("created_at", { ascending: false }),
-    supabase.from("devices").select("name, content_url").not("content_url", "is", null),
+    porCliente(
+      supabase
+        .from("media_assets")
+        .select("id, name, url, size_bytes, created_at, fit_mode"),
+      filtro,
+    ).order("created_at", { ascending: false }),
+    porCliente(
+      supabase.from("devices").select("name, content_url"),
+      filtro,
+    ).not("content_url", "is", null),
   ]);
 
   const t = getMessages();

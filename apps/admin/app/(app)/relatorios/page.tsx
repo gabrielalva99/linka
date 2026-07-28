@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
 
 type Proibido = {
@@ -159,11 +160,16 @@ export default async function RelatoriosPage({
   const podeOperar = await podeOperarAgora();
 
   const supabase = await createSupabaseServerClient();
+  // O recorte de cliente vai junto: para quem opera a plataforma o RLS entrega
+  // todos os clientes, e um relatório somando duas marcas parece apenas um
+  // relatório com números maiores.
+  const filtro = await tenantFilter();
   const { data, error } = await supabase.rpc("fleet_report", {
     p_days: periodo,
     p_rede: rede || null,
     p_loja: loja || null,
     p_aparelho: aparelho || null,
+    p_tenant: filtro,
   });
 
   // As opções dos filtros vêm do cadastro, não do resultado: uma loja que ficou
@@ -171,11 +177,9 @@ export default async function RelatoriosPage({
   // consegue perguntar justamente sobre a loja que parou.
   const [{ data: redesData }, { data: lojasData }, { data: aparelhosData }] =
     await Promise.all([
-      supabase.from("retail_chains").select("name").order("name"),
-      supabase.from("stores").select("name").order("name"),
-      supabase
-        .from("devices")
-        .select("code, name")
+      porCliente(supabase.from("retail_chains").select("name"), filtro).order("name"),
+      porCliente(supabase.from("stores").select("name"), filtro).order("name"),
+      porCliente(supabase.from("devices").select("code, name"), filtro)
         .eq("exclude_from_reports", false)
         .order("code"),
     ]);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 
 type StoreRow = {
   id: string;
@@ -19,10 +20,12 @@ type StoreRow = {
 
 export default async function LojasPage() {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("stores")
-    .select("id, name, code, kind, city, state, country, retail_chains(name)")
-    .order("name", { ascending: true });
+  const { data } = await porCliente(
+    supabase
+      .from("stores")
+      .select("id, name, code, kind, city, state, country, retail_chains(name)"),
+    await tenantFilter(),
+  ).order("name", { ascending: true });
   const t = getMessages();
   const podeEditar = await podeOperarAgora();
   const stores = (data ?? []) as StoreRow[];

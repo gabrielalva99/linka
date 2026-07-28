@@ -1,14 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { DeviceForm } from "./device-form";
 
 export default async function NovoDispositivoPage() {
   const supabase = await createSupabaseServerClient();
 
+  const filtro = await tenantFilter();
   const [{ data: models }, { data: stores }, { data: positions }] = await Promise.all([
-    supabase.from("device_models").select("id, name, line").order("name"),
-    supabase.from("stores").select("id, name, code").order("name"),
-    supabase.from("positions").select("id, label, store_id").order("label"),
+    porCliente(supabase.from("device_models").select("id, name, line"), filtro).order("name"),
+    porCliente(supabase.from("stores").select("id, name, code"), filtro).order("name"),
+    porCliente(supabase.from("positions").select("id, label, store_id"), filtro).order("label"),
   ]);
 
   const t = getMessages();

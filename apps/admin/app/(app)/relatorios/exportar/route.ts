@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { tenantFilter } from "@/lib/tenant";
 
 /**
  * A saída dos dados. O BI da ProSolution é o cliente número 1 do que a gente
@@ -40,6 +41,10 @@ export async function GET(request: Request) {
   // A planilha respeita o MESMO recorte da tela. Baixar a frota inteira quando
   // a tela mostra uma loja é o caminho mais curto para alguém mandar o número
   // errado para a marca.
+  // A planilha carrega o mesmo recorte de cliente da tela. Sem isso, quem opera
+  // a plataforma baixaria as duas marcas no mesmo arquivo — e é esse arquivo
+  // que vai por e-mail para o cliente.
+  const filtroCliente = await tenantFilter();
   let consulta = conteudo
     ? supabase
         .from("v_bi_media_hourly")
@@ -53,6 +58,8 @@ export async function GET(request: Request) {
           "rede, loja, cidade, uf, tipo_local, codigo, aparelho, modelo, linha, hora_local, recurso, categoria, sessoes, segundos",
         )
         .gte("hora_local", desde.toISOString());
+
+  if (filtroCliente) consulta = consulta.eq("tenant_id", filtroCliente);
 
   const rede = url.searchParams.get("rede");
   const loja = url.searchParams.get("loja");

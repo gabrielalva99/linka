@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CreateChainForm } from "./create-form";
 import { ChainRow } from "./chain-row";
 
@@ -8,10 +9,10 @@ export default async function RedesPage() {
   const supabase = await createSupabaseServerClient();
   // A contagem de lojas vem junto: rede sem saber quantas lojas tem é um nome
   // solto, e é a contagem que diz se dá para excluir.
-  const { data: chains } = await supabase
-    .from("retail_chains")
-    .select("id, name, stores(count)")
-    .order("name", { ascending: true });
+  const { data: chains } = await porCliente(
+    supabase.from("retail_chains").select("id, name, stores(count)"),
+    await tenantFilter(),
+  ).order("name", { ascending: true });
   const t = getMessages();
   const podeEditar = await podeOperarAgora();
 

@@ -11,6 +11,7 @@ import {
 import { modelLabel } from "@/lib/device-display";
 import { getSessionContext } from "@/lib/auth";
 import { podeOperar, ehOperadorDaPlataforma } from "@/lib/perms";
+import { getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
 import { StatusBadge } from "./status-badge";
 import { TypeTabs } from "./type-tabs";
 import { Filters } from "./filters";
@@ -91,27 +92,35 @@ export default async function FrotaPage({
   // servidor, comparando o que está instalado com o que foi publicado. Antes
   // esse fato vinha do próprio aparelho e chegava atrasado, então a tela dizia
   // "1 de 2" com os dois já na versão nova.
-  // Código de inscrição do cliente: é o que vai no kit de campo.
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("enrollment_code")
-    .limit(1)
-    .maybeSingle();
+  // Código de inscrição do CLIENTE ATIVO. Vinha do primeiro cliente cadastrado:
+  // com duas marcas, o kit de campo sairia com o código da marca errada e os
+  // aparelhos entrariam na frota de outro cliente.
+  const cliente = await getActiveTenant();
+  const filtro = await tenantFilter();
+  const { data: tenant } = cliente
+    ? await supabase
+        .from("tenants")
+        .select("enrollment_code")
+        .eq("id", cliente.id)
+        .maybeSingle()
+    : { data: null };
   const { data: release } = await supabase
     .from("agent_releases")
     .select("version")
     .eq("is_current", true)
     .maybeSingle();
-  const { data: lojasData } = await supabase
-    .from("stores")
-    .select("id, name")
-    .order("name");
-  const { data } = await supabase
-    .from("devices")
-    .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, device_models(name), stores(name)",
-    )
-    .order("code", { ascending: true });
+  const { data: lojasData } = await porCliente(
+    supabase.from("stores").select("id, name"),
+    filtro,
+  ).order("name");
+  const { data } = await porCliente(
+    supabase
+      .from("devices")
+      .select(
+        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, device_models(name), stores(name)",
+      ),
+    filtro,
+  ).order("code", { ascending: true });
   const t = getMessages();
   const ctx = await getSessionContext();
   const podeMexer = podeOperar(ctx);

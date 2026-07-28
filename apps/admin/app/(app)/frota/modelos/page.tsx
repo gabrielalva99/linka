@@ -2,14 +2,16 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CreateModelForm } from "./create-form";
 import { ModelRow } from "./model-row";
 
 export default async function ModelosPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: models } = await supabase
-    .from("device_models")
-    .select("id, name, line, devices(count)")
+  const { data: models } = await porCliente(
+    supabase.from("device_models").select("id, name, line, devices(count)"),
+    await tenantFilter(),
+  )
     .order("line", { ascending: true })
     .order("name", { ascending: true });
   const t = getMessages();

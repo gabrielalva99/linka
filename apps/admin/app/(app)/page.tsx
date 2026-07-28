@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { AutoRefresh } from "./auto-refresh";
 
 type Issue = {
@@ -32,14 +33,21 @@ export default async function DashboardPage() {
   const t = getMessages();
   const supabase = await createSupabaseServerClient();
 
+  const filtro = await tenantFilter();
   const [{ data: issuesData, error: issuesError }, { count: totalDevices }] =
     await Promise.all([
-      supabase
-        .from("v_device_issues")
-        .select(
-          "device_id, code, name, loja, store_id, tipo, gravidade, detalhe, aberta, exclude_from_reports",
-        ),
-      supabase.from("devices").select("id", { count: "exact", head: true }),
+      porCliente(
+        supabase
+          .from("v_device_issues")
+          .select(
+            "device_id, code, name, loja, store_id, tipo, gravidade, detalhe, aberta, exclude_from_reports",
+          ),
+        filtro,
+      ),
+      porCliente(
+        supabase.from("devices").select("id", { count: "exact", head: true }),
+        filtro,
+      ),
     ]);
 
   // Falha de leitura NÃO pode virar "tudo certo". Esta tela existe para avisar

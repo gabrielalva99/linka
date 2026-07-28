@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_LABELS, type ContentFit } from "@linka/shared";
 import { CampaignActions } from "./campaign-row";
 
@@ -33,12 +34,14 @@ const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
 
 export default async function CampanhasPage() {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("campaigns")
-    .select(
-      "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
-    )
-    .order("created_at", { ascending: false });
+  const { data } = await porCliente(
+    supabase
+      .from("campaigns")
+      .select(
+        "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
+      ),
+    await tenantFilter(),
+  ).order("created_at", { ascending: false });
 
   const t = getMessages();
   const campaigns = (data ?? []) as CampaignRow[];

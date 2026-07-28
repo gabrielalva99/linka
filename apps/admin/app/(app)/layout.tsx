@@ -4,6 +4,8 @@ import { getSessionContext } from "@/lib/auth";
 import { ROLE_LABELS } from "@linka/shared";
 import { LinkaLogo } from "../linka-logo";
 import { NavLink } from "./nav-link";
+import { TenantSwitcher } from "./tenant-switcher";
+import { getActiveTenant, listTenants } from "@/lib/tenant";
 
 export default async function AppLayout({
   children,
@@ -12,6 +14,8 @@ export default async function AppLayout({
 }) {
   const ctx = await getSessionContext();
   if (!ctx) redirect("/login");
+
+  const [clientes, ativo] = await Promise.all([listTenants(), getActiveTenant()]);
 
   const t = getMessages();
   const roleLabel = ctx.isSuperadmin
@@ -53,6 +57,12 @@ export default async function AppLayout({
         <header className="flex items-center justify-between border-b border-line px-6 py-3">
           <span className="text-sm text-muted">{roleLabel}</span>
           <div className="flex items-center gap-3">
+            {/* Em qual cliente estamos. Só existe para quem opera a plataforma e
+                enxerga mais de um — para o usuário de uma marca não há escolha a
+                fazer, e o seletor só criaria a impressão de que há. */}
+            {clientes.length > 1 && (
+              <TenantSwitcher clientes={clientes} atual={ativo?.id ?? null} />
+            )}
             <span className="text-sm">{ctx.email}</span>
             <form action="/auth/signout" method="post">
               <button

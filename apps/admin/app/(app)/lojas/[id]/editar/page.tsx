@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { EditStoreForm } from "./edit-form";
 
 export default async function EditarLojaPage({
@@ -21,7 +22,10 @@ export default async function EditarLojaPage({
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("retail_chains").select("id, name").order("name"),
+    porCliente(
+      supabase.from("retail_chains").select("id, name"),
+      await tenantFilter(),
+    ).order("name"),
     // Quantos aparelhos obedecem a este horário. Muda o peso do que a pessoa
     // está prestes a salvar.
     supabase

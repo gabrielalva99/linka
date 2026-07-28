@@ -1,13 +1,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { porCliente, tenantFilter } from "@/lib/tenant";
 import { StoreForm } from "./store-form";
 
 export default async function NovaLojaPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: chains } = await supabase
-    .from("retail_chains")
-    .select("id, name")
-    .order("name", { ascending: true });
+  const { data: chains } = await porCliente(
+    supabase.from("retail_chains").select("id, name"),
+    await tenantFilter(),
+  ).order("name", { ascending: true });
   const t = getMessages();
 
   return (

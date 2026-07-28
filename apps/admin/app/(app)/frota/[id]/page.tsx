@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getActiveTenant } from "@/lib/tenant";
+import { getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
 import { modelLabel } from "@/lib/device-display";
@@ -76,10 +76,12 @@ export default async function DeviceDetailPage({
     { data: appsData },
   ] =
     await Promise.all([
-      supabase
-        .from("media_assets")
-        .select("id, name, url, fit_mode")
-        .order("created_at", { ascending: false }),
+      // Biblioteca do cliente ativo: oferecer o vídeo de outra marca na lista de
+      // conteúdo é o caminho mais curto para a peça errada ir para a vitrine.
+      porCliente(
+        supabase.from("media_assets").select("id, name, url, fit_mode"),
+        await tenantFilter(),
+      ).order("created_at", { ascending: false }),
       getActiveTenant(),
       // Quem decide o que toca é o banco (fixo no aparelho > campanha mais específica).
       supabase.rpc("resolve_device_content", { p_device_id: id }),
