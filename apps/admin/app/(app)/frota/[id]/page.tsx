@@ -16,6 +16,7 @@ import { DeviceFit } from "./device-fit";
 import { CleanupPanel } from "./cleanup-panel";
 import { KioskPanel } from "./kiosk-panel";
 import { JourneyPanel, type Journey } from "./journey-panel";
+import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
@@ -211,6 +212,10 @@ export default async function DeviceDetailPage({
           {t.device.edit}
         </Link>
       </div>
+
+      {/* Aparelho que nunca reportou: a instrução de pareamento vem antes de
+          qualquer dado, porque não existe dado nenhum para ler ainda. */}
+      {d.agent_version == null && <PairingCard code={d.provisioning_code} />}
 
       <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {info.map(([k, v]) => (

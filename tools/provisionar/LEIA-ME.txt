@@ -5,7 +5,8 @@ O QUE VAI NESTA PASTA (montada pelo suporte antes da visita):
   PROVISIONAR.bat        <- o tecnico clica duas vezes aqui
   Provisionar-LINKA.ps1
   adb.exe                (+ AdbWinApi.dll e AdbWinUsbApi.dll)
-  linka-agente.apk
+  linka-agente.apk       (reserva: o programa baixa a versao atual sozinho
+                          quando o notebook tem internet)
 
 
 ROTEIRO NA LOJA (por aparelho, 5 a 8 minutos)
@@ -26,10 +27,27 @@ ROTEIRO NA LOJA (por aparelho, 5 a 8 minutos)
 4. NO COMPUTADOR - clicar duas vezes em PROVISIONAR.bat
    O programa faz o resto e mostra APARELHO PRONTO ou o que falta fazer.
 
-5. NO APARELHO - abrir o app LINKA Agente e digitar o CODIGO DE PAREAMENTO
-   (o codigo esta na etiqueta/lista daquele aparelho)
+5. NO APARELHO - abrir o app LINKA e digitar o CODIGO DE PAREAMENTO
+   O codigo vem do painel, do proprio aparelho, e nao existe antes de ele
+   estar cadastrado. Ver "DE ONDE VEM O CODIGO" no fim desta folha.
 
 6. Conferir: em ate 1 minuto o video comeca a tocar sozinho.
+
+
+DE ONDE VEM O CODIGO DE PAREAMENTO (escritorio, antes da visita)
+----------------------------------------------------------------
+O codigo nasce junto com o cadastro do aparelho. Um aparelho que nao foi
+cadastrado no painel nao tem codigo, e nao ha como inventar um.
+
+ 1. No painel: Dispositivos > Novo aparelho.
+ 2. Preencher nome e loja. Modelo e numero de serie o proprio aparelho
+    informa depois de parear; nao precisa digitar.
+ 3. Salvar e abrir a ficha do aparelho. O codigo aparece em destaque no
+    topo, com as instrucoes.
+ 4. Anotar o codigo na etiqueta do aparelho que vai para aquela loja.
+
+O codigo some da tela sozinho assim que o aparelho se conecta pela primeira
+vez. Se ele ainda estiver aparecendo, o aparelho nunca falou com o painel.
 
 
 SE DER ERRADO

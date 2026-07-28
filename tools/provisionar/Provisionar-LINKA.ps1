@@ -1,4 +1,4 @@
-# LINKA - Provisionamento de aparelho em campo.
+﻿# LINKA - Provisionamento de aparelho em campo.
 #
 # Feito para ser rodado por tecnico, nao por desenvolvedor: nenhum comando
 # digitado, nenhuma decisao tecnica. O script confere as pre-condicoes, instala,
@@ -15,6 +15,9 @@ $adb = Join-Path $base "adb.exe"
 if (-not (Test-Path $adb)) { $adb = "adb" }
 $apk = Join-Path $base "linka-agente.apk"
 $admin = "com.linka.agent/.LinkaDeviceAdminReceiver"
+# Chave publica (anon) do LINKA: so le a lista de versoes publicadas, protegida
+# por RLS. Mesma chave embutida no aplicativo.
+$anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhremt0bXNxdHZwa3htemZ0YXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTQ3MzksImV4cCI6MjEwMDQzMDczOX0.SdqYO4RAxNr6Z3s-EJVzHJyAdhzXG7t213YHj7P-9D8"
 
 function Titulo($texto) {
   Write-Host ""
@@ -143,6 +146,27 @@ Ok "Um unico usuario no aparelho"
 
 # 3. Instalacao ---------------------------------------------------------------
 Titulo "Instalando o aplicativo LINKA"
+
+# O kit fica desatualizado sozinho: ele e copiado em pendrive e usado meses
+# depois. Um aparelho de teste foi provisionado com a versao 0.15.0 quando a
+# frota ja estava na 0.19.0, e ninguem percebeu ate abrir o painel.
+# Por isso o script busca a versao publicada antes de instalar; o arquivo local
+# so entra em campo quando a loja esta sem internet.
+$urlVersao = "https://xkzktmsqtvpkxmzftars.supabase.co/rest/v1/agent_releases?is_current=eq.true&select=version,url"
+try {
+  $r = Invoke-RestMethod -Uri $urlVersao -Headers @{ apikey = $anonKey } -TimeoutSec 20
+  if ($r -and $r[0].url) {
+    $baixado = Join-Path $env:TEMP ("linka-agente-" + $r[0].version + ".apk")
+    if (-not (Test-Path $baixado)) {
+      Invoke-WebRequest -Uri $r[0].url -OutFile $baixado -TimeoutSec 180
+    }
+    $apk = $baixado
+    Ok ("Versao publicada: " + $r[0].version)
+  }
+} catch {
+  Aviso "Sem internet para buscar a versao publicada. Usando o arquivo do pendrive."
+}
+
 if (-not (Test-Path $apk)) {
   Fim $false "Arquivo linka-agente.apk nao encontrado nesta pasta. Avise o suporte."
 }

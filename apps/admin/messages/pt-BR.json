@@ -134,7 +134,12 @@
     "journeyHint": "Visita = bloco de uso que termina quando a vitrine volta à tela. Tempo de vitrine e horas contam só o expediente da loja.",
     "journeyShowcase": "Vitrine no expediente",
     "journeyRate": "parada:",
-    "journeyTestBadge": "aparelho de teste, fora dos relatórios"
+    "journeyTestBadge": "aparelho de teste, fora dos relatórios",
+    "pairingTitle": "Este aparelho ainda não se conectou",
+    "pairingIntro": "Digite o código abaixo no aplicativo LINKA do celular. Ele aparece na primeira tela, logo depois de instalar.",
+    "pairingStep1": "Abra o LINKA no celular (ícone verde e preto).",
+    "pairingStep2": "Digite este código e toque em Parear.",
+    "pairingStep3": "Em poucos segundos esta tela se atualiza sozinha e o código some."
   },
   "campaigns": {
     "title": "Campanhas",
@@ -272,6 +277,7 @@
     "dup": "Já existe um dispositivo com esse código.",
     "error": "Não foi possível salvar.",
     "testDevice": "Aparelho de teste, fora dos relatórios",
-    "testDeviceHint": "Continua sendo medido normalmente, mas não entra em relatório de cliente nem no BI. Desmarque quando o aparelho for para a loja."
+    "testDeviceHint": "Continua sendo medido normalmente, mas não entra em relatório de cliente nem no BI. Desmarque quando o aparelho for para a loja.",
+    "createdHint": "Aparelho cadastrado. O código de pareamento está na ficha dele."
   }
 }
