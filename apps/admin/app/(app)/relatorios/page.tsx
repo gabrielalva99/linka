@@ -42,6 +42,33 @@ type Report = {
     sessoes: number;
     segundos: number;
   }[];
+  por_modelo: {
+    modelo: string;
+    linha: string;
+    visitas: number;
+    segundos: number;
+    segundos_vitrine: number;
+  }[];
+  por_recurso_modelo: {
+    modelo: string;
+    recurso: string;
+    sessoes: number;
+    segundos: number;
+  }[];
+  por_regiao: {
+    uf: string;
+    cidade: string;
+    tipo_local: string;
+    linha: string;
+    visitas: number;
+    segundos: number;
+  }[];
+  por_conteudo: {
+    midia: string;
+    segundos_no_ar: number;
+    visitas: number;
+    segundos_uso: number;
+  }[];
   por_dia: { dia: string; visitas: number; segundos: number }[];
   proibidos_abertos: Proibido[];
   proibidos_corrigidos: Proibido[];
@@ -138,6 +165,13 @@ export default async function RelatoriosPage({
     `${n} ${n === 1 ? um : muitos}`;
   const maiorHora = Math.max(1, ...r.por_hora.map((h) => h.visitas));
   const maiorRecurso = Math.max(1, ...r.por_recurso.map((x) => x.segundos));
+  const modelosComUso = new Set(
+    (r.por_recurso_modelo ?? []).map((x) => x.modelo),
+  ).size;
+  const filtroUrl =
+    (rede ? `&rede=${encodeURIComponent(rede)}` : "") +
+    (loja ? `&loja=${encodeURIComponent(loja)}` : "") +
+    (aparelho ? `&aparelho=${encodeURIComponent(aparelho)}` : "");
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -160,11 +194,20 @@ export default async function RelatoriosPage({
               {t.reports.days.replace("{n}", String(d))}
             </Link>
           ))}
+          {/* Duas planilhas porque são dois grãos diferentes. Uma só, com as
+              duas coisas, convida a somar tempo de uso com tempo de vídeo — que
+              se sobrepõem e não somam. */}
           <a
-            href={`/relatorios/exportar?dias=${periodo}${rede ? `&rede=${encodeURIComponent(rede)}` : ""}${loja ? `&loja=${encodeURIComponent(loja)}` : ""}${aparelho ? `&aparelho=${encodeURIComponent(aparelho)}` : ""}`}
+            href={`/relatorios/exportar?dias=${periodo}${filtroUrl}`}
             className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
           >
             {t.reports.export}
+          </a>
+          <a
+            href={`/relatorios/exportar?tipo=conteudo&dias=${periodo}${filtroUrl}`}
+            className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+          >
+            {t.reports.exportContent}
           </a>
         </div>
       </div>
@@ -307,6 +350,90 @@ export default async function RelatoriosPage({
             <p className="mt-2 text-xs text-muted">{t.reports.rateHint}</p>
           </section>
 
+          {/* O corte de venda. Vem antes do corte por aparelho de propósito:
+              "aparelho 109" é inventário, "Razr" é decisão. */}
+          {(r.por_modelo?.length ?? 0) > 0 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byModel}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.line}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.visits}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.usage}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.rate}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_modelo.map((m) => (
+                      <tr key={`${m.modelo}-${m.linha}`} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">{m.modelo}</td>
+                        <td className="px-4 py-3 text-muted">{m.linha}</td>
+                        <td className="px-4 py-3">{m.visitas}</td>
+                        <td className="px-4 py-3 text-muted">{tempo(m.segundos)}</td>
+                        <td className="px-4 py-3 text-muted">
+                          {taxa(m.visitas, m.segundos_vitrine)}/h
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-muted">{t.reports.modelHint}</p>
+            </section>
+          )}
+
+          {/* Só faz sentido com mais de uma praça: com uma linha só, a tabela
+              repete o total e ocupa espaço sem dizer nada. */}
+          {(r.por_regiao?.length ?? 0) > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byRegion}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.city}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.placeKind}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.line}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.visits}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.usage}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_regiao.map((g) => (
+                      <tr
+                        key={`${g.uf}-${g.cidade}-${g.tipo_local}-${g.linha}`}
+                        className="bg-surface"
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          {g.cidade}
+                          <span className="ml-1 text-xs text-muted">{g.uf}</span>
+                        </td>
+                        <td className="px-4 py-3 text-muted">{g.tipo_local}</td>
+                        <td className="px-4 py-3 text-muted">{g.linha}</td>
+                        <td className="px-4 py-3">{g.visitas}</td>
+                        <td className="px-4 py-3 text-muted">{tempo(g.segundos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-muted">{t.reports.regionHint}</p>
+            </section>
+          )}
+
           {r.por_aparelho?.length > 1 && (
             <section className="mt-8">
               <h2 className="text-sm font-medium text-muted">{t.reports.byDevice}</h2>
@@ -366,6 +493,83 @@ export default async function RelatoriosPage({
                 ))}
               </ul>
             </div>
+          </section>
+
+          {/* O cruzamento só diz algo com mais de um modelo. Com um só, ele
+              repete a lista de cima com uma coluna a mais. */}
+          {modelosComUso > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">
+                {t.reports.byFeatureModel}
+              </h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.byFeature}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.usage}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_recurso_modelo.map((x) => (
+                      <tr key={`${x.modelo}-${x.recurso}`} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">{x.modelo}</td>
+                        <td className="px-4 py-3 text-muted">{x.recurso}</td>
+                        <td className="px-4 py-3 text-muted">
+                          {tempo(x.segundos)} · {x.sessoes}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          <section className="mt-8">
+            <h2 className="text-sm font-medium text-muted">{t.reports.byContent}</h2>
+            <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+              {(r.por_conteudo?.length ?? 0) > 0 ? (
+                <table className="w-full min-w-[480px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.media}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.onAir}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.visits}
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.rate}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {r.por_conteudo.map((c) => (
+                      <tr key={c.midia} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">{c.midia}</td>
+                        <td className="px-4 py-3 text-muted">
+                          {tempo(c.segundos_no_ar)}
+                        </td>
+                        <td className="px-4 py-3">{c.visitas}</td>
+                        <td className="px-4 py-3 text-muted">
+                          {taxa(c.visitas, c.segundos_no_ar)}/h
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="bg-surface px-4 py-6 text-sm text-muted">
+                  {t.reports.contentEmpty}
+                </p>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted">{t.reports.contentHint}</p>
           </section>
 
           <section className="mt-8">

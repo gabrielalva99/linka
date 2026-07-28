@@ -67,6 +67,12 @@ class HeartbeatService : Service() {
      */
     private fun coletarEEnviarEventos() {
         val token = Prefs.token(this) ?: return
+        // Antes de ler o uso: acerta o trecho de vídeo em aberto. Fica aqui e não
+        // só na tela porque a tela pode ter sido morta pelo sistema no meio de
+        // uma troca — e porque é o que fecha o trecho de hora em hora, para o
+        // relatório de ontem estar completo hoje de manhã.
+        MediaLog.reconciliar(this)
+
         val fila = EventQueue(this)
         try {
             Interaction.collect(this, fila)

@@ -18,7 +18,7 @@ import org.json.JSONObject
  *
  * SQLite do próprio Android: sem dependência externa no agente.
  */
-class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 1) {
+class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -30,14 +30,18 @@ class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 
               package text,
               started_at text not null,
               ended_at text,
-              duration_seconds integer
+              duration_seconds integer,
+              media_url text
             )
             """.trimIndent(),
         )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
-        // Versão 1 ainda; quando mudar, migrar sem perder o que está na fila.
+        // Coluna nova, tabela preservada: o aparelho que está com a fila cheia
+        // porque a loja está sem internet não pode perder o que já mediu só
+        // porque o app foi atualizado.
+        if (old < 2) db.execSQL("alter table events add column media_url text")
     }
 
     fun add(
@@ -47,6 +51,7 @@ class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 
         startedAt: String,
         endedAt: String?,
         durationSeconds: Long?,
+        mediaUrl: String? = null,
     ) {
         val values = ContentValues().apply {
             put("event_id", eventId)
@@ -55,6 +60,7 @@ class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 
             put("started_at", startedAt)
             put("ended_at", endedAt)
             put("duration_seconds", durationSeconds)
+            put("media_url", mediaUrl)
         }
         // CONFLICT_IGNORE: o mesmo evento visto duas vezes não duplica a fila.
         writableDatabase.insertWithOnConflict(
@@ -77,7 +83,8 @@ class EventQueue(ctx: Context) : SQLiteOpenHelper(ctx, "linka_events.db", null, 
                         .put("package", c.getString(c.getColumnIndexOrThrow("package")) ?: JSONObject.NULL)
                         .put("started_at", c.getString(c.getColumnIndexOrThrow("started_at")))
                         .put("ended_at", c.getString(c.getColumnIndexOrThrow("ended_at")) ?: JSONObject.NULL)
-                        .put("duration_seconds", c.getLong(c.getColumnIndexOrThrow("duration_seconds"))),
+                        .put("duration_seconds", c.getLong(c.getColumnIndexOrThrow("duration_seconds")))
+                        .put("media_url", c.getString(c.getColumnIndexOrThrow("media_url")) ?: JSONObject.NULL),
                 )
             }
         }

@@ -228,6 +228,40 @@ object Prefs {
         ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_MODE, value).apply()
 
+    // ── Trecho de exibição em aberto ─────────────────────────────────────────
+    // Qual vídeo começou a tocar e quando. Mora aqui, e não em memória, porque o
+    // trecho precisa sobreviver ao app ser reiniciado: sem isso, todo reinício
+    // engoliria silenciosamente o período de exibição anterior.
+    private const val KEY_MEDIA_URL = "media_open_url"
+    private const val KEY_MEDIA_SINCE = "media_open_since"
+    private const val KEY_MEDIA_ALIVE = "media_open_alive"
+
+    fun mediaUrl(ctx: Context): String? =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_MEDIA_URL, null)
+
+    fun mediaSince(ctx: Context): Long =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_MEDIA_SINCE, 0L)
+
+    /**
+     * Último instante em que o app comprovadamente estava rodando. É o que impede
+     * de contar como exibição o tempo em que o aparelho esteve desligado: o
+     * trecho fecha no último sinal de vida, não no relógio de agora.
+     */
+    fun mediaAlive(ctx: Context): Long =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_MEDIA_ALIVE, 0L)
+
+    fun setMediaOpen(ctx: Context, url: String, since: Long) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_MEDIA_URL, url).putLong(KEY_MEDIA_SINCE, since).apply()
+
+    fun setMediaAlive(ctx: Context, at: Long) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_MEDIA_ALIVE, at).apply()
+
+    fun clearMediaOpen(ctx: Context) =
+        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_MEDIA_URL).remove(KEY_MEDIA_SINCE).apply()
+
     private const val KEY_FIT = "playing_fit"
 
     /** Enquadramento aplicado ao conteúdo em exibição (zoom | fit). */

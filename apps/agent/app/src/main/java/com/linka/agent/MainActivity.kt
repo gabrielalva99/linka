@@ -348,6 +348,12 @@ class MainActivity : Activity() {
             playerView?.resizeMode = resizeMode(fit)
         }
 
+        // Fecha o trecho do vídeo anterior e abre o do novo. Aqui é o único ponto
+        // do app que sabe a hora EXATA da troca — o serviço só passa de minuto em
+        // minuto, e um minuto de erro é o bastante para atribuir a parada de um
+        // cliente ao vídeo errado.
+        if (urlChanged) MediaLog.reconciliarAsync(this)
+
         if (urlChanged || fitChanged || modeChanged) Telemetry.beatAsync(this)
     }
 

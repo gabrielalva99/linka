@@ -31,14 +31,28 @@ export async function GET(request: Request) {
 
   const supabase = await createSupabaseServerClient();
 
+  // Duas planilhas, mesmo recorte: o que o cliente USOU e o que estava NA TELA.
+  // Separadas porque o grão é diferente — uma linha por recurso contra uma linha
+  // por vídeo — e juntar as duas numa só produz soma de coisas que não se somam.
+  const conteudo = url.searchParams.get("tipo") === "conteudo";
+
   // RLS vale aqui igual à tela: quem baixa leva o que enxerga, não a base toda.
   // A planilha respeita o MESMO recorte da tela. Baixar a frota inteira quando
   // a tela mostra uma loja é o caminho mais curto para alguém mandar o número
   // errado para a marca.
-  let consulta = supabase
-    .from("v_bi_interaction_hourly")
-    .select("rede, loja, cidade, uf, codigo, aparelho, hora_local, recurso, categoria, sessoes, segundos")
-    .gte("hora_local", desde.toISOString());
+  let consulta = conteudo
+    ? supabase
+        .from("v_bi_media_hourly")
+        .select(
+          "rede, loja, cidade, uf, tipo_local, codigo, aparelho, modelo, linha, hora_local, midia, segundos_no_ar, visitas, segundos_uso",
+        )
+        .gte("hora_local", desde.toISOString())
+    : supabase
+        .from("v_bi_interaction_hourly")
+        .select(
+          "rede, loja, cidade, uf, tipo_local, codigo, aparelho, modelo, linha, hora_local, recurso, categoria, sessoes, segundos",
+        )
+        .gte("hora_local", desde.toISOString());
 
   const rede = url.searchParams.get("rede");
   const loja = url.searchParams.get("loja");
@@ -55,28 +69,47 @@ export async function GET(request: Request) {
     return new Response("Não foi possível gerar o arquivo.", { status: 500 });
   }
 
-  const linhas = (data ?? []).map((l) => ({
-    rede: l.rede ?? "",
-    loja: l.loja ?? "",
-    cidade: l.cidade ?? "",
-    uf: l.uf ?? "",
-    codigo: l.codigo ?? "",
-    aparelho: l.aparelho ?? "",
-    // Data e hora separadas: em coluna única o Excel decide o formato sozinho
-    // e cada máquina decide diferente.
-    data: String(l.hora_local).slice(0, 10),
-    hora: String(l.hora_local).slice(11, 16),
-    recurso: l.recurso ?? "",
-    categoria: l.categoria ?? "",
-    sessoes: l.sessoes ?? 0,
-    segundos: l.segundos ?? 0,
-  }));
+  // As duas consultas devolvem formatos diferentes; o mapeamento abaixo é que
+  // decide qual coluna sai em cada planilha.
+  const linhas = ((data ?? []) as Record<string, unknown>[]).map((l) => {
+    const comum = {
+      rede: l.rede ?? "",
+      loja: l.loja ?? "",
+      cidade: l.cidade ?? "",
+      uf: l.uf ?? "",
+      tipo_local: l.tipo_local ?? "",
+      codigo: l.codigo ?? "",
+      aparelho: l.aparelho ?? "",
+      modelo: l.modelo ?? "",
+      linha: l.linha ?? "",
+      // Data e hora separadas: em coluna única o Excel decide o formato sozinho
+      // e cada máquina decide diferente.
+      data: String(l.hora_local).slice(0, 10),
+      hora: String(l.hora_local).slice(11, 16),
+    };
+    return conteudo
+      ? {
+          ...comum,
+          video: l.midia ?? "",
+          segundos_no_ar: l.segundos_no_ar ?? 0,
+          visitas: l.visitas ?? 0,
+          segundos_uso: l.segundos_uso ?? 0,
+        }
+      : {
+          ...comum,
+          recurso: l.recurso ?? "",
+          categoria: l.categoria ?? "",
+          sessoes: l.sessoes ?? 0,
+          segundos: l.segundos ?? 0,
+        };
+  });
 
   const hoje = new Date().toISOString().slice(0, 10);
+  const nome = conteudo ? "conteudo" : "interacao";
   return new Response(csv(linhas), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="linka-interacao-${hoje}.csv"`,
+      "Content-Disposition": `attachment; filename="linka-${nome}-${hoje}.csv"`,
       "Cache-Control": "no-store",
     },
   });
