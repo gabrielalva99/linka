@@ -10,6 +10,7 @@ type Proibido = {
   app: string;
   vezes: number;
   ultima_vez: string;
+  sai_em: string;
 };
 
 type Report = {
@@ -211,7 +212,8 @@ export default async function RelatoriosPage({
                   <li key={`${a.codigo}-${a.app}`}>
                     {`${a.app} · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
                     {t.reports.times.replace("{n}", String(a.vezes))}
-                    {` · ${t.reports.lastTime} ${a.ultima_vez}`}
+                    {` · ${t.reports.lastTime} ${a.ultima_vez} · `}
+                    {t.reports.leavesOn.replace("{d}", a.sai_em)}
                   </li>
                 ))}
               </ul>

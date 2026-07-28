@@ -50,8 +50,15 @@ begin
            case e.package when 'com.android.settings' then 'Ajustes'
                           when 'com.android.vending' then 'Play Store' end as app,
            count(*) as vezes,
+           -- Converte para a hora da loja ANTES de agregar. Aplicar o fuso
+           -- depois do max() exige a coluna no group by. Eu documentei essa
+           -- armadilha aqui embaixo e caí nela de novo na linha seguinte, ao
+           -- acrescentar sai_em: o comentário não substitui conferir a chamada.
            to_char(max(e.started_at at time zone coalesce(s.timezone,'America/Sao_Paulo')),
                    'DD/MM HH24:MI') as ultima_vez,
+           -- Quando este registro sai da lista, para ninguém ter que calcular.
+           to_char(max(e.started_at at time zone coalesce(s.timezone,'America/Sao_Paulo'))
+                   + make_interval(days => greatest(1, p_days)), 'DD/MM') as sai_em,
            bool_and(d.block_settings and coalesce(d.blocked_apps,'') like '%settings%') as corrigido
     from public.device_events e
     join public.devices d on d.id = e.device_id
