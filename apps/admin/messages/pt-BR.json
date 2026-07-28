@@ -10,7 +10,8 @@
     "library": "Biblioteca",
     "chains": "Redes",
     "stores": "Lojas",
-    "users": "Acesso"
+    "users": "Acesso",
+    "reports": "Relatórios"
   },
   "login": {
     "title": "Entrar",
@@ -355,5 +356,26 @@
     "revoking": "Tirando…",
     "confirm": "Confirmar",
     "roleHint": "Cliente e Campo só visualizam: não trocam vídeo, não mexem em aparelho e não desprovisionam. Agência opera tudo do cliente."
+  },
+  "reports": {
+    "title": "Relatórios",
+    "days": "{n} dias",
+    "export": "Baixar planilha",
+    "empty": "Ainda não há interação registrada neste período.",
+    "readFailed": "Não consegui montar o relatório. Recarregue a página.",
+    "visits": "Visitas",
+    "usage": "Tempo de uso",
+    "showcase": "Vitrine no expediente",
+    "rate": "Taxa de parada",
+    "perVisit": "{t} por visita",
+    "byStore": "Por loja",
+    "byFeature": "O que o visitante abriu",
+    "byHour": "Movimento por hora",
+    "store": "Loja",
+    "chain": "Rede",
+    "rateHint": "Taxa de parada é visitas por hora de vitrine exposta. É ela que compara lojas de tamanhos diferentes; a contagem crua premia a loja que fica mais tempo aberta.",
+    "hourHint": "Horário da loja, somado no período.",
+    "noVisits": "{n} aparelho(s) sem nenhuma visita no período",
+    "noVisitsHint": "Pode ser ponto ruim na loja, pode ser aparelho com problema. Nos dois casos alguém precisa olhar."
   }
 }

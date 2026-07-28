@@ -22,6 +22,7 @@ export default async function AppLayout({
     { label: t.nav.dashboard, href: "/" },
     { label: t.nav.fleet, href: "/frota" },
     { label: t.nav.campaigns, href: "/campanhas" },
+    { label: t.nav.reports, href: "/relatorios" },
     { label: t.nav.library, href: "/biblioteca" },
     { label: t.nav.chains, href: "/redes" },
     { label: t.nav.stores, href: "/lojas" },
