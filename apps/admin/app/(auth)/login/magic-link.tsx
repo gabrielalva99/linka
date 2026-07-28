@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getMessages } from "@/lib/i18n";
 
@@ -19,7 +18,6 @@ import { getMessages } from "@/lib/i18n";
  */
 export function MagicLink() {
   const t = getMessages();
-  const router = useRouter();
   const [estado, setEstado] = useState<"nada" | "entrando" | "falhou">("nada");
 
   useEffect(() => {
@@ -43,12 +41,14 @@ export function MagicLink() {
           setEstado("falhou");
           return;
         }
-        window.history.replaceState(null, "", window.location.pathname);
-        router.replace("/");
-        router.refresh();
+        // Recarga de página inteira, e não navegação do lado do cliente: o
+        // cookie acabou de ser escrito e o pedido do React Server Component sai
+        // antes de o navegador passar a mandá-lo. Com router.replace a pessoa
+        // ficava parada em "Entrando…" para sempre, com a sessão já válida.
+        window.location.replace("/");
       })
       .catch(() => setEstado("falhou"));
-  }, [router]);
+  }, []);
 
   if (estado === "nada") return null;
 
