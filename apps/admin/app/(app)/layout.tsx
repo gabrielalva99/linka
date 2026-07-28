@@ -26,6 +26,12 @@ export default async function AppLayout({
     { label: t.nav.chains, href: "/redes" },
     { label: t.nav.stores, href: "/lojas" },
   ];
+  // Acesso só aparece para quem pode conceder acesso. Menu com item que leva a
+  // uma tela recusada é pior do que menu sem o item.
+  const ehAgencia = ctx?.memberships.some((m) => m.role === "agency") ?? false;
+  if (ctx?.isSuperadmin || ehAgencia) {
+    nav.push({ label: t.nav.users, href: "/usuarios" });
+  }
 
   return (
     <div className="flex min-h-full flex-1">

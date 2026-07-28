@@ -9,7 +9,8 @@
     "campaigns": "Campanhas",
     "library": "Biblioteca",
     "chains": "Redes",
-    "stores": "Lojas"
+    "stores": "Lojas",
+    "users": "Acesso"
   },
   "login": {
     "title": "Entrar",
@@ -313,5 +314,31 @@
     "noStoreSet": "sem loja",
     "readFailed": "Não consegui ler a situação dos aparelhos",
     "readFailedHint": "Isso não quer dizer que está tudo bem nem que está tudo mal: quer dizer que o painel não conseguiu consultar agora. Recarregue a página; se continuar, saia e entre de novo."
+  },
+  "users": {
+    "title": "Acesso ao painel",
+    "subtitle": "Quem consegue entrar e ver os dados de {cliente}.",
+    "inviteTitle": "Convidar alguém",
+    "current": "Quem tem acesso hoje",
+    "person": "Pessoa",
+    "access": "Tipo de acesso",
+    "email": "E-mail",
+    "invite": "Convidar",
+    "inviting": "Convidando…",
+    "roleClient": "Cliente (só olha)",
+    "roleField": "Campo (só olha)",
+    "roleAgency": "Agência (opera tudo)",
+    "created": "Acesso criado para {email}.",
+    "sendLink": "Mande este link para a pessoa. Ela entra por ele e define a própria senha.",
+    "copy": "Copiar link",
+    "copied": "Copiado",
+    "linkExpires": "O link vale por tempo limitado. Se vencer, é só convidar de novo.",
+    "empty": "Só você tem acesso a este cliente.",
+    "readFailed": "Não consegui ler a lista de acessos. Recarregue a página.",
+    "revoke": "Tirar acesso",
+    "revokeConfirm": "Tirar o acesso de {nome}?",
+    "revoking": "Tirando…",
+    "confirm": "Confirmar",
+    "roleHint": "Cliente e Campo só visualizam: não trocam vídeo, não mexem em aparelho e não desprovisionam. Agência opera tudo do cliente."
   }
 }
