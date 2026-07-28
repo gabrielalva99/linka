@@ -232,7 +232,14 @@
     "creating": "Adicionando…",
     "empty": "Nenhuma rede cadastrada ainda.",
     "dup": "Já existe uma rede com esse nome.",
-    "error": "Não foi possível salvar."
+    "error": "Não foi possível salvar.",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "confirmDelete": "Excluir esta rede?",
+    "stores": "{n} loja(s)"
   },
   "stores": {
     "title": "Lojas",
@@ -261,7 +268,17 @@
     "noDevicesHere": "Nenhum aparelho nesta loja ainda.",
     "deviceOnline": "no ar",
     "deviceOffline": "fora do ar",
-    "deviceNoVideo": "sem vídeo na tela"
+    "deviceNoVideo": "sem vídeo na tela",
+    "editTitle": "Editar loja",
+    "edit": "Editar loja",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "cancel": "Cancelar",
+    "noChain": "Sem rede",
+    "hoursTitle": "Horário de funcionamento",
+    "hoursEffect": "Os {n} aparelho(s) desta loja seguem este horário: com a loja aberta, a vitrine acende sozinha se a tela apagar; com a loja fechada, fica quieta para não gastar bateria nem queimar a tela. É também o que recorta o tempo de vitrine nos relatórios.",
+    "hoursError": "Não foi possível salvar. Confira se o horário de abertura é antes do de fechamento.",
+    "hoursLine": "Funciona das {abre} às {fecha}. Os aparelhos desta loja seguem este horário."
   },
   "positions": {
     "title": "Posições",
@@ -270,7 +287,12 @@
     "adding": "Adicionando…",
     "empty": "Nenhuma posição nesta loja ainda.",
     "delete": "Remover",
-    "error": "Não foi possível salvar."
+    "error": "Não foi possível salvar.",
+    "rename": "Renomear",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "confirmDelete": "Apagar esta posição?"
   },
   "models": {
     "title": "Modelos",
@@ -281,7 +303,14 @@
     "empty": "Nenhum modelo cadastrado ainda.",
     "manage": "Gerenciar modelos",
     "dup": "Já existe um modelo com esse nome.",
-    "error": "Não foi possível salvar."
+    "error": "Não foi possível salvar.",
+    "rename": "Editar",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "confirmDelete": "Excluir este modelo?",
+    "devices": "{n} aparelho(s)"
   },
   "deviceForm": {
     "new": "Novo dispositivo",

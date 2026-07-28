@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { PositionForm } from "./position-form";
-import { deletePosition } from "./actions";
+import { PositionRow } from "./position-row";
 
 type StoreDetail = {
   id: string;
@@ -14,6 +14,8 @@ type StoreDetail = {
   state: string | null;
   country: string;
   timezone: string;
+  opens_at: string | null;
+  closes_at: string | null;
   retail_chains: { name: string | null } | { name: string | null }[] | null;
 };
 
@@ -27,7 +29,7 @@ export default async function StoreDetailPage({
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, code, kind, city, state, country, timezone, retail_chains(name)")
+    .select("id, name, code, kind, city, state, country, timezone, opens_at, closes_at, retail_chains(name)")
     .eq("id", id)
     .single<StoreDetail>();
 
@@ -66,12 +68,25 @@ export default async function StoreDetailPage({
         ← {t.stores.title}
       </Link>
 
-      <h1 className="mt-2 text-xl font-semibold">{store.name}</h1>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{store.name}</h1>
+        <Link
+          href={`/lojas/${store.id}/editar`}
+          className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+        >
+          {t.stores.edit}
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-muted">
         {chainName} · {kindLabel}
         {store.city ? ` · ${store.city}${store.state ? `/${store.state}` : ""}` : ""}
         {` · ${store.country} · ${store.timezone}`}
         {store.code ? ` · ${store.code}` : ""}
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        {t.stores.hoursLine
+          .replace("{abre}", String(store.opens_at ?? "09:00").slice(0, 5))
+          .replace("{fecha}", String(store.closes_at ?? "22:00").slice(0, 5))}
       </p>
 
       <div className="mt-8">
@@ -138,22 +153,12 @@ export default async function StoreDetailPage({
           {positions && positions.length > 0 ? (
             <ul className="divide-y divide-line">
               {positions.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between bg-surface px-4 py-3 text-sm"
-                >
-                  <span>{p.label}</span>
-                  <form action={deletePosition}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="store_id" value={store.id} />
-                    <button
-                      type="submit"
-                      className="text-xs text-muted hover:text-danger"
-                    >
-                      {t.positions.delete}
-                    </button>
-                  </form>
-                </li>
+                <PositionRow
+                  key={p.id as string}
+                  id={p.id as string}
+                  rotulo={p.label as string}
+                  storeId={store.id}
+                />
               ))}
             </ul>
           ) : (

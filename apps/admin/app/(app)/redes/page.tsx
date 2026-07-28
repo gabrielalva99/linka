@@ -1,12 +1,15 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { CreateChainForm } from "./create-form";
+import { ChainRow } from "./chain-row";
 
 export default async function RedesPage() {
   const supabase = await createSupabaseServerClient();
+  // A contagem de lojas vem junto: rede sem saber quantas lojas tem é um nome
+  // solto, e é a contagem que diz se dá para excluir.
   const { data: chains } = await supabase
     .from("retail_chains")
-    .select("id, name")
+    .select("id, name, stores(count)")
     .order("name", { ascending: true });
   const t = getMessages();
 
@@ -22,9 +25,14 @@ export default async function RedesPage() {
         {chains && chains.length > 0 ? (
           <ul className="divide-y divide-line">
             {chains.map((c) => (
-              <li key={c.id} className="bg-surface px-4 py-3 text-sm">
-                {c.name}
-              </li>
+              <ChainRow
+                key={c.id as string}
+                id={c.id as string}
+                nome={c.name as string}
+                lojas={
+                  (c.stores as unknown as { count: number }[] | null)?.[0]?.count ?? 0
+                }
+              />
             ))}
           </ul>
         ) : (

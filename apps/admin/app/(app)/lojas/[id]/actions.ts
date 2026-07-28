@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
+import { logAction } from "@/lib/audit";
 
 export type CreatePositionState = { status: "idle" | "ok" | "error" };
 
@@ -28,12 +29,42 @@ export async function createPosition(
   return { status: "ok" };
 }
 
-export async function deletePosition(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  const storeId = String(formData.get("store_id") ?? "");
-  if (!id) return;
-
+/** Corrige o rótulo da posição. Antes, renomear "Mesa 3" exigia apagar e
+ *  recriar, o que soltava todos os aparelhos que estavam ali. */
+export async function renamePosition(id: string, label: string, storeId: string) {
+  const limpo = label.trim();
+  if (!limpo) return { ok: false as const, error: "Digite um nome." };
   const supabase = await createSupabaseServerClient();
-  await supabase.from("positions").delete().eq("id", id);
+  const { error } = await supabase.from("positions").update({ label: limpo }).eq("id", id);
+  if (error) return { ok: false as const, error: "Não foi possível salvar." };
+  await logAction("renomear_posicao", "store", storeId, { posicao: limpo });
   revalidatePath(`/lojas/${storeId}`);
+  return { ok: true as const };
+}
+
+/**
+ * Apaga a posição, e só se não houver aparelho nela.
+ *
+ * Antes apagava calado. A chave estrangeira solta o vínculo dos aparelhos, e a
+ * ficha deles passava a mostrar um traço no lugar da posição, sem ninguém
+ * entender por quê. Quem está na loja procurando o aparelho "da mesa 3" fica
+ * sem a informação que foi buscar.
+ */
+export async function deletePosition(id: string, storeId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { count } = await supabase
+    .from("devices")
+    .select("id", { count: "exact", head: true })
+    .eq("position_id", id);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false as const,
+      error: `${count} aparelho(s) estão nesta posição. Mova antes de apagar.`,
+    };
+  }
+  const { error } = await supabase.from("positions").delete().eq("id", id);
+  if (error) return { ok: false as const, error: "Não foi possível excluir." };
+  await logAction("excluir_posicao", "store", storeId);
+  revalidatePath(`/lojas/${storeId}`);
+  return { ok: true as const };
 }

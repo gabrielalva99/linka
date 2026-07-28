@@ -2,12 +2,13 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { CreateModelForm } from "./create-form";
+import { ModelRow } from "./model-row";
 
 export default async function ModelosPage() {
   const supabase = await createSupabaseServerClient();
   const { data: models } = await supabase
     .from("device_models")
-    .select("id, name, line")
+    .select("id, name, line, devices(count)")
     .order("line", { ascending: true })
     .order("name", { ascending: true });
   const t = getMessages();
@@ -30,14 +31,20 @@ export default async function ModelosPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">{t.models.name}</th>
                 <th className="px-4 py-2 font-medium">{t.models.line}</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {models.map((m) => (
-                <tr key={m.id} className="bg-surface">
-                  <td className="px-4 py-3 font-medium">{m.name}</td>
-                  <td className="px-4 py-3 text-muted">{m.line ?? "—"}</td>
-                </tr>
+                <ModelRow
+                  key={m.id as string}
+                  id={m.id as string}
+                  nome={m.name as string}
+                  linha={m.line as string | null}
+                  aparelhos={
+                    (m.devices as unknown as { count: number }[] | null)?.[0]?.count ?? 0
+                  }
+                />
               ))}
             </tbody>
           </table>
