@@ -86,7 +86,10 @@ Deno.serve(async (req) => {
     update.battery_charging = payload.battery_charging;
   }
   if (typeof payload.synced === "boolean") update.synced = payload.synced;
-  if (typeof payload.app_updated === "boolean") update.app_updated = payload.app_updated;
+  // app_updated NÃO é mais aceito. Quem sabe se o aparelho está atualizado é o
+  // servidor: ele tem a versão instalada e a publicada. O aparelho respondia
+  // isso a partir de um valor em cache e ficava uma batida atrás, então o painel
+  // mostrava "1 de 2" com os dois já na versão nova.
   if ("playing_url" in payload) {
     update.playing_url =
       typeof payload.playing_url === "string" && payload.playing_url.length > 0

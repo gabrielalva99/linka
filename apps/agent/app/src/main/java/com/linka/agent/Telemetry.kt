@@ -82,11 +82,10 @@ object Telemetry {
             // O painel precisa saber se a cura está disponível ANTES de precisar dela.
             .put("reset_token_ready", Kiosk.resetTokenActive(ctx))
             .put("blocked_apps", Kiosk.blockedApps(ctx))
-        // Atualizado = a versão que está rodando é a publicada. Quem sabe as duas
-        // pontas é o aparelho, então é ele que responde.
-        Prefs.publishedVersion(ctx)?.let {
-            body.put("app_updated", it == Api.AGENT_VERSION)
-        }
+        // "Está atualizado?" não é mais respondido aqui. O aparelho só sabia a
+        // versão publicada por um valor em cache, então respondia com atraso e o
+        // painel contava errado. Quem compara agora é o servidor, que tem as duas
+        // pontas: a versão instalada e a publicada.
         if (commandDone != null) body.put("command_done", commandDone)
         if (commandResult != null) body.put("command_result", commandResult)
         // Faxina que rodou sozinha precisa aparecer no painel na mesma batida.

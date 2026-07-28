@@ -22,7 +22,6 @@ type DeviceRow = {
   battery_level: number | null;
   battery_charging: boolean | null;
   synced: boolean;
-  app_updated: boolean;
   agent_version: string | null;
   last_seen_at: string | null;
   device_type: DeviceType;
@@ -78,10 +77,19 @@ export default async function FrotaPage({
     : null;
 
   const supabase = await createSupabaseServerClient();
+  // A versão publicada vem junto: quem sabe se o aparelho está atualizado é o
+  // servidor, comparando o que está instalado com o que foi publicado. Antes
+  // esse fato vinha do próprio aparelho e chegava atrasado, então a tela dizia
+  // "1 de 2" com os dois já na versão nova.
+  const { data: release } = await supabase
+    .from("agent_releases")
+    .select("version")
+    .eq("is_current", true)
+    .maybeSingle();
   const { data } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, synced, app_updated, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, device_models(name), stores(name)",
+      "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, device_models(name), stores(name)",
     )
     .order("code", { ascending: true });
   const t = getMessages();
@@ -100,7 +108,10 @@ export default async function FrotaPage({
     (d) => effectiveStatus(d.status, d.last_seen_at) === "online",
   ).length;
   const synced = devices.filter((d) => d.synced).length;
-  const updated = devices.filter((d) => d.app_updated).length;
+  const publicada = release?.version ?? null;
+  const updated = publicada
+    ? devices.filter((d) => d.agent_version === publicada).length
+    : 0;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
   const locked = devices.filter((d) => d.kiosk_locked).length;
