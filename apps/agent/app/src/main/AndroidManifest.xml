@@ -28,6 +28,12 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Subir sozinho quando o aparelho liga. Sem isto, só o cargo de dono do
+         aparelho trazia a vitrine de volta depois de um reinício, e a frota de
+         instalação assistida não tem esse cargo: a loja tirava da tomada e a
+         vitrine ficava preta até alguém abrir o app. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -45,6 +51,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- A vitrine volta sozinha depois de qualquer reinício. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <!-- Recebe o cargo de dono do aparelho (ADR-7). -->
         <receiver
