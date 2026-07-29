@@ -362,6 +362,7 @@ if ($codigo) {
   Write-Host ""
   $entrou = $false
   $avisouPermissao = $false
+  $digitou = $false
   for ($t = 0; $t -lt 45; $t++) {
     Start-Sleep -Seconds 2
     & $adb shell uiautomator dump /sdcard/linka-tela.xml 2>&1 | Out-Null
@@ -385,6 +386,32 @@ if ($codigo) {
       $entrou = $true
       break
     }
+
+    # Ainda na tela de pareamento: DIGITA o codigo, como uma pessoa faria.
+    #
+    # Mandar o codigo junto com o comando de abrir o app nao e confiavel: quando
+    # o app ja esta aberto, o Android entrega o codigo por outra porta e ele se
+    # perde. Na pratica o tecnico tinha que digitar a mao toda vez, e o kit
+    # dizia que estava tudo certo. Aqui a gente para de torcer: acha o campo na
+    # tela, digita e toca no botao.
+    if (-not $digitou -and $t -ge 2) {
+      if ($tela -match 'text="Código de pareamento"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+        $cx = [int](([int]$Matches[1] + [int]$Matches[3]) / 2)
+        $cy = [int](([int]$Matches[2] + [int]$Matches[4]) / 2)
+        if ($tela -match 'text="Parear"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {
+          $bx = [int](([int]$Matches[1] + [int]$Matches[3]) / 2)
+          $by = [int](([int]$Matches[2] + [int]$Matches[4]) / 2)
+          & $adb shell input tap $cx $cy 2>&1 | Out-Null
+          Start-Sleep -Milliseconds 600
+          & $adb shell input text $completo 2>&1 | Out-Null
+          Start-Sleep -Milliseconds 600
+          & $adb shell input tap $bx $by 2>&1 | Out-Null
+          $digitou = $true
+          Write-Host "  codigo digitado no aparelho"
+        }
+      }
+    }
+
     if ($t % 5 -eq 0) { Write-Host "  aguardando o aparelho entrar na frota..." }
   }
 

@@ -101,6 +101,10 @@ class MainActivity : Activity() {
 
     // ── Pareamento ────────────────────────────────────────────────────────
     private fun showPairing(autoCode: String? = null) {
+        // Destranca ao voltar para o pareamento: é a tela em que o técnico
+        // precisa conseguir mexer no aparelho.
+        Kiosk.destrancar(this)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(56, 120, 56, 56)
@@ -218,6 +222,16 @@ class MainActivity : Activity() {
 
     // ── Conteúdo (player) ─────────────────────────────────────────────────
     private fun showContent(token: String) {
+        // Tranca o aparelho na vitrine: sem barra de notificações, sem sair.
+        //
+        // Isto nunca existiu no produto. O que segurava o cliente era o app de
+        // Ajustes estar escondido — e foi exatamente isso que impedia o aparelho
+        // de ligar. Agora a trava é a ferramenta certa do Android, e ela só
+        // acontece AQUI: com o aparelho na frota e conteúdo na tela. Na tela de
+        // pareamento o aparelho fica livre, porque aparelho preso numa tela que
+        // não avança é o mesmo tijolo de antes.
+        Kiosk.trancar(this)
+
         // Retoma o último conteúdo conhecido, se estiver no aparelho: reiniciar
         // sem internet (queda de luz na loja de manhã) não pode virar tela preta.
         val last = Prefs.playingUrl(this)

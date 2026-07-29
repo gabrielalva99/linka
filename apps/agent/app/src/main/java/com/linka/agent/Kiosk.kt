@@ -102,6 +102,32 @@ object Kiosk {
         // Reaplica o bloqueio a cada início: atualização não pode reabrir a porta.
         applyAppBlocks(ctx, Prefs.blockSettings(ctx))
 
+        // Autoriza o modo quiosque de verdade para este app.
+        //
+        // Isto nunca existiu. A "proteção" do produto era esconder o app de
+        // Ajustes, e foi ela que impediu os aparelhos de ligar. Medido no
+        // aparelho antes de escrever isto: mLockTaskModeState=NONE, lista de
+        // pacotes autorizados vazia. Ou seja, o cliente sempre pôde puxar a
+        // barra de notificações e sair da vitrine.
+        //
+        // Autorizar aqui não tranca nada sozinho: quem entra no modo é a tela,
+        // ao aparecer (ver MainActivity). Separado de propósito, para o aparelho
+        // nunca ficar trancado sem uma tela nossa na frente.
+        try {
+            dpm.setLockTaskPackages(admin, arrayOf(ctx.packageName))
+        } catch (_: Exception) {
+        }
+
+        // Tira o aviso de "terminar de configurar o aparelho".
+        //
+        // É resto do assistente inicial, e some assim que o sistema entende que
+        // a configuração acabou. Sem isso ele fica na barra de notificações da
+        // vitrine, convidando o cliente a entrar nos Ajustes.
+        try {
+            dpm.setSecureSetting(admin, "user_setup_complete", "1")
+        } catch (_: Exception) {
+        }
+
         // ── Tela inicial obrigatória: DESLIGADO ──────────────────────────────
         //
         // Aqui o LINKA se registrava como a tela inicial do aparelho, para a
@@ -187,14 +213,59 @@ object Kiosk {
      * cria uma senha de tela e a vitrine morre no próximo reinício, sem cura
      * possível neste hardware (o token de reset é recusado, medido em campo).
      */
-    private val RESTRICOES_DE_VITRINE = listOf(
-        android.os.UserManager.DISALLOW_CONFIG_CREDENTIALS,
+    /**
+     * Travas que NUNCA podem entrar nesta lista, e o que cada uma quebraria.
+     *
+     * Estão aqui como memória: as três já foram adicionadas por mim e removidas
+     * no mesmo dia, depois de trancarem o próprio caminho de conserto.
+     *
+     *  DISALLOW_INSTALL_APPS — bloqueia instalar QUALQUER coisa, inclusive pelo
+     *    cabo e pela atualização automática. Medido: `adb install` devolve
+     *    "User restriction prevents installing". Com 250 aparelhos na rua, isso
+     *    é perder o único jeito de corrigir um defeito sem visita técnica.
+     *
+     *  DISALLOW_INSTALL_UNKNOWN_SOURCES — mesmo risco: o agente se atualiza a
+     *    partir de um APK nosso, que é exatamente "fonte desconhecida".
+     *
+     *  DISALLOW_DEBUGGING_FEATURES — desliga a depuração USB, que é a corda de
+     *    salvamento. Foi por cabo que três aparelhos travados foram
+     *    diagnosticados e recuperados hoje. Fechar essa porta é ficar sem
+     *    nenhuma quando algo der errado.
+     *
+     * O que essas três protegiam já é coberto: Play Store escondido, e modo
+     * quiosque impedindo o cliente de chegar em Ajustes ou navegador.
+     */
+    private val NUNCA_RESTRINGIR = listOf(
         android.os.UserManager.DISALLOW_INSTALL_APPS,
         android.os.UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+        android.os.UserManager.DISALLOW_DEBUGGING_FEATURES,
+    )
+
+    private val RESTRICOES_DE_VITRINE = listOf(
+        android.os.UserManager.DISALLOW_CONFIG_CREDENTIALS,
         android.os.UserManager.DISALLOW_FACTORY_RESET,
         android.os.UserManager.DISALLOW_SAFE_BOOT,
         android.os.UserManager.DISALLOW_ADD_USER,
+        // Conta no aparelho quebra o controle de dono e reabre sincronização de
+        // fotos do cliente. É a primeira coisa que o provisionamento exige que
+        // não exista, e não pode voltar depois pela porta dos Ajustes.
+        android.os.UserManager.DISALLOW_MODIFY_ACCOUNTS,
+        // Relógio errado contamina a telemetria em silêncio: a sessão vai para o
+        // servidor com a hora do aparelho, e o BI lê por hora local da loja.
+        android.os.UserManager.DISALLOW_CONFIG_DATE_TIME,
+        // Idioma trocado deixa a vitrine em outro idioma até alguém ir na loja.
+        android.os.UserManager.DISALLOW_CONFIG_LOCALE,
     )
+
+    /**
+     * Bluetooth fica de fora desta lista de propósito.
+     *
+     * Bloquear os Ajustes tinha derrubado junto o pareamento Bluetooth, e a loja
+     * ficou sem conseguir demonstrar fone em aparelho sem entrada P2 — uma perda
+     * de venda que a gente mesmo causou. Agora que os Ajustes voltaram, o
+     * recurso volta com eles, e é para continuar assim.
+     */
+    private const val BLUETOOTH_LIBERADO = true
 
     /** Devolve o que foi realmente bloqueado — o painel não deve supor. */
     /**
@@ -210,6 +281,38 @@ object Kiosk {
         } catch (_: Exception) {
             false
         }
+
+    /**
+     * Tranca a tela no modo quiosque: sem barra de notificações, sem sair do app.
+     *
+     * Só entra com o aparelho JÁ na frota e com conteúdo na tela. Na tela de
+     * pareamento fica destrancado de propósito: aparelho que não conseguiu
+     * entrar na frota precisa continuar acessível para o técnico resolver, e um
+     * aparelho trancado numa tela que não avança é o mesmo tijolo que a gente
+     * acabou de sair.
+     */
+    fun trancar(activity: android.app.Activity) {
+        if (!isDeviceOwner(activity)) return
+        try {
+            val dpm = dpm(activity)
+            // Bloqueia tudo: barra de status, notificações, botão home e
+            // recentes. É uma vitrine, não um telefone emprestado.
+            if (Build.VERSION.SDK_INT >= 28) {
+                dpm.setLockTaskFeatures(admin(activity), DevicePolicyManager.LOCK_TASK_FEATURE_NONE)
+            }
+            activity.startLockTask()
+        } catch (_: Exception) {
+            // Fabricante que recusa: o retorno automático continua cobrindo.
+        }
+    }
+
+    /** Destranca. Usado ao voltar para o pareamento e antes de devolver o aparelho. */
+    fun destrancar(activity: android.app.Activity) {
+        try {
+            activity.stopLockTask()
+        } catch (_: Exception) {
+        }
+    }
 
     fun applyAppBlocks(ctx: Context, blocked: Boolean): String {
         if (!isDeviceOwner(ctx)) return "não sou dono do aparelho"
@@ -238,6 +341,20 @@ object Kiosk {
             try {
                 if (blocked) dpm.addUserRestriction(admin, r)
                 else dpm.clearUserRestriction(admin, r)
+            } catch (_: Exception) {
+            }
+        }
+
+        // Desfaz as travas que nunca deveriam ter entrado, sempre.
+        //
+        // Uma versão minha aplicou as três, e elas trancam o próprio caminho de
+        // conserto: sem instalar e sem cabo, um aparelho com defeito só volta
+        // com formatação. Como só o dono do aparelho consegue removê-las, este é
+        // o único lugar do mundo capaz de desfazer isso — e por isso roda a cada
+        // início, e não uma vez.
+        for (r in NUNCA_RESTRINGIR) {
+            try {
+                dpm.clearUserRestriction(admin, r)
             } catch (_: Exception) {
             }
         }
