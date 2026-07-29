@@ -57,6 +57,31 @@ object SelfUpdate {
         }
         if (!Kiosk.isDeviceOwner(ctx)) return
 
+        // ESPERA a vitrine estar presa no app. Este e o conserto de uma regressao
+        // que o Gabriel notou: "algumas atualizacoes atras o app piscava 1 segundo
+        // e ja voltava para o video".
+        //
+        // Instalar mata o processo, sempre. O que muda e o que o Android levanta
+        // depois:
+        //
+        //   COM lock task  - ele restaura a tarefa presa, e a vitrine volta em ~1s
+        //                    sem passar por tela nenhuma. Medido no aparelho.
+        //   SEM lock task  - ele pede a tela inicial, e nestes aparelhos quem
+        //                    responde e o launcher da Motorola. A vitrine sai do ar
+        //                    e volta so pelo MY_PACKAGE_REPLACED, depois de alguns
+        //                    segundos de menu de apps na cara do cliente.
+        //
+        // Fora do quiosque o aparelho esta em manutencao ou na mao de um cliente
+        // testando a camera. Nos dois casos, instalar agora e interromper alguem
+        // para mostrar o launcher. A versao nova nao tem pressa: ela entra na
+        // proxima volta, quando a vitrine estiver de novo no lugar dela.
+        //
+        // A espera vem ANTES da contagem de tentativas de proposito: adiar nao e
+        // falhar, e gastar tentativa aqui faria uma versao boa ser declarada
+        // "recusada, precisa de cabo" so porque alguem mexeu no aparelho.
+        if (Prefs.emManutencao(ctx)) return
+        if (!Kiosk.lockTaskOn(ctx)) return
+
         val tentativas = Prefs.updateAttempts(ctx, version)
         if (tentativas >= MAX_TENTATIVAS) {
             Prefs.setUpdateError(
