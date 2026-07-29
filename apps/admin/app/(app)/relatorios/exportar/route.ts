@@ -12,6 +12,28 @@ import { tenantFilter } from "@/lib/tenant";
  * Uma linha por aparelho, por hora, por recurso. É o mesmo grão que o BI já
  * consome hoje, para ninguém ter que reaprender a planilha.
  */
+/**
+ * Segundos viram minutos, com vírgula.
+ *
+ * Duas correções numa: "1433" não é informação para ninguém — ninguém divide por
+ * 60 de cabeça lendo planilha. E a vírgula é o separador decimal do Excel em
+ * português: com ponto, "23.9" vira texto ou vira 239, dependendo da máquina —
+ * o mesmo tipo de detalhe bobo que decide se a planilha presta ou não.
+ *
+ * Minuto e não "23min 53s" porque a coluna precisa somar. Texto bonito numa
+ * planilha de BI é coluna que não entra em conta nenhuma.
+ *
+ * Duas casas, e não uma: a sessão mais curta que a gente mede tem 2 segundos, e
+ * com uma casa ela vira 0,0 — desaparece da soma sem deixar rastro. Perder
+ * número em silêncio é o defeito que eu menos quero num arquivo que vai virar
+ * gráfico na frente da marca.
+ */
+function minutos(segundos: unknown): string {
+  const n = Number(segundos);
+  if (!Number.isFinite(n)) return "0,00";
+  return (n / 60).toFixed(2).replace(".", ",");
+}
+
 function csv(linhas: Record<string, unknown>[]): string {
   if (linhas.length === 0) return "﻿";
   const colunas = Object.keys(linhas[0]);
@@ -98,16 +120,16 @@ export async function GET(request: Request) {
       ? {
           ...comum,
           video: l.midia ?? "",
-          segundos_no_ar: l.segundos_no_ar ?? 0,
+          minutos_no_ar: minutos(l.segundos_no_ar),
           visitas: l.visitas ?? 0,
-          segundos_uso: l.segundos_uso ?? 0,
+          minutos_de_uso: minutos(l.segundos_uso),
         }
       : {
           ...comum,
           recurso: l.recurso ?? "",
           categoria: l.categoria ?? "",
           sessoes: l.sessoes ?? 0,
-          segundos: l.segundos ?? 0,
+          minutos: minutos(l.segundos),
         };
   });
 
