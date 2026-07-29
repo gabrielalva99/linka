@@ -313,7 +313,16 @@ class MainActivity : Activity() {
         // reinício da tela; quem a fecha é o relógio, sempre.
         if (Prefs.emManutencao(this)) {
             mostrarManutencao()
-            checkContent(token)
+            // O RELOGIO TAMBEM, e nao so uma consulta.
+            //
+            // Este return foi um defeito de verdade, e caro: ele saia antes de
+            // ligar o relogio de 20 segundos. Aparelho cuja tela reiniciasse
+            // dentro dos cinco minutos de manutencao (o Android recolhe memoria
+            // quando o tecnico abre a camera) parava de consultar o servidor PARA
+            // SEMPRE — sem receber troca de video e sem se atualizar, e sem erro
+            // nenhum no painel, porque o heartbeat vive no servico e continuava
+            // batendo. Vitrine viva, aparelho surdo.
+            ligarRelogioDeConteudo(token)
             return
         }
         Kiosk.trancar(this)
@@ -328,6 +337,21 @@ class MainActivity : Activity() {
         } else {
             setContentView(comSaidaEscondida(waitingView("Carregando conteúdo…")))
         }
+        ligarRelogioDeConteudo(token)
+    }
+
+    /**
+     * Liga o relogio que pergunta ao servidor o que exibir — e se ha versao nova.
+     *
+     * Existe como funcao propria porque DOIS caminhos chegam na vitrine
+     * (a entrada normal e a volta da manutencao) e um deles esquecia de ligar o
+     * relogio. Esquecer isto nao quebra nada visivel: o video continua tocando e o
+     * heartbeat continua batendo do servico, entao o painel mostra o aparelho
+     * saudavel. Ele so para de OBEDECER.
+     *
+     * Idempotente de proposito: chamar duas vezes nao cria dois relogios.
+     */
+    private fun ligarRelogioDeConteudo(token: String) {
         checkContent(token)
         if (contentTimer == null) {
             contentTimer = Timer().also {

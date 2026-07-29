@@ -66,12 +66,23 @@ object SelfUpdate {
             )
             return
         }
-        // Conta ANTES de tentar: se o processo morrer no meio, a tentativa contou.
-        Prefs.setUpdateAttempt(ctx, version, tentativas + 1)
+        // A trava vem ANTES da contagem, e a ordem inversa era um defeito.
+        //
+        // Contando primeiro, cada consulta de 20 segundos gastava uma tentativa —
+        // inclusive as que só encontravam um download já em curso e voltavam sem
+        // fazer nada. Um APK de 3,7 MB no Wi-Fi de loja passa de 20 segundos, então
+        // uma atualização perfeitamente saudável queimava as três tentativas antes
+        // de terminar e era declarada "recusada, precisa de cabo".
+        //
+        // Agora conta quem realmente vai baixar. A tentativa continua sendo contada
+        // ANTES do download (e não depois): se o processo morrer no meio da
+        // instalação, ela tem que contar, senão um APK que derruba o app na
+        // instalação viraria laço infinito.
         synchronized(this) {
             if (running) return
             running = true
         }
+        Prefs.setUpdateAttempt(ctx, version, tentativas + 1)
         Thread {
             try {
                 val apk = download(ctx, url)
