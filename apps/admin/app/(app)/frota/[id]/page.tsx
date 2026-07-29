@@ -20,6 +20,7 @@ import { JourneyPanel, type Journey } from "./journey-panel";
 import { AppsPanel, type DeviceApp } from "./apps-panel";
 import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
+import { ArchiveCard } from "./archive-card";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -62,7 +63,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -134,6 +135,9 @@ export default async function DeviceDetailPage({
     blocked_apps: string | null;
     screen_lock_set: boolean | null;
     exclude_from_reports: boolean;
+    is_active: boolean;
+    archived_at: string | null;
+    archive_reason: string | null;
     device_models: Rel;
     stores: Rel;
     positions: { label: string | null } | { label: string | null }[] | null;
@@ -370,6 +374,17 @@ export default async function DeviceDetailPage({
           )}
         </div>
       </section>
+
+      {/* No fim da ficha e sem destaque: é a ação mais rara desta tela e a que
+          mais incomoda se for clicada por engano. */}
+      {podeOperar && (
+        <ArchiveCard
+          deviceId={d.id}
+          arquivado={!d.is_active}
+          motivo={d.archive_reason}
+          desde={d.archived_at}
+        />
+      )}
 
       <AutoRefresh ms={5000} />
     </div>

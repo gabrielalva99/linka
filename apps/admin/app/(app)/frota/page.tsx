@@ -120,14 +120,20 @@ export default async function FrotaPage({
     supabase.from("device_models").select("id, name, line"),
     filtro,
   ).order("name");
+  // Aparelho arquivado sai da lista por padrão: ele não está mais na rua, e
+  // deixá-lo aqui faz o total da frota mentir. O filtro "arquivados" é o único
+  // jeito de vê-los, e aí a lista mostra SÓ eles.
+  const soArquivados = situacao === "arquivados";
   const { data } = await porCliente(
     supabase
       .from("devices")
       .select(
-        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, device_models(name), stores(name)",
+        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, is_active, archive_reason, device_models(name), stores(name)",
       ),
     filtro,
-  ).order("code", { ascending: true });
+  )
+    .eq("is_active", !soArquivados)
+    .order("code", { ascending: true });
   const t = getMessages();
   const ctx = await getSessionContext();
   const podeMexer = podeOperar(ctx);
@@ -157,7 +163,8 @@ export default async function FrotaPage({
     } else if (loja) {
       if (d.store_id !== loja) return false;
     }
-    if (situacao) {
+    // "arquivados" já foi resolvido na consulta; aqui ele não filtra mais nada.
+    if (situacao && situacao !== "arquivados") {
       const fora = effectiveStatus(d.status, d.last_seen_at) !== "online";
       if (situacao === "offline" && !fora) return false;
       if (situacao === "sem_travas" && d.kiosk_locked) return false;

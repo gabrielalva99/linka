@@ -60,6 +60,7 @@
     "offlineOnly": "Fora do ar",
     "unlockedOnly": "Sem travas",
     "outdatedOnly": "App desatualizado",
+    "archivedOnly": "Fora de operação",
     "clearFilters": "Limpar",
     "noResults": "Nenhum aparelho encontrado com esses filtros."
   },
@@ -250,6 +251,7 @@
     "code": "Código (PDV)",
     "noCode": "sem código",
     "generateCode": "Gerar",
+    "storeCodeCol": "Código",
     "codeHint": "É o que o técnico digita na loja para o aparelho entrar já vinculado aqui, no formato CÓDIGODOCLIENTE-CÓDIGODALOJA. Loja sem código recebe aparelho sem lugar, e alguém tem que corrigir depois um por um.",
     "chain": "Rede",
     "kind": "Tipo",

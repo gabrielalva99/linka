@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAction } from "@/lib/audit";
 import { getActiveTenant } from "@/lib/tenant";
+import { podeOperarAgora } from "@/lib/perms";
 import type { ContentFit } from "@linka/shared";
 
 /**
@@ -148,4 +149,61 @@ export async function addMedia(input: {
     .update({ content_url: input.url })
     .eq("id", input.deviceId);
   revalidatePath(`/frota/${input.deviceId}`);
+}
+
+/**
+ * Tira o aparelho de operação: roubado, quebrado, devolvido.
+ *
+ * O que isso resolve: hoje ele aparece como "fora do ar" todo dia, para sempre,
+ * e não há como fechar o aviso. Alerta que não fecha é o jeito mais rápido de
+ * ensinar a equipe a ignorar a tela de problemas — e aí o aparelho que caiu de
+ * verdade some no meio do ruído.
+ *
+ * NÃO apaga nada. O que ele mediu enquanto estava na loja aconteceu, e relatório
+ * de mês passado não pode mudar porque o aparelho sumiu ontem. Também não mexe
+ * no token: se ele voltar a se conectar, aparece na lista de arquivados como
+ * "visto agora" — que é justamente o que interessa saber de um aparelho roubado.
+ */
+export async function arquivarAparelho(deviceId: string, motivo: string) {
+  if (!(await podeOperarAgora())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const limpo = motivo.trim();
+  if (!limpo) {
+    return { ok: false as const, error: "Diga o motivo (roubado, quebrado, devolvido)." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("devices")
+    .update({
+      is_active: false,
+      archived_at: new Date().toISOString(),
+      archive_reason: limpo,
+    })
+    .eq("id", deviceId);
+  if (error) return { ok: false as const, error: "Não consegui arquivar." };
+
+  await logAction("device.archive", "device", deviceId, { motivo: limpo });
+  revalidatePath("/frota");
+  revalidatePath(`/frota/${deviceId}`);
+  return { ok: true as const };
+}
+
+/** Devolve o aparelho à operação. Volta a ser cobrado como todos os outros. */
+export async function desarquivarAparelho(deviceId: string) {
+  if (!(await podeOperarAgora())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("devices")
+    .update({ is_active: true, archived_at: null, archive_reason: null })
+    .eq("id", deviceId);
+  if (error) return { ok: false as const, error: "Não consegui reativar." };
+
+  await logAction("device.unarchive", "device", deviceId);
+  revalidatePath("/frota");
+  revalidatePath(`/frota/${deviceId}`);
+  return { ok: true as const };
 }
