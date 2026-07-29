@@ -213,7 +213,12 @@ export function TenantRow({
           </span>
         )}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-right">
+      {/* Sem whitespace-nowrap de proposito. Esta celula guarda tres frases de
+          confirmacao ("Excluir X? Nao tem volta.", o aviso de desativar), e
+          proibir quebra de linha fazia a mais longa esticar a tabela para fora da
+          caixa — no exato momento em que a pessoa precisa ler o aviso antes de
+          decidir. O alinhamento a direita se mantem; o que muda e poder quebrar. */}
+      <td className="px-4 py-3 text-right">
         {erro && <span className="mr-2 text-xs text-danger">{erro}</span>}
         {confirmandoExclusao ? (
           <>
@@ -243,7 +248,7 @@ export function TenantRow({
                 desativaria um contrato achando que apagou 250 telas — ou o
                 contrário, deixaria de desativar por medo de apagar. */}
             <span className="mr-2 text-xs text-muted">
-              Sai do seletor. Os aparelhos na loja continuam no ar.
+              Sai do seletor. Aparelhos seguem no ar.
             </span>
             <button
               onClick={() =>
@@ -264,7 +269,7 @@ export function TenantRow({
           <>
             <button
               onClick={() => setEditando(true)}
-              className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+              className="text-xs text-muted hover:text-fg hover:underline"
             >
               Renomear
             </button>
@@ -277,7 +282,7 @@ export function TenantRow({
                     setErro(null);
                     setConfirmandoDesativar(true);
                   }}
-                  className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+                  className="ml-3 text-xs text-muted hover:text-fg hover:underline"
                 >
                   Desativar
                 </button>
@@ -305,7 +310,7 @@ export function TenantRow({
                   setErro(null);
                   setConfirmandoExclusao(true);
                 }}
-                className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-danger hover:text-danger"
+                className="ml-3 text-xs text-muted hover:text-danger hover:underline"
               >
                 Excluir
               </button>
@@ -314,7 +319,7 @@ export function TenantRow({
               <button
                 onClick={() => startTransition(() => entrarNoCliente(id))}
                 disabled={pending}
-                className="ml-2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
+                className="ml-4 rounded-md bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
               >
                 Entrar
               </button>

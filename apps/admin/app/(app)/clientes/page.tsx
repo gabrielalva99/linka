@@ -62,7 +62,11 @@ export default async function ClientesPage() {
   const clientes = (data ?? []) as Row[];
 
   return (
-    <div className="mx-auto max-w-4xl">
+    // 6xl, e nao 4xl: esta e a tela com mais coluna do painel (identidade,
+    // tres contagens, dois segredos e as acoes). Em 896px a linha passava de
+    // 1170px e nascia uma barra de rolagem horizontal com meia tela vazia do
+    // lado — o pior dos dois mundos, apertado E sobrando espaco.
+    <div className="mx-auto max-w-6xl">
       <h1 className="text-xl font-semibold">Clientes</h1>
       <p className="mt-1 text-sm text-muted">
         Cada cliente é uma operação separada: frota, lojas, campanhas e

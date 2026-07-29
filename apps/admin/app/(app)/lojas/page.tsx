@@ -60,7 +60,9 @@ export default async function LojasPage() {
     (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
 
   return (
-    <div className="mx-auto max-w-5xl">
+    // 9 colunas nao cabem em 1024px sem rolagem — mesma correcao da tela de
+    // Clientes: a caixa acompanha o conteudo, em vez de o conteudo rolar.
+    <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t.stores.title}</h1>
         {podeEditar && (
