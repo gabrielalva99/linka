@@ -8,6 +8,7 @@ import {
   renameTenant,
   resetEnrollmentCode,
   setMaintenancePin,
+  setTenantActive,
 } from "./actions";
 
 /**
@@ -23,6 +24,7 @@ export function TenantRow({
   slug,
   codigo,
   pin,
+  clienteAtivo,
   aparelhos,
   lojas,
   pessoas,
@@ -33,6 +35,7 @@ export function TenantRow({
   slug: string;
   codigo: string;
   pin: string | null;
+  clienteAtivo: boolean;
   aparelhos: number;
   lojas: number;
   pessoas: number;
@@ -44,6 +47,7 @@ export function TenantRow({
   const [valor, setValor] = useState(nome);
   const [confirmandoCodigo, setConfirmandoCodigo] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [confirmandoDesativar, setConfirmandoDesativar] = useState(false);
   const [editandoPin, setEditandoPin] = useState(false);
   const [novoPin, setNovoPin] = useState(pin ?? "");
   const [erro, setErro] = useState<string | null>(null);
@@ -100,6 +104,13 @@ export function TenantRow({
         {ativo && (
           <span className="ml-2 whitespace-nowrap rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
             aberto agora
+          </span>
+        )}
+        {/* Sem isto a linha do cliente desativado fica idêntica à de um ativo, e
+            a pessoa passa a tarde procurando por que ele não está no seletor. */}
+        {!clienteAtivo && (
+          <span className="ml-2 whitespace-nowrap rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">
+            desativado
           </span>
         )}
         <span className="block text-xs text-muted">{slug}</span>
@@ -224,6 +235,31 @@ export function TenantRow({
               Excluir
             </button>
           </>
+        ) : confirmandoDesativar ? (
+          <>
+            {/* O aviso diz o que NÃO acontece, e é a parte que importa.
+                "Desativar cliente" soa como desligar a operação dele; se as
+                vitrines continuassem no ar sem isso estar escrito, alguém
+                desativaria um contrato achando que apagou 250 telas — ou o
+                contrário, deixaria de desativar por medo de apagar. */}
+            <span className="mr-2 text-xs text-muted">
+              Sai do seletor. Os aparelhos na loja continuam no ar.
+            </span>
+            <button
+              onClick={() =>
+                startTransition(async () => {
+                  const r = await setTenantActive(id, false);
+                  if (!r.ok) setErro(r.error);
+                  setConfirmandoDesativar(false);
+                  router.refresh();
+                })
+              }
+              disabled={pending}
+              className="rounded-md border border-warning/40 px-3 py-1.5 text-xs text-warning hover:bg-warning/10 disabled:opacity-40"
+            >
+              Desativar
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -232,6 +268,35 @@ export function TenantRow({
             >
               Renomear
             </button>
+            {/* Desativar/reativar antes de Excluir: é a saída certa para contrato
+                encerrado, e Excluir só passa com o cliente vazio. */}
+            {clienteAtivo ? (
+              !ativo && (
+                <button
+                  onClick={() => {
+                    setErro(null);
+                    setConfirmandoDesativar(true);
+                  }}
+                  className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
+                >
+                  Desativar
+                </button>
+              )
+            ) : (
+              <button
+                onClick={() =>
+                  startTransition(async () => {
+                    const r = await setTenantActive(id, true);
+                    if (!r.ok) setErro(r.error);
+                    router.refresh();
+                  })
+                }
+                disabled={pending}
+                className="ml-2 rounded-md border border-success/40 px-3 py-1.5 text-xs text-success hover:bg-success/10 disabled:opacity-40"
+              >
+                Reativar
+              </button>
+            )}
             {/* Excluir some do cliente aberto: apagar o chão em que você está
                 pisando é um estado que ninguém precisa alcançar. */}
             {!ativo && (
@@ -245,7 +310,7 @@ export function TenantRow({
                 Excluir
               </button>
             )}
-            {!ativo && (
+            {!ativo && clienteAtivo && (
               <button
                 onClick={() => startTransition(() => entrarNoCliente(id))}
                 disabled={pending}

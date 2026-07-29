@@ -65,6 +65,31 @@ export async function createTenant(
   return { status: "ok" };
 }
 
+/**
+ * Encontra um endereço interno livre, ignorando o próprio cliente.
+ *
+ * O sufixo numérico existe para o caso de duas marcas com o mesmo nome: a
+ * segunda vira "motorola-2" em vez de a operação toda travar num erro de
+ * duplicidade que a pessoa não tem como resolver pela tela.
+ */
+async function slugLivre(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  base: string,
+  proprioId: string,
+): Promise<string> {
+  let tentativa = base;
+  for (let n = 2; n < 50; n++) {
+    const { data } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("slug", tentativa)
+      .maybeSingle();
+    if (!data || data.id === proprioId) return tentativa;
+    tentativa = `${base}-${n}`;
+  }
+  return `${base}-${Date.now()}`;
+}
+
 export async function renameTenant(id: string, name: string) {
   const limpo = name.trim();
   if (!limpo) return { ok: false as const, error: "Digite um nome." };
@@ -73,9 +98,23 @@ export async function renameTenant(id: string, name: string) {
   }
 
   const supabase = await createSupabaseServerClient();
-  // O endereço interno NÃO muda junto. Ele já está em caminho de arquivo e em
-  // registro antigo; renomear a marca não pode reescrever a história.
-  const { error } = await supabase.from("tenants").update({ name: limpo }).eq("id", id);
+  // O endereço interno ACOMPANHA o nome, e isso é uma correção.
+  //
+  // Antes ele ficava congelado, com a justificativa de que estaria em caminho de
+  // arquivo e em registro antigo. Fui verificar: hoje o slug só aparece embaixo do
+  // nome nesta lista — nem o Storage nem as Edge Functions o usam. E congelado ele
+  // quebrava o caminho mais óbvio de todos: renomear "Motorola" para "Teste" e
+  // depois abrir a Motorola de verdade. O slug `motorola` continuava preso ao
+  // cliente de teste e a criação do novo respondia "cliente já existe" — para um
+  // nome que não existia.
+  //
+  // Se algum dia o slug entrar em caminho de arquivo, isto volta a ser errado e
+  // precisa de renomeação de pasta junto.
+  const slug = await slugLivre(supabase, slugify(limpo), id);
+  const { error } = await supabase
+    .from("tenants")
+    .update({ name: limpo, slug })
+    .eq("id", id);
   if (error) return { ok: false as const, error: "Não consegui renomear." };
 
   await logAction("tenant.rename", "tenant", id, { name: limpo });
@@ -151,6 +190,49 @@ export async function setMaintenancePin(id: string, pin: string) {
     id,
   );
   revalidatePath("/clientes");
+  return { ok: true as const };
+}
+
+/**
+ * Desativa (ou reativa) um cliente.
+ *
+ * É a resposta para "o contrato acabou" — e a alternativa honesta a excluir, que
+ * só passa com o cliente vazio e leva a medição embora.
+ *
+ * O QUE ACONTECE: o cliente sai do seletor, então ninguém cadastra loja nem sobe
+ * vídeo dentro de um contrato encerrado por engano. Continua nesta tela, que é
+ * onde se reativa.
+ *
+ * O QUE NÃO ACONTECE, e a tela precisa dizer: os aparelhos na rua CONTINUAM
+ * funcionando e exibindo o que já está neles. Desativar um cliente não pode
+ * apagar 250 vitrines em 15 lojas por um clique num painel — quem encerra
+ * vitrine é desprovisionar ou arquivar aparelho, com alguém sabendo. Contrato é
+ * papel; vitrine é loja.
+ */
+export async function setTenantActive(id: string, ativo: boolean) {
+  if (!ehOperadorDaPlataforma(await getSessionContext())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("tenants").update({ is_active: ativo }).eq("id", id);
+  if (error) {
+    return {
+      ok: false as const,
+      error: ativo ? "Não consegui reativar." : "Não consegui desativar.",
+    };
+  }
+
+  // Sai do cliente desativado antes de recarregar: continuar "dentro" de um
+  // cliente que não está mais no seletor deixa a tela num estado que a pessoa não
+  // consegue explicar nem desfazer.
+  if (!ativo) {
+    const jar = await cookies();
+    if (jar.get(TENANT_COOKIE)?.value === id) jar.delete(TENANT_COOKIE);
+  }
+
+  await logAction(ativo ? "tenant.activate" : "tenant.deactivate", "tenant", id);
+  revalidatePath("/clientes");
+  revalidatePath("/");
   return { ok: true as const };
 }
 

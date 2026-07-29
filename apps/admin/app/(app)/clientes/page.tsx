@@ -95,6 +95,7 @@ export default async function ClientesPage() {
                 slug={c.slug}
                 codigo={c.enrollment_code}
                 pin={pinDoCliente.get(c.id) ?? null}
+                clienteAtivo={c.is_active}
                 aparelhos={aparelhos.get(c.id) ?? 0}
                 lojas={lojas.get(c.id) ?? 0}
                 pessoas={conta(c.memberships)}

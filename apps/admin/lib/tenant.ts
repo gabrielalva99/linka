@@ -10,11 +10,23 @@ export const TENANT_COOKIE = "linka_tenant";
  * Clientes que a pessoa logada enxerga. O RLS já faz o recorte: quem é da
  * Motorola vê a Motorola; quem opera a plataforma vê todos.
  */
+/**
+ * Clientes que a operação enxerga — só os ATIVOS.
+ *
+ * O filtro é o que dá sentido a desativar um cliente. Antes a coluna is_active
+ * existia e ninguém a lia: desativar não fazia efeito em lugar nenhum, e o
+ * cliente continuava no seletor esperando alguém cadastrar uma loja dentro de um
+ * contrato encerrado.
+ *
+ * A tela de Clientes NÃO usa esta função de propósito: é lá que se reativa, e um
+ * cliente que desaparece da própria tela de administração não tem volta.
+ */
 export async function listTenants(): Promise<ActiveTenant[]> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("tenants")
     .select("id, name, slug")
+    .eq("is_active", true)
     .order("name");
   return (data ?? []) as ActiveTenant[];
 }
