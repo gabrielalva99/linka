@@ -64,7 +64,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -141,6 +141,8 @@ export default async function DeviceDetailPage({
     signal_dbm: number | null;
     is_device_owner: boolean;
     kiosk_locked: boolean;
+    lock_task_on: boolean | null;
+    maintenance_open: boolean;
     pending_command: string | null;
     idle_return_seconds: number;
     adb_enabled: boolean | null;
@@ -319,6 +321,8 @@ export default async function DeviceDetailPage({
           deviceId={d.id}
           isDeviceOwner={d.is_device_owner}
           kioskLocked={d.kiosk_locked}
+          lockTaskOn={d.lock_task_on}
+          maintenanceOpen={d.maintenance_open}
           pendingCommand={d.pending_command}
           idleReturnSeconds={d.idle_return_seconds}
           adbEnabled={d.adb_enabled}

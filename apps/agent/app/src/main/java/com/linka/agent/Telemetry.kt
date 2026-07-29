@@ -98,7 +98,13 @@ object Telemetry {
             .put("signal_dbm", Health.signalDbm(ctx) ?: JSONObject.NULL)
             // Kiosk: o painel nunca deve adivinhar se a trava pegou.
             .put("is_device_owner", Kiosk.isDeviceOwner(ctx))
+            // Tres fatos diferentes, e o nome de cada um diz o que ele mede.
+            // "kiosk_locked" nunca foi a trava do quiosque: sao as travas de REDE.
+            // Elas ficam aplicadas durante a manutencao, entao sozinhas diziam ao
+            // painel que a vitrine estava presa justamente quando ela nao estava.
             .put("kiosk_locked", Kiosk.locked(ctx))
+            .put("lock_task_on", Kiosk.lockTaskOn(ctx))
+            .put("maintenance_open", Prefs.emManutencao(ctx))
             .put("adb_enabled", Kiosk.adbEnabled(ctx))
             // O painel precisa saber se a cura está disponível ANTES de precisar dela.
             .put("reset_token_ready", Kiosk.resetTokenActive(ctx))

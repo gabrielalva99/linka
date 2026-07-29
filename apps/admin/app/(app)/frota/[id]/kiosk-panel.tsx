@@ -15,6 +15,8 @@ export function KioskPanel({
   deviceId,
   isDeviceOwner,
   kioskLocked,
+  lockTaskOn,
+  maintenanceOpen,
   pendingCommand,
   idleReturnSeconds,
   adbEnabled,
@@ -25,6 +27,8 @@ export function KioskPanel({
   deviceId: string;
   isDeviceOwner: boolean;
   kioskLocked: boolean;
+  lockTaskOn: boolean | null;
+  maintenanceOpen: boolean;
   pendingCommand: string | null;
   idleReturnSeconds: number;
   adbEnabled: boolean | null;
@@ -36,11 +40,25 @@ export function KioskPanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // A ordem responde "o que eu preciso saber PRIMEIRO sobre este aparelho".
+  //
+  // Manutenção aberta vem na frente de tudo: é o único estado em que o aparelho
+  // está solto de propósito, e quem olha a tela precisa saber disso antes de
+  // concluir que a trava falhou.
+  //
+  // Depois vem a trava DE VERDADE (lock task). Antes esta faixa lia kioskLocked,
+  // que mede outra coisa — as travas de rede — e ficava verde com o aparelho
+  // aberto na mão de alguém. Nulo quando o agente é anterior a 0.42.0 e não
+  // reporta: aí a faixa cai no que sabemos, sem inventar.
   const badge = !isDeviceOwner
     ? { text: t.device.kioskOff, cls: "bg-surface-2 text-muted" }
-    : kioskLocked
-      ? { text: t.device.kioskLocked, cls: "bg-success/15 text-success" }
-      : { text: t.device.kioskPartial, cls: "bg-warning/15 text-warning" };
+    : maintenanceOpen
+      ? { text: "Liberado para manutenção agora", cls: "bg-warning/15 text-warning" }
+      : lockTaskOn === false
+        ? { text: "Fora do quiosque", cls: "bg-warning/15 text-warning" }
+        : kioskLocked
+          ? { text: t.device.kioskLocked, cls: "bg-success/15 text-success" }
+          : { text: t.device.kioskPartial, cls: "bg-warning/15 text-warning" };
 
   return (
     <div className="mt-3 rounded-xl border border-line bg-surface p-5">

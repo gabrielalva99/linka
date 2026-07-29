@@ -69,6 +69,28 @@ object Kiosk {
         return RESTRICTIONS.all { um.hasUserRestriction(it) }
     }
 
+    /**
+     * O aparelho esta preso no app AGORA (lock task ativo).
+     *
+     * Nao confundir com locked() acima, que responde outra coisa: se as travas de
+     * REDE estao aplicadas. As duas andavam juntas por acidente e se separaram
+     * quando a saida de manutencao nasceu — stopLockTask() solta o aparelho e nao
+     * toca nas restricoes, entao locked() continuava dizendo "sim" com o aparelho
+     * aberto na mao de alguem na loja.
+     *
+     * Pergunta ao sistema, e nao a uma variavel nossa: se o startLockTask() falhar
+     * ao voltar da manutencao (fabricante que recusa, e a excecao e engolida de
+     * proposito para nao derrubar a vitrine), uma variavel nossa mentiria "trancado"
+     * para sempre. Vitrine solta em silencio e o painel tranquilo e o pior par
+     * possivel.
+     */
+    fun lockTaskOn(ctx: Context): Boolean = try {
+        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        am.lockTaskModeState != android.app.ActivityManager.LOCK_TASK_MODE_NONE
+    } catch (_: Exception) {
+        false
+    }
+
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)

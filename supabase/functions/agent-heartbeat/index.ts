@@ -130,6 +130,16 @@ Deno.serve(async (req) => {
     update.is_device_owner = payload.is_device_owner;
   }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
+  // A trava DE VERDADE e a janela de manutencao, separadas do campo acima.
+  //
+  // kiosk_locked nunca foi a trava do quiosque: e "as travas de rede estao
+  // aplicadas". Elas continuam aplicadas durante a manutencao, entao ele dizia
+  // "presa" com o aparelho aberto — e, pior, continuaria dizendo "presa" para
+  // sempre se o startLockTask() falhasse ao voltar.
+  if (typeof payload.lock_task_on === "boolean") update.lock_task_on = payload.lock_task_on;
+  if (typeof payload.maintenance_open === "boolean") {
+    update.maintenance_open = payload.maintenance_open;
+  }
   if (typeof payload.adb_enabled === "boolean") update.adb_enabled = payload.adb_enabled;
   if (typeof payload.blocked_apps === "string") {
     update.blocked_apps = payload.blocked_apps.slice(0, 200);
