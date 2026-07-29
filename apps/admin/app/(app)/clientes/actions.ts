@@ -127,11 +127,20 @@ export async function setMaintenancePin(id: string, pin: string) {
   }
   // Seis dígitos, e não quatro: quatro são 10 mil combinações, e o bloqueio de 3
   // tentativas no aparelho não segura quem tem a tarde inteira na loja.
+  // Grava em tenant_secrets (RLS: só superadmin). Upsert porque a linha só passa
+  // a existir quando alguém define o primeiro PIN — cliente sem PIN é a ausência
+  // da linha, e não uma linha vazia.
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
-    .from("tenants")
-    .update({ maintenance_pin: limpo.length > 0 ? limpo : null })
-    .eq("id", id);
+    .from("tenant_secrets")
+    .upsert(
+      {
+        tenant_id: id,
+        maintenance_pin: limpo.length > 0 ? limpo : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id" },
+    );
   if (error) return { ok: false as const, error: "Não consegui salvar o PIN." };
 
   // O PIN NÃO vai para a auditoria — registrar o valor num log que outras pessoas

@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, maintenance_pin, stores(opens_at, closes_at), tenants(maintenance_pin)")
+    .select("id, tenant_id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -96,10 +96,17 @@ Deno.serve(async (req) => {
   // paciência testa o milhão de combinações fora do aparelho. O que protege de
   // verdade é o conjunto — bloqueio após 3 erros na tela, religar automático em
   // 5 minutos e registro em audit_log a cada saída. O hash só evita o caso fácil.
-  const cliente = Array.isArray(device.tenants) ? device.tenants[0] : device.tenants;
-  const pinEfetivo: string | null =
-    (device.maintenance_pin as string | null) ??
-    ((cliente?.maintenance_pin as string | null) ?? null);
+  //
+  // Vem de tenant_secrets, e não de tenants: a política de leitura de tenants
+  // libera a própria linha para qualquer pessoa da marca, então o PIN guardado lá
+  // era legível pelo cliente pela API — tela fechada com coluna aberta. Aqui a
+  // service role passa por cima do RLS; no painel, só o superadmin alcança.
+  const { data: segredo } = await supabase
+    .from("tenant_secrets")
+    .select("maintenance_pin")
+    .eq("tenant_id", device.tenant_id)
+    .maybeSingle();
+  const pinEfetivo: string | null = segredo?.maintenance_pin ?? null;
   let pinHash: string | null = null;
   if (pinEfetivo) {
     const bytes = await crypto.subtle.digest(

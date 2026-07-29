@@ -18,7 +18,6 @@ type Row = {
   enrollment_code: string;
   is_active: boolean;
   created_at: string;
-  maintenance_pin: string | null;
   memberships: Contagem;
 };
 
@@ -39,17 +38,26 @@ export default async function ClientesPage() {
   // Aparelhos e lojas vêm de views agrupadas, não da contagem embutida: a
   // embutida não aceita filtro e somava aparelho arquivado e loja desativada, ou
   // seja, mostrava um contrato maior do que o que está de pé.
-  const [{ data }, ativo, aparelhos, lojas] = await Promise.all([
+  const [{ data }, ativo, aparelhos, lojas, { data: segredos }] = await Promise.all([
     supabase
       .from("tenants")
       .select(
-        "id, name, slug, enrollment_code, is_active, created_at, maintenance_pin, memberships(count)",
+        "id, name, slug, enrollment_code, is_active, created_at, memberships(count)",
       )
       .order("name"),
     getActiveTenant(),
     aparelhosPorCliente(supabase),
     lojasPorCliente(supabase),
+    // O PIN mora em tabela separada, legível só pelo operador da plataforma.
+    // Estava em `tenants`, onde a política de leitura libera a própria linha para
+    // qualquer pessoa da marca — a tela era fechada e a coluna não.
+    supabase.from("tenant_secrets").select("tenant_id, maintenance_pin"),
   ]);
+  const pinDoCliente = new Map<string, string | null>(
+    ((segredos ?? []) as { tenant_id: string; maintenance_pin: string | null }[]).map(
+      (s) => [s.tenant_id, s.maintenance_pin],
+    ),
+  );
 
   const clientes = (data ?? []) as Row[];
 
@@ -86,7 +94,7 @@ export default async function ClientesPage() {
                 nome={c.name}
                 slug={c.slug}
                 codigo={c.enrollment_code}
-                pin={c.maintenance_pin}
+                pin={pinDoCliente.get(c.id) ?? null}
                 aparelhos={aparelhos.get(c.id) ?? 0}
                 lojas={lojas.get(c.id) ?? 0}
                 pessoas={conta(c.memberships)}
