@@ -95,6 +95,34 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(url, serviceKey);
 
+  // Freio de chute. Esta porta não tem como exigir login — quem bate é aparelho,
+  // numa loja, antes de existir na frota — então o que dá para fazer é contar
+  // quem erra. Vinte erros em quinze minutos da mesma origem e a porta fecha por
+  // um tempo. Um técnico erra o código duas, três vezes; um laço automatizado
+  // erra milhares.
+  const ip =
+    (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    "desconhecido";
+
+  const desde = new Date(Date.now() - 15 * 60_000).toISOString();
+  const { count: errosRecentes } = await supabase
+    .from("provision_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("ip", ip)
+    .eq("ok", false)
+    .gte("created_at", desde);
+
+  if ((errosRecentes ?? 0) >= 20) {
+    return json({ error: "muitas_tentativas" }, 429);
+  }
+
+  /** Registra o resultado e devolve a resposta, para não esquecer nenhum caminho. */
+  const responder = async (corpo: Record<string, unknown>, status: number) => {
+    await supabase.from("provision_attempts").insert({ ip, ok: status < 300 });
+    return json(corpo, status);
+  };
+
   // Código do aparelho é tentado inteiro, antes de partir no hífen: código
   // cadastrado no escritório pode ter hífen dentro e não é para virar duas
   // coisas.
@@ -119,7 +147,7 @@ Deno.serve(async (req) => {
       .select("id, name")
       .eq("enrollment_code", codigoCliente)
       .maybeSingle();
-    if (!tenant) return json({ error: "code_not_found" }, 404);
+    if (!tenant) return responder({ error: "code_not_found" }, 404);
     tenantName = String(tenant.name);
 
     if (codigoLoja) {
@@ -134,7 +162,7 @@ Deno.serve(async (req) => {
       // descobriria isso na loja — descobriria semanas depois, olhando um
       // relatório com quinze aparelhos órfãos.
       if (!store) {
-        return json({ error: "store_not_found", store_code: codigoLoja }, 404);
+        return responder({ error: "store_not_found", store_code: codigoLoja }, 404);
       }
       storeId = String(store.id);
       storeName = String(store.name);
@@ -165,12 +193,24 @@ Deno.serve(async (req) => {
         })
         .select("id, device_token, tenant_id, model_id, store_id")
         .single();
-      if (insErr || !criado) return json({ error: "create_failed" }, 500);
+      if (insErr || !criado) return responder({ error: "create_failed" }, 500);
       device = criado;
     }
   }
 
-  const token = (device.device_token as string | null) ?? newToken();
+  // Token NOVO a cada entrada, mesmo para aparelho que já existia.
+  //
+  // Reaproveitar o token antigo era o segundo achado do pentest: quem tivesse o
+  // código de inscrição (papel esquecido na loja, foto num grupo) mandava o
+  // identificador de um aparelho já cadastrado e recebia o token dele, sem
+  // provar posse nenhuma — e passava a conviver com o aparelho de verdade, os
+  // dois falando com o servidor, ninguém percebendo.
+  //
+  // Não dá para exigir prova de posse aqui: o caso legítimo é reinstalar o app,
+  // e o aparelho reinstalado não tem token para apresentar. O que dá é acabar
+  // com a convivência. Trocando o token, o aparelho real perde o acesso na hora
+  // e cai como "fora do ar" no painel — um ataque silencioso vira um alerta.
+  const token = newToken();
 
   const update: Record<string, unknown> = {
     device_token: token,
@@ -189,7 +229,7 @@ Deno.serve(async (req) => {
   }
 
   const { error: upErr } = await supabase.from("devices").update(update).eq("id", device.id);
-  if (upErr) return json({ error: "update_failed" }, 500);
+  if (upErr) return responder({ error: "update_failed" }, 500);
 
   if (!device.model_id && hardwareModel) {
     await linkCatalogModel(
@@ -203,10 +243,10 @@ Deno.serve(async (req) => {
   // Devolve os nomes para o kit conseguir CONFIRMAR em voz alta o que acabou de
   // acontecer. Um código digitado errado que devolve "ok" é como quinze
   // aparelhos vão para a loja errada sem ninguém notar.
-  return json({
+  return responder({
     device_id: device.id,
     device_token: token,
     tenant_name: tenantName,
     store_name: storeName,
-  });
+  }, 200);
 });
