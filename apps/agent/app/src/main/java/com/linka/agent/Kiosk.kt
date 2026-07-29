@@ -147,7 +147,54 @@ object Kiosk {
      * Câmera, YouTube, navegador e o resto continuam livres: o cliente ainda testa
      * o aparelho de verdade, que é o ponto da demonstração.
      */
-    private val BLOCKABLE = listOf("com.android.settings", "com.android.vending")
+    /**
+     * ── Ajustes SAIU desta lista, e o motivo é o defeito mais caro do projeto ──
+     *
+     * Esconder `com.android.settings` fechava a porta certa e derrubava junto
+     * uma coisa que ninguém imagina estar ali: o **FallbackHome**, a tela
+     * inicial mínima do Android, mora DENTRO do pacote de Ajustes
+     * (`com.android.settings/.FallbackHome`).
+     *
+     * É a única tela inicial preparada para rodar antes de o aparelho
+     * destravar. É ela que segura o boot de qualquer telefone enquanto o
+     * launcher de verdade ainda não pode subir — inclusive quando alguém troca
+     * de launcher. Escondendo o pacote, o aparelho fica sem NENHUMA tela
+     * inicial nessa fase:
+     *
+     *     E WindowManager: No home screen found for Intent
+     *       { MAIN cat=[HOME] } and user 0
+     *
+     * E nunca termina de ligar. Não aparece no provisionamento: só no primeiro
+     * reinício, quando o aparelho já está numa loja. Três aparelhos de teste
+     * ficaram inutilizáveis até a causa aparecer, e cada um só voltou com
+     * formatação.
+     *
+     * Confirmado no aparelho: `hidden=true` em com.android.settings, e a
+     * consulta por telas iniciais devolvendo "No activities found".
+     *
+     * O que a gente queria — impedir senha de tela e instalação de app — agora
+     * é feito por restrições específicas (ver RESTRICOES_DE_VITRINE), que é o
+     * caminho que o Android oferece para isso. Play Store continua escondido:
+     * ele não guarda nada de que o sistema precise para ligar.
+     */
+    private val BLOCKABLE = listOf("com.android.vending")
+
+    /**
+     * O que a gente realmente queria ao esconder os Ajustes, dito na linguagem
+     * do Android em vez de na marreta.
+     *
+     * DISALLOW_CONFIG_CREDENTIALS é o que importa de verdade: sem ele o cliente
+     * cria uma senha de tela e a vitrine morre no próximo reinício, sem cura
+     * possível neste hardware (o token de reset é recusado, medido em campo).
+     */
+    private val RESTRICOES_DE_VITRINE = listOf(
+        android.os.UserManager.DISALLOW_CONFIG_CREDENTIALS,
+        android.os.UserManager.DISALLOW_INSTALL_APPS,
+        android.os.UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+        android.os.UserManager.DISALLOW_FACTORY_RESET,
+        android.os.UserManager.DISALLOW_SAFE_BOOT,
+        android.os.UserManager.DISALLOW_ADD_USER,
+    )
 
     /** Devolve o que foi realmente bloqueado — o painel não deve supor. */
     /**
@@ -183,6 +230,30 @@ object Kiosk {
             }
             if (ok && agora == blocked && blocked) efetivos.add(pkg.substringAfterLast('.'))
         }
+
+        // As travas que substituíram o esconde-Ajustes. Aplicadas uma a uma e
+        // sem parar na primeira que o fabricante recusar: fechar cinco portas de
+        // seis é melhor do que desistir das seis.
+        for (r in RESTRICOES_DE_VITRINE) {
+            try {
+                if (blocked) dpm.addUserRestriction(admin, r)
+                else dpm.clearUserRestriction(admin, r)
+            } catch (_: Exception) {
+            }
+        }
+        if (blocked) efetivos.add("senha de tela")
+
+        // NUNCA esconder o pacote de Ajustes: é onde mora a tela inicial de
+        // emergência do Android. Se uma versão antiga deixou ele escondido, este
+        // é o único lugar do sistema capaz de desfazer isso — o comando de shell
+        // é recusado, e o aparelho já não liga para alguém mexer no painel.
+        try {
+            if (dpm.isApplicationHidden(admin, "com.android.settings")) {
+                dpm.setApplicationHidden(admin, "com.android.settings", false)
+            }
+        } catch (_: Exception) {
+        }
+
         return if (!blocked) "" else efetivos.joinToString(", ")
     }
 
