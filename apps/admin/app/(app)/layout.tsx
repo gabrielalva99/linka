@@ -37,6 +37,11 @@ export default async function AppLayout({
   if (ctx?.isSuperadmin || ehAgencia) {
     nav.push({ label: t.nav.users, href: "/usuarios" });
   }
+  // A lista de clientes é da plataforma. Para quem é de uma marca, esta tela não
+  // deveria existir nem como ideia — ele tem um cliente, e é o dele.
+  if (ctx?.isSuperadmin) {
+    nav.push({ label: "Clientes", href: "/clientes" });
+  }
 
   return (
     <div className="flex min-h-full flex-1">
