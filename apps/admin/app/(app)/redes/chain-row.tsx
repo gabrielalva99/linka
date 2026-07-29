@@ -100,9 +100,18 @@ export function ChainRow({
               })
             }
             disabled={pending}
-            className="rounded-md border border-danger/40 px-2 py-1 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
+            className="rounded-md border border-danger/40 px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
           >
             {t.chains.confirm}
+          </button>
+          {/* Sem esta saída, quem clicou "Excluir" por engano só tinha dois
+              caminhos: confirmar a exclusão ou recarregar a página. Era a única
+              confirmação do painel sem cancelar. */}
+          <button
+            onClick={() => setConfirmando(false)}
+            className="text-xs text-muted hover:underline"
+          >
+            {t.chains.cancel}
           </button>
         </>
       ) : (
@@ -110,7 +119,7 @@ export function ChainRow({
         <>
           <button
             onClick={() => setEditando(true)}
-            className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+            className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
           >
             {t.chains.rename}
           </button>
@@ -119,7 +128,7 @@ export function ChainRow({
               setErro(null);
               setConfirmando(true);
             }}
-            className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-danger hover:text-danger"
+            className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-danger hover:text-danger"
           >
             {t.chains.delete}
           </button>

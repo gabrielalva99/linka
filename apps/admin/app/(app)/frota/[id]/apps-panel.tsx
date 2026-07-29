@@ -70,7 +70,7 @@ export function AppsPanel({
           <button
             onClick={() => remover(a.package)}
             disabled={pending}
-            className="rounded-md border border-warning/40 px-2 py-1 text-xs text-warning hover:bg-warning/10 disabled:opacity-40"
+            className="rounded-md border border-warning/40 px-3 py-1.5 text-xs text-warning hover:bg-warning/10 disabled:opacity-40"
           >
             {t.device.appsConfirm}
           </button>

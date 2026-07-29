@@ -43,8 +43,12 @@
   --color-primary: #00f24f;
   --color-primary-foreground: #04150a;
 
-  /* Status */
-  --color-success: #00f24f;
+  /* Status.
+     "Deu certo" NÃO pode ser a mesma cor da marca. Enquanto foram idênticos,
+     todo número em verde parecia boa notícia — inclusive o total de visitas,
+     que é só o destaque da tela. Num produto de dados isso é mentira visual:
+     o verde tem que significar uma coisa só. */
+  --color-success: #00c840;
   --color-warning: #f5b301;
   --color-danger: #ff4d4f;
   --color-info: #3b9eff;

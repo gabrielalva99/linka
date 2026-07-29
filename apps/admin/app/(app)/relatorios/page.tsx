@@ -130,7 +130,12 @@ function taxa(visitas: number, segundosVitrine: number): string {
 function variacao(agora: number, antes: number) {
   if (antes <= 0) return null;
   const pct = Math.round(((agora - antes) / antes) * 100);
-  return { texto: `${pct > 0 ? "+" : ""}${pct}%`, subiu: pct >= 0 };
+  // Zero não é alta. Pintar "0%" de verde sugere melhora onde houve estabilidade,
+  // que é o tipo de mentira pequena que corrói a confiança no resto da tela.
+  return {
+    texto: `${pct > 0 ? "+" : ""}${pct}%`,
+    tom: pct === 0 ? "igual" : pct > 0 ? "subiu" : "caiu",
+  } as const;
 }
 
 const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
@@ -201,7 +206,7 @@ export default async function RelatoriosPage({
 
   if (error || !r) {
     return (
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <h1 className="text-xl font-semibold">{t.reports.title}</h1>
         <p className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm text-warning">
           {t.reports.readFailed}
@@ -246,7 +251,7 @@ export default async function RelatoriosPage({
     const v = variacao(agora, antes);
     if (!v) return null;
     return (
-      <dd className={`mt-0.5 text-xs ${v.subiu ? "text-success" : "text-warning"}`}>
+      <dd className={`mt-0.5 text-xs ${v.tom === "igual" ? "text-muted" : v.tom === "subiu" ? "text-success" : "text-warning"}`}>
         {v.texto} <span className="text-muted">{t.reports.vsPrevious}</span>
       </dd>
     );
@@ -413,7 +418,7 @@ export default async function RelatoriosPage({
             </details>
           )}
 
-          <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <dl className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <div className="rounded-xl border border-line bg-surface p-5">
               <dt className="text-xs text-muted">{t.reports.visits}</dt>
               <dd className="mt-1 text-2xl font-semibold text-brand-500">{r.visitas}</dd>
@@ -640,7 +645,11 @@ export default async function RelatoriosPage({
                           </td>
                           <td
                             className={`px-4 py-3 font-medium ${
-                              v ? (v.subiu ? "text-success" : "text-warning") : "text-muted"
+                              v && v.tom !== "igual"
+                                ? v.tom === "subiu"
+                                  ? "text-success"
+                                  : "text-warning"
+                                : "text-muted"
                             }`}
                           >
                             {v?.texto ?? "—"}
@@ -888,13 +897,13 @@ export default async function RelatoriosPage({
                   return (
                     <div key={h} className="flex flex-1 flex-col items-center gap-1">
                       {d && (
-                        <span className="text-[10px] text-brand-500">{d.visitas}</span>
+                        <span className="text-xs text-brand-500">{d.visitas}</span>
                       )}
                       <span
                         className={`w-4 rounded-sm ${d ? "bg-brand-500" : "bg-surface-2"}`}
                         style={{ height: `${altura}px` }}
                       />
-                      <span className="text-[10px] text-muted">{h}</span>
+                      <span className="text-xs text-muted">{h}</span>
                     </div>
                   );
                 })}
@@ -909,7 +918,7 @@ export default async function RelatoriosPage({
               <div className="flex items-end gap-2">
                 {semana.map((s) => (
                   <div key={s.nome} className="flex flex-1 flex-col items-center gap-1">
-                    <span className="text-[10px] text-brand-500">
+                    <span className="text-xs text-brand-500">
                       {s.media > 0 ? s.media.toFixed(1) : ""}
                     </span>
                     {/* Largura fixa, como no gráfico por hora. Barra que estica
@@ -920,7 +929,7 @@ export default async function RelatoriosPage({
                         height: `${s.media > 0 ? Math.max(8, Math.round((s.media / maiorMedia) * 56)) : 2}px`,
                       }}
                     />
-                    <span className="text-[10px] text-muted">{s.nome}</span>
+                    <span className="text-xs text-muted">{s.nome}</span>
                   </div>
                 ))}
               </div>
@@ -934,7 +943,7 @@ export default async function RelatoriosPage({
               <div className="min-w-[420px]">
                 {DIAS_SEMANA.map((nome, i) => (
                   <div key={nome} className="flex items-center gap-1">
-                    <span className="w-8 shrink-0 text-[10px] text-muted">{nome}</span>
+                    <span className="w-8 shrink-0 text-xs text-muted">{nome}</span>
                     {HORAS.map((h) => {
                       const c = (r.mapa ?? []).find(
                         (x) => x.dia === i + 1 && x.hora === h,
@@ -959,7 +968,7 @@ export default async function RelatoriosPage({
                 <div className="mt-1 flex items-center gap-1">
                   <span className="w-8 shrink-0" />
                   {HORAS.map((h) => (
-                    <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                    <span key={h} className="flex-1 text-center text-xs text-muted">
                       {h}
                     </span>
                   ))}
@@ -1000,7 +1009,7 @@ export default async function RelatoriosPage({
                   ))}
                   <div className="flex items-center gap-1">
                     {HORAS.map((h) => (
-                      <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                      <span key={h} className="flex-1 text-center text-xs text-muted">
                         {h}
                       </span>
                     ))}
@@ -1045,7 +1054,7 @@ export default async function RelatoriosPage({
                   ))}
                   <div className="flex items-center gap-1">
                     {HORAS.map((h) => (
-                      <span key={h} className="flex-1 text-center text-[10px] text-muted">
+                      <span key={h} className="flex-1 text-center text-xs text-muted">
                         {h}
                       </span>
                     ))}

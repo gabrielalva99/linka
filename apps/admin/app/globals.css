@@ -11,3 +11,14 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }
+
+/* Foco de teclado visível em tudo.
+   Os campos tiravam o anel nativo (outline-none) e devolviam uma borda de 1px,
+   que no escuro quase não existe; botão e link não tinham nada. Quem navega de
+   Tab navegava às cegas. focus-visible só aparece para teclado: quem usa mouse
+   não vê anel nenhum. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

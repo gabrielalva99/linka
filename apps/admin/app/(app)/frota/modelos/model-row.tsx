@@ -104,7 +104,7 @@ export function ModelRow({
                 })
               }
               disabled={pending}
-              className="rounded-md border border-danger/40 px-2 py-1 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
+              className="rounded-md border border-danger/40 px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
             >
               {t.models.confirm}
             </button>
@@ -114,7 +114,7 @@ export function ModelRow({
           <>
             <button
               onClick={() => setEditando(true)}
-              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+              className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
             >
               {t.models.rename}
             </button>
@@ -123,7 +123,7 @@ export function ModelRow({
                 setErro(null);
                 setConfirmando(true);
               }}
-              className="ml-2 rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-danger hover:text-danger"
+              className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-danger hover:text-danger"
             >
               {t.models.delete}
             </button>

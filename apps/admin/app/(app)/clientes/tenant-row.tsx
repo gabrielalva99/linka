@@ -117,7 +117,7 @@ export function TenantRow({
                 })
               }
               disabled={pending}
-              className="rounded-md border border-warning/40 px-2 py-1 text-xs text-warning hover:bg-warning/10 disabled:opacity-40"
+              className="rounded-md border border-warning/40 px-3 py-1.5 text-xs text-warning hover:bg-warning/10 disabled:opacity-40"
             >
               Trocar
             </button>
@@ -148,7 +148,7 @@ export function TenantRow({
                 })
               }
               disabled={pending}
-              className="rounded-md border border-danger/40 px-2 py-1 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
+              className="rounded-md border border-danger/40 px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
             >
               Excluir
             </button>
@@ -157,7 +157,7 @@ export function TenantRow({
           <>
             <button
               onClick={() => setEditando(true)}
-              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+              className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
             >
               Renomear
             </button>
@@ -169,7 +169,7 @@ export function TenantRow({
                   setErro(null);
                   setConfirmandoExclusao(true);
                 }}
-                className="ml-2 rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-danger hover:text-danger"
+                className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-danger hover:text-danger"
               >
                 Excluir
               </button>
