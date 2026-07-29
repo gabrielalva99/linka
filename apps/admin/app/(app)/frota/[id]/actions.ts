@@ -207,3 +207,32 @@ export async function desarquivarAparelho(deviceId: string) {
   revalidatePath(`/frota/${deviceId}`);
   return { ok: true as const };
 }
+
+/**
+ * Manda o aparelho tentar a atualização de novo.
+ *
+ * O aparelho desiste depois de três recusas e grava o motivo. O contador é por
+ * versão, e não havia nada capaz de zerá-lo: um download que falhou três vezes
+ * significava um técnico dirigindo até a loja. Com 250 aparelhos, isso ia
+ * acontecer toda semana.
+ *
+ * Limpa o aviso no painel na mesma hora, porque o aviso é sobre a desistência
+ * anterior — deixá-lo na tela faria a pessoa clicar duas, três vezes achando que
+ * o botão não funcionou.
+ */
+export async function tentarAtualizarDeNovo(deviceId: string) {
+  if (!(await podeOperarAgora())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("devices")
+    .update({ pending_command: "update_retry", update_error: null })
+    .eq("id", deviceId);
+  if (error) return { ok: false as const, error: "Não consegui enviar." };
+
+  await logAction("atualizar_de_novo", "device", deviceId);
+  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath("/frota");
+  return { ok: true as const };
+}

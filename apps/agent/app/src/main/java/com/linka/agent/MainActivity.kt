@@ -76,10 +76,20 @@ class MainActivity : Activity() {
             startHeartbeat()
             showContent(token)
         } else {
-            // O kit de campo passa o código pelo cabo: o técnico não digita nada.
-            // Se não vier, cai na tela de sempre, com o campo para digitar.
+            // O código vem do kit por DOIS caminhos, e a ordem importa.
+            //
+            // O arquivo é o confiável. O caminho do intent (segundo abaixo) só
+            // funciona quando o app ainda não está aberto: depois do
+            // provisionamento a vitrine sobe sozinha, e aí o Android entrega o
+            // código a uma tela já existente. Na prática o técnico tinha que
+            // digitar à mão em todo aparelho, o que em 250 é meia hora de atraso
+            // e um erro de digitação garantido.
+            //
+            // Arquivo não depende de o app estar aberto, nem de tempo, nem de a
+            // tela estar na frente. O kit grava, o app lê e apaga.
+            val doArquivo = lerCodigoDoKit()
             val doCabo = intent?.getStringExtra("enroll")?.trim()?.uppercase()
-            showPairing(doCabo?.takeIf { it.isNotEmpty() })
+            showPairing((doArquivo ?: doCabo)?.takeIf { it.isNotEmpty() })
         }
     }
 
@@ -91,10 +101,41 @@ class MainActivity : Activity() {
      * intent aqui e não em onCreate. Sem este método o código era descartado em
      * silêncio e o aparelho ficava esperando alguém digitar.
      */
+    /**
+     * Lê o código que o kit gravou no aparelho, e apaga o arquivo.
+     *
+     * Apaga sempre, mesmo se o pareamento falhar depois: código de inscrição
+     * largado num arquivo do aparelho é a chave da frota do cliente esquecida
+     * dentro do celular que fica na vitrine.
+     */
+    private fun lerCodigoDoKit(): String? {
+        val lugares = listOf(
+            java.io.File("/sdcard/linka-enroll.txt"),
+            java.io.File("/sdcard/Download/linka-enroll.txt"),
+        )
+        for (f in lugares) {
+            try {
+                if (!f.exists()) continue
+                val codigo = f.readText().trim().uppercase()
+                f.delete()
+                if (codigo.isNotEmpty()) return codigo
+            } catch (_: Exception) {
+            }
+        }
+        return null
+    }
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (Prefs.token(this) != null) return
+        // Arquivo primeiro, aqui também: o kit pode ter gravado depois de a tela
+        // já estar aberta.
+        val doArquivo = lerCodigoDoKit()
+        if (!doArquivo.isNullOrEmpty()) {
+            showPairing(doArquivo)
+            return
+        }
         val code = intent?.getStringExtra("enroll")?.trim()?.uppercase()
         if (!code.isNullOrEmpty()) showPairing(code)
     }

@@ -48,6 +48,14 @@ object Telemetry {
         "cleanup_now" -> Cleanup.run(ctx).also { Prefs.setPendingCleanupReport(ctx, it) }
         "lock_probe" -> Kiosk.probeLock(ctx)
         "clear_password" -> Kiosk.clearScreenLock(ctx)
+        // Aparelho que desistiu de uma atualização só voltava com cabo: o
+        // contador de tentativas é por versão e nada no painel o zerava. Com 250
+        // na rua, isso é um técnico dirigindo até a loja porque um download
+        // falhou três vezes.
+        "update_retry" -> {
+            Prefs.clearUpdateFailure(ctx)
+            "vai tentar atualizar de novo"
+        }
         "inventory_now" -> {
             // Força o envio do inventário na próxima batida, em vez de esperar a hora.
             Prefs.setLastInventoryAt(ctx, 0L)

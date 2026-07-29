@@ -21,6 +21,7 @@ import { AppsPanel, type DeviceApp } from "./apps-panel";
 import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
+import { UpdateRetry } from "./update-retry";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -271,9 +272,18 @@ export default async function DeviceDetailPage({
       )}
 
       {d.update_error && (
-        <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
-          {t.device.updateBlocked}: {d.update_error}
-        </p>
+        <div className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+          <p className="text-xs text-warning">
+            {t.device.updateBlocked}: {d.update_error}
+          </p>
+          {/* O aviso sem saída era o defeito: informava e deixava a pessoa sem
+              nada para fazer, a não ser levar um notebook até a loja. */}
+          {podeOperar && (
+            <div className="mt-2">
+              <UpdateRetry deviceId={d.id} />
+            </div>
+          )}
+        </div>
       )}
 
       <JourneyPanel

@@ -346,6 +346,15 @@ if ($codigo) {
   $completo = if ($loja) { "$codigo-$loja" } else { $codigo }
   # -S para o app antes de abrir. Sem isso o Android entrega o codigo a uma tela
   # que ja esta aberta, e o pareamento nao acontece.
+  # O codigo vai por ARQUIVO, nao por comando.
+  #
+  # Mandar junto com o comando de abrir o app nao funciona quando o app ja esta
+  # aberto: depois do provisionamento a vitrine sobe sozinha, e o Android
+  # descarta o codigo. Na pratica o tecnico digitava a mao em todo aparelho, o
+  # que em 250 aparelhos e meia hora de atraso e um erro de digitacao garantido.
+  #
+  # O arquivo nao depende de nada disso. O app le e apaga.
+  & $adb shell "echo $completo > /sdcard/linka-enroll.txt" 2>&1 | Out-Null
   & $adb shell am start -S -n com.linka.agent/.MainActivity -e enroll $completo 2>&1 | Out-Null
 
   # ── Conferir em vez de contar ate oito ─────────────────────────────────────

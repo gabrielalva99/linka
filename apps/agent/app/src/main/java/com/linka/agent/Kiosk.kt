@@ -114,6 +114,7 @@ object Kiosk {
         // ao aparecer (ver MainActivity). Separado de propósito, para o aparelho
         // nunca ficar trancado sem uma tela nossa na frente.
         autorizarNoQuiosque(ctx)
+        liberarPermissoesDeDemonstracao(ctx)
 
         // Tira o aviso de "terminar de configurar o aparelho".
         //
@@ -299,6 +300,56 @@ object Kiosk {
         "com.android.packageinstaller",
         "com.android.settings.intelligence",
     )
+
+    /**
+     * Permissões que a vitrine concede sozinha, para o cliente nunca ver diálogo.
+     *
+     * Numa loja, o primeiro cliente que toca na câmera recebe um pedido de
+     * permissão na cara e desiste. Sendo dono do aparelho, a gente concede antes.
+     *
+     * São três, e só três: câmera, microfone e fotos. É o que a pessoa testa num
+     * celular de demonstração. Contatos, localização, mensagens e o resto
+     * continuam pedindo como sempre — num aparelho que passa na mão de cem
+     * pessoas por semana, conceder o que ninguém precisa é criar problema onde
+     * não tinha.
+     *
+     * E cada app só recebe o que ele mesmo declara precisar: quem não pede
+     * câmera não ganha câmera.
+     */
+    private val PERMISSOES_DE_DEMONSTRACAO = listOf(
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+    )
+
+    fun liberarPermissoesDeDemonstracao(ctx: Context) {
+        if (!isDeviceOwner(ctx)) return
+        val dpm = dpm(ctx)
+        val admin = admin(ctx)
+        for (app in Inventory.apps(ctx)) {
+            if (app.pacote in FORA_DO_QUIOSQUE) continue
+            val pedidas = try {
+                ctx.packageManager
+                    .getPackageInfo(app.pacote, android.content.pm.PackageManager.GET_PERMISSIONS)
+                    .requestedPermissions
+                    ?.toSet() ?: emptySet()
+            } catch (_: Exception) {
+                continue
+            }
+            for (p in PERMISSOES_DE_DEMONSTRACAO) {
+                if (p !in pedidas) continue
+                try {
+                    dpm.setPermissionGrantState(
+                        admin, app.pacote, p,
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
+                    )
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
 
     fun autorizarNoQuiosque(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
