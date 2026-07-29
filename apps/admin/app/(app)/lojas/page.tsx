@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
-import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
+import { porCliente, tenantFilter } from "@/lib/tenant";
+import { aparelhosPorLoja } from "@/lib/contagens";
 
 type StoreRow = {
   id: string;
@@ -26,7 +27,7 @@ export default async function LojasPage() {
   // 22:00" para todas as lojas — inclusive para a que fecha às 20h. Erro que o
   // TypeScript não pega: o `select` devolve um tipo largo e a asserção logo
   // abaixo afirmava campos que não vinham.
-  const [{ data }, { data: porLoja }] = await Promise.all([
+  const [{ data }, aparelhosDaLoja] = await Promise.all([
     porCliente(
       supabase
         .from("stores")
@@ -37,20 +38,16 @@ export default async function LojasPage() {
     ).order("name", { ascending: true }),
     // A contagem de aparelhos tinha o mesmo problema, e pior: lia `s.devices`,
     // que não existia no resultado. Toda loja aparecia com 0 aparelhos, mesmo
-    // cheia. Vem em consulta separada porque a contagem embutida do PostgREST
-    // não aceita filtro — e sem filtrar voltaria a somar arquivado.
-    emOperacao(supabase.from("devices").select("store_id"), filtro),
+    // cheia. Agora vem de view agrupada no banco — contar aqui em JavaScript
+    // funcionaria hoje e passaria a errar calado depois do milésimo aparelho,
+    // que é o limite de linhas que o PostgREST devolve.
+    aparelhosPorLoja(supabase, filtro),
   ]);
 
   const t = getMessages();
   const podeEditar = await podeOperarAgora();
   const stores = (data ?? []) as StoreRow[];
 
-  const aparelhosDaLoja = new Map<string, number>();
-  for (const d of (porLoja ?? []) as { store_id: string | null }[]) {
-    if (!d.store_id) continue;
-    aparelhosDaLoja.set(d.store_id, (aparelhosDaLoja.get(d.store_id) ?? 0) + 1);
-  }
 
   const kindLabel = (k: string) =>
     k === "shopping"

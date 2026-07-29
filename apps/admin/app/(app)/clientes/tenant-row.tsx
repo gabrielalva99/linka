@@ -7,6 +7,7 @@ import {
   entrarNoCliente,
   renameTenant,
   resetEnrollmentCode,
+  setMaintenancePin,
 } from "./actions";
 
 /**
@@ -21,6 +22,7 @@ export function TenantRow({
   nome,
   slug,
   codigo,
+  pin,
   aparelhos,
   lojas,
   pessoas,
@@ -30,6 +32,7 @@ export function TenantRow({
   nome: string;
   slug: string;
   codigo: string;
+  pin: string | null;
   aparelhos: number;
   lojas: number;
   pessoas: number;
@@ -41,12 +44,14 @@ export function TenantRow({
   const [valor, setValor] = useState(nome);
   const [confirmandoCodigo, setConfirmandoCodigo] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [editandoPin, setEditandoPin] = useState(false);
+  const [novoPin, setNovoPin] = useState(pin ?? "");
   const [erro, setErro] = useState<string | null>(null);
 
   if (editando) {
     return (
       <tr className="bg-surface">
-        <td className="px-4 py-2" colSpan={6}>
+        <td className="px-4 py-2" colSpan={7}>
           <span className="flex flex-wrap items-center gap-2">
             <input
               value={valor}
@@ -129,6 +134,72 @@ export function TenantRow({
           >
             trocar
           </button>
+        )}
+      </td>
+      {/* PIN de manutenção: o que o técnico digita no aparelho, na loja, para
+          destravar a vitrine por 5 minutos. Fica aqui, ao lado do código de
+          inscrição, porque são os dois segredos de campo do cliente — quem
+          precisa de um normalmente precisa saber do outro.
+
+          Mostrado por extenso de propósito: quem abre esta tela opera a
+          plataforma e precisa DITAR o número por telefone para alguém que está
+          dentro da loja. Esconder atrás de "revelar" só somaria um clique sem
+          proteger de nada — a linha inteira já é visível para o mesmo usuário. */}
+      <td className="whitespace-nowrap px-4 py-3">
+        {editandoPin ? (
+          <span className="inline-flex items-center gap-2">
+            <input
+              value={novoPin}
+              onChange={(e) => setNovoPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              placeholder="6 a 8 dígitos"
+              inputMode="numeric"
+              className="w-28 rounded-md border border-line bg-surface px-2 py-1 font-mono text-xs outline-none focus:border-primary"
+              autoFocus
+            />
+            <button
+              onClick={() =>
+                startTransition(async () => {
+                  const r = await setMaintenancePin(id, novoPin);
+                  if (!r.ok) setErro(r.error);
+                  else {
+                    setErro(null);
+                    setEditandoPin(false);
+                    router.refresh();
+                  }
+                })
+              }
+              disabled={pending}
+              className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
+            >
+              Salvar
+            </button>
+            <button
+              onClick={() => {
+                setEditandoPin(false);
+                setNovoPin(pin ?? "");
+                setErro(null);
+              }}
+              className="text-xs text-muted hover:underline"
+            >
+              Cancelar
+            </button>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-2">
+            {pin ? (
+              <span className="font-mono text-xs">{pin}</span>
+            ) : (
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">
+                sem saída na loja
+              </span>
+            )}
+            <button
+              onClick={() => setEditandoPin(true)}
+              className="text-xs text-muted hover:underline"
+            >
+              {pin ? "trocar" : "definir"}
+            </button>
+          </span>
         )}
       </td>
       <td className="whitespace-nowrap px-4 py-3 text-right">

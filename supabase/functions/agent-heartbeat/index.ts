@@ -33,6 +33,12 @@ const COMMANDS = new Set([
   "lock_probe",
   "clear_password",
   "inventory_now",
+  // Faltava, e o botão "Tentar de novo" do painel não funcionava por causa disso:
+  // o comando entrava na fila, o servidor o considerava desconhecido, filtrava da
+  // resposta e ele ficava preso para sempre. O agente já sabia executar; o
+  // caminho até ele é que estava cortado. Toda entrada nova aqui é obrigatória —
+  // esta lista é o que decide o que chega ao aparelho.
+  "update_retry",
 ]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
@@ -156,6 +162,24 @@ Deno.serve(async (req) => {
 
   const { error } = await supabase.from("devices").update(update).eq("id", device.id);
   if (error) return json({ error: "update_failed" }, 500);
+
+  // Saída de manutenção na loja: vira trilha de auditoria.
+  //
+  // Sem registro, "o aparelho estava destravado quando eu cheguei" fica
+  // indistinguível de "a trava falhou sozinha" — e a segunda hipótese joga a
+  // culpa no produto. Com trilha, o painel mostra o aparelho, a loja e a hora.
+  //
+  // Vem pelo heartbeat, e não por endpoint próprio, porque a saída acontece na
+  // loja e a rede pode estar ruim: o agente guarda o aviso e ele sai na próxima
+  // batida que passar. Um destravamento sem internet não pode virar um
+  // destravamento sem registro.
+  if (payload.maintenance_exit != null) {
+    const detalhe = String(payload.maintenance_exit).slice(0, 200);
+    await supabase.rpc("registrar_saida_manutencao", {
+      p_device_id: device.id,
+      p_detalhe: detalhe.length > 0 ? detalhe : null,
+    });
+  }
 
   // Inventário de apps: chega de hora em hora, não a cada batida.
   if (Array.isArray(payload.apps)) {

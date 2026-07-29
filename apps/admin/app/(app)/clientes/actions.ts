@@ -108,6 +108,44 @@ export async function resetEnrollmentCode(id: string) {
 }
 
 /**
+ * Define o PIN que destrava o aparelho na loja.
+ *
+ * Vale para todos os aparelhos do cliente, porque a equipe de campo precisa de um
+ * número que ela decore: um PIN por aparelho, com 250 aparelhos, viraria uma
+ * planilha que ninguém leva para a loja.
+ *
+ * Apagar o campo TIRA a saída presencial de toda a frota do cliente, e é assim
+ * que se revoga um PIN que vazou. Os aparelhos recebem em até 20 segundos.
+ */
+export async function setMaintenancePin(id: string, pin: string) {
+  if (!ehOperadorDaPlataforma(await getSessionContext())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const limpo = pin.replace(/\D/g, "");
+  if (limpo.length > 0 && (limpo.length < 6 || limpo.length > 8)) {
+    return { ok: false as const, error: "O PIN precisa ter de 6 a 8 dígitos." };
+  }
+  // Seis dígitos, e não quatro: quatro são 10 mil combinações, e o bloqueio de 3
+  // tentativas no aparelho não segura quem tem a tarde inteira na loja.
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("tenants")
+    .update({ maintenance_pin: limpo.length > 0 ? limpo : null })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: "Não consegui salvar o PIN." };
+
+  // O PIN NÃO vai para a auditoria — registrar o valor num log que outras pessoas
+  // leem anularia o motivo de ele existir. Registra que mudou, e nada além.
+  await logAction(
+    limpo.length > 0 ? "tenant.set_maintenance_pin" : "tenant.clear_maintenance_pin",
+    "tenant",
+    id,
+  );
+  revalidatePath("/clientes");
+  return { ok: true as const };
+}
+
+/**
  * Exclui um cliente — e só passa se ele estiver VAZIO.
  *
  * A trava não é frescura: no banco, tudo que é do cliente cai junto em cascata.

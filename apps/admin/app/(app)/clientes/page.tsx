@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSessionContext } from "@/lib/auth";
 import { ehOperadorDaPlataforma } from "@/lib/perms";
 import { getActiveTenant } from "@/lib/tenant";
+import { aparelhosPorCliente, lojasPorCliente } from "@/lib/contagens";
 import { CreateTenantForm } from "./create-form";
 import { TenantRow } from "./tenant-row";
 
@@ -17,8 +18,7 @@ type Row = {
   enrollment_code: string;
   is_active: boolean;
   created_at: string;
-  devices: Contagem;
-  stores: Contagem;
+  maintenance_pin: string | null;
   memberships: Contagem;
 };
 
@@ -36,14 +36,19 @@ export default async function ClientesPage() {
   if (!ehOperadorDaPlataforma(await getSessionContext())) redirect("/");
 
   const supabase = await createSupabaseServerClient();
-  const [{ data }, ativo] = await Promise.all([
+  // Aparelhos e lojas vêm de views agrupadas, não da contagem embutida: a
+  // embutida não aceita filtro e somava aparelho arquivado e loja desativada, ou
+  // seja, mostrava um contrato maior do que o que está de pé.
+  const [{ data }, ativo, aparelhos, lojas] = await Promise.all([
     supabase
       .from("tenants")
       .select(
-        "id, name, slug, enrollment_code, is_active, created_at, devices(count), stores(count), memberships(count)",
+        "id, name, slug, enrollment_code, is_active, created_at, maintenance_pin, memberships(count)",
       )
       .order("name"),
     getActiveTenant(),
+    aparelhosPorCliente(supabase),
+    lojasPorCliente(supabase),
   ]);
 
   const clientes = (data ?? []) as Row[];
@@ -67,6 +72,9 @@ export default async function ClientesPage() {
               <th className="whitespace-nowrap px-4 py-2 font-medium">
                 Código de inscrição
               </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium">
+                PIN de manutenção
+              </th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -78,8 +86,9 @@ export default async function ClientesPage() {
                 nome={c.name}
                 slug={c.slug}
                 codigo={c.enrollment_code}
-                aparelhos={conta(c.devices)}
-                lojas={conta(c.stores)}
+                pin={c.maintenance_pin}
+                aparelhos={aparelhos.get(c.id) ?? 0}
+                lojas={lojas.get(c.id) ?? 0}
                 pessoas={conta(c.memberships)}
                 ativo={c.id === ativo?.id}
               />

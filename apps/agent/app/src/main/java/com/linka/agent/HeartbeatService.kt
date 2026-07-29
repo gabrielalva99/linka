@@ -39,11 +39,39 @@ class HeartbeatService : Service() {
         if (idleTimer == null) {
             idleTimer = Timer().also {
                 it.scheduleAtFixedRate(
-                    timerTask { checkIdle(); checkScreen() }, 5_000L, 5_000L,
+                    timerTask { checkManutencao(); checkIdle(); checkScreen() }, 5_000L, 5_000L,
                 )
             }
         }
         return START_STICKY
+    }
+
+    /**
+     * Fecha a janela de manutenção quando o tempo vence.
+     *
+     * Quem tranca de novo é o SERVIÇO, e não a tela, porque o caso que importa é
+     * exatamente aquele em que a tela não está mais na frente: o técnico
+     * destravou, foi para os Ajustes e saiu da loja. A tela dele já morreu; o
+     * serviço continua de pé.
+     *
+     * Roda antes do retorno automático de propósito — assim o vencimento da
+     * manutenção é sempre decidido no mesmo ciclo em que a vitrine volta, sem
+     * uma volta de 5 segundos em que o aparelho fica destravado e sem ninguém
+     * olhando.
+     */
+    private fun checkManutencao() {
+        val ate = Prefs.manutencaoAte(this)
+        if (ate == 0L || System.currentTimeMillis() < ate) return
+        Prefs.setManutencaoAte(this, 0L)
+        try {
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    putExtra(MainActivity.EXTRA_RETRANCAR, true)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                },
+            )
+        } catch (_: Exception) {
+        }
     }
 
     /**
@@ -149,6 +177,9 @@ class HeartbeatService : Service() {
      */
     private fun checkScreen() {
         if (Prefs.token(this) == null) return
+        // Manutenção em curso: não acende nem puxa nada. O técnico pode estar com
+        // a tela apagada de propósito, conferindo o aparelho.
+        if (Prefs.emManutencao(this)) return
         if (Health.screenOn(this)) return
         if (!lojaAberta()) return
         try {
@@ -165,6 +196,13 @@ class HeartbeatService : Service() {
     private fun checkIdle() {
         val leftAt = Prefs.leftAt(this)
         if (leftAt == 0L || Prefs.token(this) == null) return
+        // Manutenção em curso: o retorno automático fica suspenso.
+        //
+        // Sem isto a saída de manutenção não serviria para nada: o técnico abre os
+        // Ajustes, e 30 segundos depois o serviço arranca ele de lá e devolve a
+        // vitrine. Duas proteções nossas se anulando — e a culpa cairia no
+        // aparelho, que "não deixa mexer".
+        if (Prefs.emManutencao(this)) return
         val limitMs = Prefs.idleReturnSeconds(this) * 1000L
         if (System.currentTimeMillis() - leftAt < limitMs) return
         // Tela apagada com a loja FECHADA: deixa quieto, ninguém vai passar na

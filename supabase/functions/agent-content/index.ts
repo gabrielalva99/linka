@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, serviceKey);
   const { data: device } = await supabase
     .from("devices")
-    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)")
+    .select("id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, maintenance_pin, stores(opens_at, closes_at), tenants(maintenance_pin)")
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -85,6 +85,32 @@ Deno.serve(async (req) => {
   // vai passar na frente e insistir só gasta bateria e queima a tela.
   const loja = Array.isArray(device.stores) ? device.stores[0] : device.stores;
 
+  // PIN de manutenção: vai como HASH, nunca em claro.
+  //
+  // O aparelho não precisa do número — precisa saber se o que foi digitado na
+  // tela confere. Mandando o hash, o PIN da rede inteira não fica escrito em
+  // aparelho nenhum, e ler a memória de um aparelho não entrega a chave dos
+  // outros 249.
+  //
+  // Isto não transforma seis dígitos em segredo forte: quem tiver o hash e
+  // paciência testa o milhão de combinações fora do aparelho. O que protege de
+  // verdade é o conjunto — bloqueio após 3 erros na tela, religar automático em
+  // 5 minutos e registro em audit_log a cada saída. O hash só evita o caso fácil.
+  const cliente = Array.isArray(device.tenants) ? device.tenants[0] : device.tenants;
+  const pinEfetivo: string | null =
+    (device.maintenance_pin as string | null) ??
+    ((cliente?.maintenance_pin as string | null) ?? null);
+  let pinHash: string | null = null;
+  if (pinEfetivo) {
+    const bytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(pinEfetivo),
+    );
+    pinHash = Array.from(new Uint8Array(bytes))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
   return json({
     content_url: contentUrl,
     store_opens_at: String(loja?.opens_at ?? "09:00").slice(0, 5),
@@ -101,5 +127,8 @@ Deno.serve(async (req) => {
     // o servidor comparando com o cache dava "atualizado" logo após instalar.
     current_version: release?.version ?? null,
     agent_update: agentUpdate,
+    // Nulo = sem saída presencial. O agente falha fechado: sem hash, o gesto
+    // escondido responde "saída não configurada" em vez de destravar.
+    maintenance_pin_sha256: pinHash,
   });
 });

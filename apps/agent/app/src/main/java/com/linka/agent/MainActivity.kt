@@ -38,6 +38,14 @@ class MainActivity : Activity() {
     private var contentTimer: Timer? = null
     private var waitingShown = false
     private var playingLocal = false
+    private var precisaRetrancar = false
+
+    /**
+     * A tela de manutencao esta na frente. Nao e o mesmo que a janela de 5
+     * minutos estar aberta (isso e Prefs.emManutencao): esta e a tela; aquela e
+     * a permissao. Serve para o retorno a vitrine acontecer uma vez so.
+     */
+    private var telaDeManutencaoAberta = false
 
     companion object {
         /** Preenche a tela cortando as bordas (padrão). */
@@ -49,6 +57,25 @@ class MainActivity : Activity() {
         const val MODE_SHOW = "show"
         const val MODE_MENU = "main_menu"
         const val MODE_STOPPED = "not_running"
+
+        // ── Saída de manutenção ─────────────────────────────────────────────
+        const val TOQUES_PARA_ABRIR = 7
+        const val JANELA_DE_TOQUES_MS = 4_000L
+        const val ERROS_DE_PIN_ATE_BLOQUEAR = 3
+        const val BLOQUEIO_DE_PIN_MS = 5 * 60_000L
+
+        /**
+         * Quanto tempo o aparelho fica liberado.
+         *
+         * Cinco minutos resolve o que o técnico foi fazer (mover de posição,
+         * conferir uma reclamação, recolher) e limita o dano de ele ir embora sem
+         * trancar. Porta de manutenção esquecida aberta é pior do que porta
+         * nenhuma: cria a sensação de vitrine protegida onde não há proteção.
+         */
+        const val MANUTENCAO_MS = 5 * 60_000L
+
+        /** Pedido do serviço para trancar de novo quando o tempo venceu. */
+        const val EXTRA_RETRANCAR = "retrancar"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -128,6 +155,13 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // Antes do desvio de aparelho já pareado abaixo: este pedido vem do
+        // serviço para aparelho JÁ na frota, e cair no `return` seguinte deixaria
+        // a vitrine destravada para sempre.
+        if (intent?.getBooleanExtra(EXTRA_RETRANCAR, false) == true) {
+            precisaRetrancar = true
+            return
+        }
         if (Prefs.token(this) != null) return
         // Arquivo primeiro, aqui também: o kit pode ter gravado depois de a tela
         // já estar aberta.
@@ -271,6 +305,17 @@ class MainActivity : Activity() {
         // acontece AQUI: com o aparelho na frota e conteúdo na tela. Na tela de
         // pareamento o aparelho fica livre, porque aparelho preso numa tela que
         // não avança é o mesmo tijolo de antes.
+        //
+        // MENOS durante a manutenção. Se o Android matar e recriar esta tela nos
+        // cinco minutos liberados (acontece: o técnico abre a câmera, o sistema
+        // recolhe memória), trancar aqui cortaria a manutenção no meio sem aviso —
+        // e o técnico concluiria que o gesto não funciona. A janela sobrevive ao
+        // reinício da tela; quem a fecha é o relógio, sempre.
+        if (Prefs.emManutencao(this)) {
+            mostrarManutencao()
+            checkContent(token)
+            return
+        }
         Kiosk.trancar(this)
 
         // Retoma o último conteúdo conhecido, se estiver no aparelho: reiniciar
@@ -281,7 +326,7 @@ class MainActivity : Activity() {
             currentFit = Prefs.playingFit(this) ?: FIT_ZOOM
             playVideo(last, currentFit)
         } else {
-            setContentView(waitingView("Carregando conteúdo…"))
+            setContentView(comSaidaEscondida(waitingView("Carregando conteúdo…")))
         }
         checkContent(token)
         if (contentTimer == null) {
@@ -351,6 +396,14 @@ class MainActivity : Activity() {
                         body.optString("current_version"),
                     )
                 }
+                // PIN de manutenção (só o hash). Chave nula GRAVA nulo de
+                // propósito: é assim que trocar ou remover o PIN no painel tira a
+                // saída presencial dos aparelhos que já estão na rua.
+                Prefs.setMaintenancePinHash(
+                    this@MainActivity,
+                    if (body.isNull("maintenance_pin_sha256")) null
+                    else body.optString("maintenance_pin_sha256").takeIf { it.isNotEmpty() },
+                )
                 // Nova versão publicada: o aparelho se atualiza sozinho.
                 body.optJSONObject("agent_update")?.let { up ->
                     SelfUpdate.maybeUpdate(
@@ -423,7 +476,7 @@ class MainActivity : Activity() {
                 player?.release()
                 player = null
                 playerView = null
-                setContentView(waitingView("Aguardando conteúdo"))
+                setContentView(comSaidaEscondida(waitingView("Aguardando conteúdo")))
                 enterImmersive()
                 waitingShown = true
             }
@@ -474,6 +527,253 @@ class MainActivity : Activity() {
             gravity = android.view.Gravity.CENTER
             setPadding(0, 48, 0, 0)
         })
+    }
+
+    // ── Saída de manutenção na loja ───────────────────────────────────────────
+    //
+    // O PROBLEMA. Desde que a trava de quiosque virou real, o aparelho na
+    // vitrine não tem saída presencial. Quem está na loja para trocar o aparelho
+    // de posição, conferir uma reclamação ou levá-lo embora dependia de alguém no
+    // painel, no escritório, no mesmo minuto. Numa loja a 40 km isso é uma visita
+    // técnica por causa de um toque.
+    //
+    // O GESTO. Sete toques no canto superior esquerdo, dentro de 4 segundos. Fica
+    // escondido porque um botão visível de "sair" na vitrine é um convite: quem
+    // mexe no aparelho na loja é o cliente curioso, não só o técnico. Sete toques
+    // rápidos num quadrado pequeno não acontecem por acidente, e quem não sabe do
+    // gesto não descobre por tentativa.
+    //
+    // DEPOIS DO GESTO ainda vem o PIN. O gesto é obscuridade, não segurança:
+    // qualquer pessoa que veja um técnico fazendo aprende. O que autoriza é o PIN.
+
+    private var toquesDeManutencao = 0
+    private var primeiroToqueEm = 0L
+    private var relogioDaManutencao: Timer? = null
+
+    /** Envolve a vitrine com o alvo invisível do gesto. */
+    private fun comSaidaEscondida(conteudo: View): View {
+        val root = FrameLayout(this)
+        root.addView(
+            conteudo,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        val lado = (72 * resources.displayMetrics.density).toInt()
+        root.addView(
+            View(this).apply {
+                layoutParams = FrameLayout.LayoutParams(lado, lado).apply {
+                    gravity = android.view.Gravity.TOP or android.view.Gravity.START
+                }
+                setOnClickListener { contarToqueDeManutencao() }
+            },
+        )
+        return root
+    }
+
+    private fun contarToqueDeManutencao() {
+        val agora = System.currentTimeMillis()
+        // Fora da janela, o contador recomeça deste toque — e não do zero, senão
+        // o oitavo toque de uma sequência lenta zeraria e nunca abriria.
+        if (agora - primeiroToqueEm > JANELA_DE_TOQUES_MS) {
+            primeiroToqueEm = agora
+            toquesDeManutencao = 1
+            return
+        }
+        toquesDeManutencao++
+        if (toquesDeManutencao < TOQUES_PARA_ABRIR) return
+        toquesDeManutencao = 0
+        primeiroToqueEm = 0L
+        pedirPin()
+    }
+
+    private fun sha256(texto: String): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest(texto.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
+    private fun pedirPin() {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(56, 120, 56, 56)
+            setBackgroundColor(getColor(R.color.marca_preto))
+        }
+        root.addView(
+            ImageView(this).apply {
+                setImageResource(R.drawable.logo_linka)
+                adjustViewBounds = true
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 100,
+                )
+            },
+        )
+        root.addView(
+            TextView(this).apply {
+                text = "Manutenção"
+                textSize = 20f
+                setTextColor(getColor(R.color.marca_claro))
+                setPadding(0, 40, 0, 0)
+            },
+        )
+        val status = TextView(this).apply {
+            textSize = 15f
+            setPadding(0, 16, 0, 24)
+            setTextColor(getColor(R.color.marca_cinza))
+        }
+        val voltar = Button(this).apply {
+            text = "Voltar para a vitrine"
+            setOnClickListener { voltarParaVitrine() }
+        }
+
+        val bloqueadoAte = Prefs.pinBloqueadoAte(this)
+        val hash = Prefs.maintenancePinHash(this)
+        when {
+            // Bloqueio primeiro: senão bastaria errar 3 vezes, sair da tela e
+            // voltar para ganhar 3 tentativas novas — o limite não limitaria nada.
+            System.currentTimeMillis() < bloqueadoAte -> {
+                val faltam = ((bloqueadoAte - System.currentTimeMillis()) / 60_000) + 1
+                status.text = "Bloqueado por tentativas erradas. Tente em $faltam min."
+                root.addView(status); root.addView(voltar)
+            }
+            // Falha FECHADA: sem PIN definido, não existe saída presencial. O
+            // contrário (liberar quando não há PIN) transformaria todo aparelho
+            // recém-provisionado numa vitrine destravada por sete toques.
+            hash == null -> {
+                status.text =
+                    "Saída não configurada para este cliente.\n\n" +
+                        "Defina o PIN de manutenção no painel, em Clientes. " +
+                        "O aparelho recebe em até 20 segundos."
+                root.addView(status); root.addView(voltar)
+            }
+            else -> {
+                status.text = "Digite o PIN de manutenção."
+                val input = EditText(this).apply {
+                    hint = "PIN"
+                    inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                        android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                    setTextColor(getColor(R.color.marca_claro))
+                    setHintTextColor(getColor(R.color.marca_cinza))
+                }
+                val destravar = Button(this).apply {
+                    text = "Destravar"
+                    setBackgroundColor(getColor(R.color.marca_verde))
+                    setTextColor(getColor(R.color.marca_preto))
+                }
+                destravar.setOnClickListener {
+                    val digitado = input.text.toString().trim()
+                    if (sha256(digitado) == hash) {
+                        Prefs.limparErrosDePin(this)
+                        liberarParaManutencao()
+                    } else {
+                        Prefs.registrarErroDePin(
+                            this, ERROS_DE_PIN_ATE_BLOQUEAR, BLOQUEIO_DE_PIN_MS,
+                        )
+                        input.setText("")
+                        val restam = ERROS_DE_PIN_ATE_BLOQUEAR - Prefs.pinErros(this)
+                        status.text = if (Prefs.pinBloqueadoAte(this) > System.currentTimeMillis()) {
+                            "PIN errado. Bloqueado por 5 minutos."
+                        } else {
+                            "PIN errado. Mais $restam tentativa(s) antes de bloquear."
+                        }
+                    }
+                }
+                root.addView(status); root.addView(input)
+                root.addView(destravar); root.addView(voltar)
+            }
+        }
+        setContentView(root)
+    }
+
+    /**
+     * Libera o aparelho e marca a hora de trancar de novo.
+     *
+     * A trilha sobe ANTES de destravar (fica gravada e vai na próxima batida):
+     * se dependesse de rede no instante da saída, destravar sem internet — que é
+     * justamente o caso suspeito — viraria destravar sem registro.
+     */
+    private fun liberarParaManutencao() {
+        Prefs.setSaidaPendente(this, "PIN correto na tela do aparelho")
+        Prefs.setManutencaoAte(this, System.currentTimeMillis() + MANUTENCAO_MS)
+        Telemetry.beatAsync(this)
+        Kiosk.destrancar(this)
+        mostrarManutencao()
+    }
+
+    private fun mostrarManutencao() {
+        telaDeManutencaoAberta = true
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(56, 120, 56, 56)
+            setBackgroundColor(getColor(R.color.marca_preto))
+        }
+        val titulo = TextView(this).apply {
+            text = "Aparelho liberado"
+            textSize = 22f
+            setTextColor(getColor(R.color.marca_verde))
+        }
+        val conta = TextView(this).apply {
+            textSize = 16f
+            setPadding(0, 24, 0, 0)
+            setTextColor(getColor(R.color.marca_claro))
+        }
+        val aviso = TextView(this).apply {
+            text = "O botão de início e os Ajustes estão liberados. " +
+                "A vitrine volta e tranca sozinha quando o tempo acabar.\n\n" +
+                "Esta saída foi registrada no painel."
+            textSize = 14f
+            setPadding(0, 24, 0, 24)
+            setTextColor(getColor(R.color.marca_cinza))
+        }
+        val agora = Button(this).apply {
+            text = "Trancar agora"
+            setBackgroundColor(getColor(R.color.marca_verde))
+            setTextColor(getColor(R.color.marca_preto))
+            setOnClickListener { voltarParaVitrine() }
+        }
+        root.addView(titulo); root.addView(conta); root.addView(aviso); root.addView(agora)
+        setContentView(root)
+
+        relogioDaManutencao?.cancel()
+        relogioDaManutencao = Timer().also {
+            it.scheduleAtFixedRate(
+                timerTask {
+                    val restamMs = Prefs.manutencaoAte(this@MainActivity) - System.currentTimeMillis()
+                    runOnUiThread {
+                        if (restamMs <= 0) voltarParaVitrine()
+                        else {
+                            val s = (restamMs / 1000).toInt()
+                            conta.text = "Tranca de novo em ${s / 60}:${"%02d".format(s % 60)}"
+                        }
+                    }
+                },
+                0L, 1_000L,
+            )
+        }
+    }
+
+    /**
+     * Fecha a manutenção: tranca de novo e devolve a vitrine.
+     *
+     * A guarda de entrada existe porque DOIS caminhos chegam aqui quando o tempo
+     * vence: o relógio desta tela e o serviço (que cuida do caso de a tela não
+     * estar mais na frente). Chamados os dois, o vídeo era liberado e recriado
+     * duas vezes e a vitrine piscava na cara do cliente. Quem chegar primeiro
+     * resolve; o segundo não faz nada.
+     */
+    private fun voltarParaVitrine() {
+        if (!telaDeManutencaoAberta) return
+        telaDeManutencaoAberta = false
+        relogioDaManutencao?.cancel()
+        relogioDaManutencao = null
+        Prefs.setManutencaoAte(this, 0L)
+        Kiosk.trancar(this)
+        val url = currentUrl
+        if (url != null && MediaCache.isCached(this, url)) playVideo(url, currentFit)
+        else {
+            setContentView(comSaidaEscondida(waitingView("Aguardando conteúdo")))
+            enterImmersive()
+        }
     }
 
     /** Arquivo local quando existe; nuvem só como último recurso. */
@@ -531,7 +831,10 @@ class MainActivity : Activity() {
         view.player = exo
         player = exo
         playerView = view
-        setContentView(view)
+        // Envolvido: é o que põe o alvo do gesto de manutenção sobre o vídeo. O
+        // alvo é um quadrado invisível de 72dp no canto — não cobre o vídeo nem
+        // atrapalha quem só quer assistir.
+        setContentView(comSaidaEscondida(view))
         enterImmersive()
     }
 
@@ -597,6 +900,22 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         Prefs.setLeftAt(this, 0L)
+        // Trancar de novo tem que ser AQUI, e não em onNewIntent.
+        //
+        // startLockTask() exige a tela em primeiro plano e resumida. Chamado em
+        // onNewIntent, quando a tela ainda está subindo, ele lança exceção — que o
+        // Kiosk engole em silêncio. O resultado seria o pior possível: o aparelho
+        // voltaria para a vitrine parecendo trancado, e destrancado de verdade.
+        if (precisaRetrancar) {
+            precisaRetrancar = false
+            // Tela recriada pelo Android depois de a janela vencer: nao passou por
+            // mostrarManutencao(), entao a guarda ainda esta fechada e o retorno
+            // seria engolido — o aparelho ficaria destravado esperando um segundo
+            // pedido que nunca vem.
+            telaDeManutencaoAberta = true
+            voltarParaVitrine()
+            return
+        }
         player?.let {
             it.volume = Prefs.volumePercent(this) / 100f
             it.play()
@@ -612,6 +931,8 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         contentTimer?.cancel()
         contentTimer = null
+        relogioDaManutencao?.cancel()
+        relogioDaManutencao = null
         player?.release()
         player = null
         playerView = null

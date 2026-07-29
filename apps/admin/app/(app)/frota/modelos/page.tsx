@@ -3,17 +3,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
 import { porCliente, tenantFilter } from "@/lib/tenant";
+import { aparelhosPorModelo } from "@/lib/contagens";
 import { CreateModelForm } from "./create-form";
 import { ModelRow } from "./model-row";
 
 export default async function ModelosPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: models } = await porCliente(
-    supabase.from("device_models").select("id, name, line, devices(count)"),
-    await tenantFilter(),
-  )
-    .order("line", { ascending: true })
-    .order("name", { ascending: true });
+  const filtro = await tenantFilter();
+  // A contagem vem de view agrupada, e nao da contagem embutida: a embutida nao
+  // aceita filtro e somava aparelho arquivado, inflando o peso de cada modelo.
+  const [{ data: models }, aparelhos] = await Promise.all([
+    porCliente(
+      supabase.from("device_models").select("id, name, line"),
+      filtro,
+    )
+      .order("line", { ascending: true })
+      .order("name", { ascending: true }),
+    aparelhosPorModelo(supabase, filtro),
+  ]);
   const t = getMessages();
   const podeEditar = await podeOperarAgora();
 
@@ -47,9 +54,7 @@ export default async function ModelosPage() {
                   id={m.id as string}
                   nome={m.name as string}
                   linha={m.line as string | null}
-                  aparelhos={
-                    (m.devices as unknown as { count: number }[] | null)?.[0]?.count ?? 0
-                  }
+                  aparelhos={aparelhos.get(m.id as string) ?? 0}
                   podeEditar={podeEditar}
                 />
               ))}

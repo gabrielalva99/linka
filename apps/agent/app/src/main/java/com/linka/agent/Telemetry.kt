@@ -18,6 +18,8 @@ object Telemetry {
         if (result.code !in 200..299) return
         // Entregue: pode esquecer o relato da faxina.
         Prefs.setPendingCleanupReport(ctx, null)
+        // Idem para a saída de manutenção: só esquece com confirmação do servidor.
+        Prefs.setSaidaPendente(ctx, null)
 
         val command = try {
             JSONObject(result.body).let { if (it.isNull("command")) null else it.optString("command") }
@@ -121,6 +123,10 @@ object Telemetry {
         Prefs.pendingCleanupReport(ctx)?.let { body.put("cleanup_result", it) }
         // Aparelho que desistiu de atualizar não pode ficar em silêncio.
         body.put("update_error", Prefs.updateError(ctx) ?: JSONObject.NULL)
+        // Saída de manutenção que aconteceu na loja: sobe na primeira batida que
+        // pegar rede. Só limpa depois de o servidor confirmar (abaixo), senão uma
+        // queda de rede apagaria o registro justamente de quem destravou offline.
+        Prefs.saidaPendente(ctx)?.let { body.put("maintenance_exit", it) }
 
         return try {
             Api.heartbeat(token, body)

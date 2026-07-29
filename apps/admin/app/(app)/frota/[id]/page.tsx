@@ -76,6 +76,7 @@ export default async function DeviceDetailPage({
     { data: resolvedRows },
     { data: journeyData },
     { data: appsData },
+    { data: saidasData },
   ] =
     await Promise.all([
       // Biblioteca do cliente ativo: oferecer o vídeo de outra marca na lista de
@@ -96,11 +97,28 @@ export default async function DeviceDetailPage({
         .select("package, label, version, is_system")
         .eq("device_id", id)
         .order("label"),
+      // Saídas de manutenção deste aparelho.
+      //
+      // A tela do aparelho promete ao técnico que a saída "foi registrada no
+      // painel". Se o painel não mostrasse, a promessa seria falsa — e a trilha
+      // que ninguém consegue ler não serve para nada.
+      supabase
+        .from("audit_log")
+        .select("created_at, metadata")
+        .eq("entity", "device")
+        .eq("entity_id", id)
+        .eq("action", "saida_de_manutencao")
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
   const t = getMessages();
   const podeOperar = await podeOperarAgora();
   const media = (mediaData ?? []) as Media[];
+  const saidas = (saidasData ?? []) as {
+    created_at: string;
+    metadata: { loja?: string; detalhe?: string } | null;
+  }[];
   const d = device as {
     id: string;
     code: string | null;
@@ -384,6 +402,39 @@ export default async function DeviceDetailPage({
           )}
         </div>
       </section>
+
+      {/* Quem destravou este aparelho na loja, e quando.
+          Só aparece quando aconteceu: seção vazia em toda ficha de aparelho é
+          ruído em 250 telas para servir a um caso raro. */}
+      {saidas.length > 0 && (
+        <section className="mt-6 rounded-xl border border-line bg-surface p-5">
+          <h2 className="text-sm font-medium">Saídas de manutenção na loja</h2>
+          <p className="mt-1 text-xs text-muted">
+            Alguém digitou o PIN na tela do aparelho e destravou a vitrine por 5
+            minutos.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {saidas.map((s, i) => (
+              <li
+                key={`${s.created_at}-${i}`}
+                className="flex flex-wrap items-baseline gap-x-2 border-b border-line pb-2 text-sm last:border-0 last:pb-0"
+              >
+                <span className="font-medium">
+                  {new Date(s.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span className="text-xs text-muted">
+                  {s.metadata?.loja ?? "sem loja"} · {s.metadata?.detalhe ?? "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* No fim da ficha e sem destaque: é a ação mais rara desta tela e a que
           mais incomoda se for clicada por engano. */}

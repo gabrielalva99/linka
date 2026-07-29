@@ -304,4 +304,101 @@ object Prefs {
         if (value == null) editor.remove(KEY_FIT) else editor.putString(KEY_FIT, value)
         editor.apply()
     }
+
+    // ── Saída de manutenção ─────────────────────────────────────────────────
+    //
+    // Guarda o HASH do PIN, nunca o PIN. Quem envia já envia com hash
+    // (agent-content), então o número da rede não fica escrito em aparelho
+    // nenhum — e abrir a memória de um aparelho não entrega a chave dos outros.
+
+    private const val KEY_PIN_HASH = "maintenance_pin_sha256"
+    private const val KEY_PIN_ERROS = "maintenance_pin_erros"
+    private const val KEY_PIN_BLOQUEIO = "maintenance_pin_bloqueio_ate"
+    private const val KEY_SAIDA_PENDENTE = "maintenance_exit_pendente"
+
+    fun maintenancePinHash(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_PIN_HASH, null)
+
+    fun setMaintenancePinHash(ctx: Context, value: String?) {
+        val editor = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+        if (value.isNullOrEmpty()) editor.remove(KEY_PIN_HASH)
+        else editor.putString(KEY_PIN_HASH, value)
+        editor.apply()
+    }
+
+    fun pinErros(ctx: Context): Int =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_PIN_ERROS, 0)
+
+    /**
+     * Até quando a tela de PIN fica recusando tentativa.
+     *
+     * Sobrevive a reiniciar o aparelho de propósito: se o bloqueio morresse ao
+     * desligar, o limite de tentativas não valeria nada — bastaria reiniciar
+     * entre cada trinca de palpites.
+     */
+    fun pinBloqueadoAte(ctx: Context): Long =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_PIN_BLOQUEIO, 0L)
+
+    fun registrarErroDePin(ctx: Context, limite: Int, bloqueioMs: Long) {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val erros = p.getInt(KEY_PIN_ERROS, 0) + 1
+        val editor = p.edit().putInt(KEY_PIN_ERROS, erros)
+        if (erros >= limite) {
+            editor.putLong(KEY_PIN_BLOQUEIO, System.currentTimeMillis() + bloqueioMs)
+                .putInt(KEY_PIN_ERROS, 0)
+        }
+        editor.apply()
+    }
+
+    fun limparErrosDePin(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_PIN_ERROS).remove(KEY_PIN_BLOQUEIO).apply()
+
+    /**
+     * Saída que aconteceu e ainda não foi contada ao painel.
+     *
+     * Fica gravada porque a saída acontece na loja, onde a rede pode estar
+     * ruim: sem isso, destravar sem internet viraria destravar sem registro —
+     * exatamente o caso em que a trilha mais importa.
+     */
+    fun saidaPendente(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_SAIDA_PENDENTE, null)
+
+    fun setSaidaPendente(ctx: Context, value: String?) {
+        val editor = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+        if (value == null) editor.remove(KEY_SAIDA_PENDENTE)
+        else editor.putString(KEY_SAIDA_PENDENTE, value)
+        editor.apply()
+    }
+
+    private const val KEY_MANUTENCAO_ATE = "manutencao_ate"
+
+    /**
+     * Até quando o aparelho está liberado para manutenção. 0 = vitrine normal.
+     *
+     * Um valor só resolve duas coisas que precisam concordar, e é por isso que
+     * não são dois:
+     *
+     *   1. enquanto durar, o serviço PARA de trazer a vitrine de volta. Sem
+     *      isso o retorno automático puxaria o técnico de dentro dos Ajustes a
+     *      cada 30 segundos e a manutenção seria impossível;
+     *   2. quando vencer, o serviço tranca de novo, mesmo que o técnico tenha
+     *      ido embora com o aparelho em outra tela.
+     *
+     * Se fossem dois valores, um poderia expirar sem o outro — e a falha
+     * silenciosa seria a pior das duas: vitrine destravada na loja, achando que
+     * está protegida.
+     *
+     * Gravado (e não só em memória) porque quem lê é o serviço e quem escreve é
+     * a tela: são processos que o Android pode matar em ordens diferentes.
+     */
+    fun manutencaoAte(ctx: Context): Long =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_MANUTENCAO_ATE, 0L)
+
+    fun setManutencaoAte(ctx: Context, value: Long) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putLong(KEY_MANUTENCAO_ATE, value).apply()
+
+    fun emManutencao(ctx: Context): Boolean =
+        System.currentTimeMillis() < manutencaoAte(ctx)
 }
