@@ -51,6 +51,7 @@ export function FleetTable({
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [loja, setLoja] = useState("");
   const [modelo, setModelo] = useState("");
+  const [teste, setTeste] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
   const todosMarcados = linhas.length > 0 && marcados.size === linhas.length;
@@ -69,11 +70,16 @@ export function FleetTable({
   }
 
   function aplicar() {
-    const alvo: { storeId?: string; modelId?: string } = {};
+    const alvo: {
+      storeId?: string;
+      modelId?: string;
+      excluirDoRelatorio?: boolean;
+    } = {};
     if (loja) alvo.storeId = loja;
     if (modelo) alvo.modelId = modelo;
-    if (!alvo.storeId && !alvo.modelId) {
-      setErro("Escolha a loja ou o modelo.");
+    if (teste) alvo.excluirDoRelatorio = teste === "sim";
+    if (!alvo.storeId && !alvo.modelId && alvo.excluirDoRelatorio === undefined) {
+      setErro("Escolha a loja, o modelo ou o relatório.");
       return;
     }
     startTransition(async () => {
@@ -86,6 +92,7 @@ export function FleetTable({
       setMarcados(new Set());
       setLoja("");
       setModelo("");
+      setTeste("");
       router.refresh();
     });
   }
@@ -125,6 +132,20 @@ export function FleetTable({
                 {m.nome}
               </option>
             ))}
+          </select>
+          {/* Entrar/sair do relatório em lote.
+              Antes isto só existia como caixinha dentro do formulário de editar
+              aparelho: para tirar seis aparelhos do relatório eram seis
+              formulários abertos e salvos. E a decisão é quase sempre coletiva —
+              "estes são os da minha mesa", não "este um". */}
+          <select
+            value={teste}
+            onChange={(e) => setTeste(e.target.value)}
+            className={campo}
+          >
+            <option value="">Relatório…</option>
+            <option value="nao">Contar no relatório</option>
+            <option value="sim">Fora do relatório (teste)</option>
           </select>
           <button
             onClick={aplicar}

@@ -17,7 +17,18 @@ import { logAction } from "@/lib/audit";
  */
 export async function definirEmMassa(
   ids: string[],
-  alvo: { storeId?: string | null; modelId?: string | null },
+  alvo: {
+    storeId?: string | null;
+    modelId?: string | null;
+    /**
+     * Fora do relatório (aparelho de teste).
+     *
+     * Entra no lote porque a alternativa é abrir 250 formulários de edição para
+     * virar uma chavinha — e porque a decisão é quase sempre coletiva: "estes
+     * seis são da minha mesa", não "este um é".
+     */
+    excluirDoRelatorio?: boolean;
+  },
 ) {
   if (!(await podeOperarAgora())) {
     return { ok: false as const, error: "Sem permissão." };
@@ -35,6 +46,9 @@ export async function definirEmMassa(
     update.position_id = null;
   }
   if (alvo.modelId !== undefined) update.model_id = alvo.modelId;
+  if (alvo.excluirDoRelatorio !== undefined) {
+    update.exclude_from_reports = alvo.excluirDoRelatorio;
+  }
   if (Object.keys(update).length === 0) {
     return { ok: false as const, error: "Nada para alterar." };
   }

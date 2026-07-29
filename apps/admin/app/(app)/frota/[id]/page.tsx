@@ -307,6 +307,8 @@ export default async function DeviceDetailPage({
       <JourneyPanel
         journey={(journeyData as Journey | null) ?? null}
         excluded={d.exclude_from_reports}
+        deviceId={d.id}
+        podeOperar={podeOperar}
       />
 
       <section className="mt-8">

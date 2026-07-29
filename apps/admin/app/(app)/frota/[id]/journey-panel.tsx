@@ -1,4 +1,5 @@
 import { getMessages } from "@/lib/i18n";
+import { ReportToggle } from "./report-toggle";
 
 /**
  * O que aconteceu com este aparelho na loja hoje.
@@ -75,9 +76,13 @@ function Comparacao({
 export function JourneyPanel({
   journey,
   excluded,
+  deviceId,
+  podeOperar,
 }: {
   journey: Journey | null;
   excluded: boolean;
+  deviceId: string;
+  podeOperar: boolean;
 }) {
   const t = getMessages();
   const j = journey;
@@ -106,6 +111,10 @@ export function JourneyPanel({
             {t.device.journeyTestBadge}
           </span>
         )}
+        {/* A chave anda ao lado da marca, e nos dois sentidos com o mesmo
+            esforço: durante a implantação, tirar tudo do relatório deixa quem
+            constrói sem nada para olhar. */}
+        {podeOperar && <ReportToggle deviceId={deviceId} excluido={excluded} />}
       </div>
 
       {vazio ? (
