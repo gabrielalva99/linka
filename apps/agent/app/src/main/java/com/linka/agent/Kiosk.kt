@@ -113,10 +113,7 @@ object Kiosk {
         // Autorizar aqui não tranca nada sozinho: quem entra no modo é a tela,
         // ao aparecer (ver MainActivity). Separado de propósito, para o aparelho
         // nunca ficar trancado sem uma tela nossa na frente.
-        try {
-            dpm.setLockTaskPackages(admin, arrayOf(ctx.packageName))
-        } catch (_: Exception) {
-        }
+        autorizarNoQuiosque(ctx)
 
         // Tira o aviso de "terminar de configurar o aparelho".
         //
@@ -283,6 +280,49 @@ object Kiosk {
         }
 
     /**
+     * Quem pode rodar dentro do quiosque.
+     *
+     * A primeira versão autorizava só o LINKA, e isso quebrava o produto: o
+     * cliente ficava preso no vídeo, sem conseguir abrir a câmera. Uma vitrine
+     * de celular existe para a pessoa PEGAR o aparelho e testar — travar isso é
+     * pior do que não ter trava nenhuma.
+     *
+     * Então a lista é: tudo que o cliente pode abrir (a mesma lista que o
+     * inventário manda ao painel), mais a tela inicial de fábrica para ele ter
+     * de onde abrir, menos o que não pode. O que fica de fora não abre nem pelo
+     * atalho, nem pela busca, nem por link de outro app.
+     */
+    private val FORA_DO_QUIOSQUE = setOf(
+        "com.android.settings",
+        "com.android.vending",
+        "com.google.android.packageinstaller",
+        "com.android.packageinstaller",
+        "com.android.settings.intelligence",
+    )
+
+    fun autorizarNoQuiosque(ctx: Context) {
+        if (!isDeviceOwner(ctx)) return
+        try {
+            val permitidos = mutableSetOf(ctx.packageName)
+            // A tela inicial de fábrica entra: é de onde o cliente abre a câmera.
+            // Sem ela, o quiosque vira uma tela de vídeo e nada mais.
+            ctx.packageManager
+                .resolveActivity(
+                    android.content.Intent(android.content.Intent.ACTION_MAIN)
+                        .addCategory(android.content.Intent.CATEGORY_HOME),
+                    0,
+                )
+                ?.activityInfo?.packageName
+                ?.let { permitidos.add(it) }
+            for (a in Inventory.apps(ctx)) {
+                if (a.pacote !in FORA_DO_QUIOSQUE) permitidos.add(a.pacote)
+            }
+            dpm(ctx).setLockTaskPackages(admin(ctx), permitidos.toTypedArray())
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
      * Tranca a tela no modo quiosque: sem barra de notificações, sem sair do app.
      *
      * Só entra com o aparelho JÁ na frota e com conteúdo na tela. Na tela de
@@ -295,10 +335,19 @@ object Kiosk {
         if (!isDeviceOwner(activity)) return
         try {
             val dpm = dpm(activity)
-            // Bloqueia tudo: barra de status, notificações, botão home e
-            // recentes. É uma vitrine, não um telefone emprestado.
+            // Barra de notificações fechada, MAS o botão de início liberado.
+            //
+            // Sem o botão de início o cliente não tem como abrir a câmera, e a
+            // demonstração morre. Com ele, o cliente vai à tela inicial e abre o
+            // que quiser — e o que não está autorizado simplesmente não abre,
+            // inclusive os Ajustes. É a diferença entre uma vitrine e um vídeo
+            // preso numa moldura.
             if (Build.VERSION.SDK_INT >= 28) {
-                dpm.setLockTaskFeatures(admin(activity), DevicePolicyManager.LOCK_TASK_FEATURE_NONE)
+                dpm.setLockTaskFeatures(
+                    admin(activity),
+                    DevicePolicyManager.LOCK_TASK_FEATURE_HOME or
+                        DevicePolicyManager.LOCK_TASK_FEATURE_OVERVIEW,
+                )
             }
             activity.startLockTask()
         } catch (_: Exception) {

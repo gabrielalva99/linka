@@ -49,6 +49,22 @@ function effectiveStatus(status: DeviceStatus, lastSeen: string | null): DeviceS
   return status;
 }
 
+/**
+ * Compara "0.37.0" com "0.36.0" por número, não por texto.
+ *
+ * Comparação de texto erra feio na primeira dezena: "0.9.0" > "0.10.0" em ordem
+ * alfabética. Com 250 aparelhos e uma versão por semana, isso chega em meses.
+ */
+function compararVersao(a: string, b: string): number {
+  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
 function relativeLastSeen(ts: string | null): string {
   if (!ts) return "—";
   const min = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
@@ -200,8 +216,16 @@ export default async function FrotaPage({
   const online = noAr.length;
   const synced = noAr.filter((d) => d.synced).length;
   const publicada = publicadaAgora;
+  // "Atualizado" é estar na publicada OU À FRENTE dela.
+  //
+  // A comparação era de igualdade, então um aparelho com versão mais nova que a
+  // publicada aparecia como desatualizado — foi o que a tela mostrou depois de
+  // um teste por cabo: 0 de 2 atualizados, com um aparelho à frente da frota.
+  // Igualdade só funciona enquanto ninguém nunca sai da fila.
   const updated = publicada
-    ? noAr.filter((d) => d.agent_version === publicada).length
+    ? noAr.filter(
+        (d) => d.agent_version != null && compararVersao(d.agent_version, publicada) >= 0,
+      ).length
     : 0;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
