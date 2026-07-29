@@ -175,6 +175,20 @@ export default async function RelatoriosPage({
   // As opções dos filtros vêm do cadastro, não do resultado: uma loja que ficou
   // sem movimento no período tem que continuar selecionável, senão a pessoa não
   // consegue perguntar justamente sobre a loja que parou.
+  // Até quando o dado chegou.
+  //
+  // Sem isto o relatório mente por omissão: o aparelho manda o que mediu a cada
+  // minuto, e uma sessão de uso só fecha quando a pessoa sai do app — então uma
+  // visita aparece de um a três minutos depois de acontecer. Quem pega o
+  // aparelho e recarrega a tela vê o número antigo e conclui que está quebrado.
+  // Foi exatamente o que aconteceu no primeiro teste de campo.
+  const { data: ultimo } = await porCliente(
+    supabase.from("device_events").select("created_at"),
+    filtro,
+  )
+    .order("created_at", { ascending: false })
+    .limit(1);
+
   const [{ data: redesData }, { data: lojasData }, { data: aparelhosData }] =
     await Promise.all([
       porCliente(supabase.from("retail_chains").select("name"), filtro).order("name"),
@@ -206,6 +220,12 @@ export default async function RelatoriosPage({
   const dia = (d: Date) =>
     d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   const periodoTexto = `${dia(inicio)} a ${dia(fim)}`;
+  const recebidoAte = ultimo?.[0]?.created_at
+    ? new Date(ultimo[0].created_at as string).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   /** "1 aparelho" e não "1 aparelho(s)". Relatório de cliente não tem parêntese. */
   const plural = (n: number, um: string, muitos: string) =>
@@ -288,7 +308,10 @@ export default async function RelatoriosPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t.reports.title}</h1>
-          <p className="mt-0.5 text-xs text-muted">{periodoTexto}</p>
+          <p className="mt-0.5 text-xs text-muted">
+            {periodoTexto}
+            {recebidoAte && ` · ${t.reports.receivedUntil.replace("{h}", recebidoAte)}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {PERIODOS.map((d) => (
