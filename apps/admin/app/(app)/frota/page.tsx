@@ -12,9 +12,9 @@ import { modelLabel } from "@/lib/device-display";
 import { getSessionContext } from "@/lib/auth";
 import { podeOperar, ehOperadorDaPlataforma } from "@/lib/perms";
 import { getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
-import { StatusBadge } from "./status-badge";
 import { TypeTabs } from "./type-tabs";
 import { Filters } from "./filters";
+import { FleetTable } from "./fleet-table";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 type DeviceRow = {
@@ -111,6 +111,13 @@ export default async function FrotaPage({
     .maybeSingle();
   const { data: lojasData } = await porCliente(
     supabase.from("stores").select("id, name"),
+    filtro,
+  ).order("name");
+  // Modelos entram para a ação em massa: aparelho que se cadastra sozinho às
+  // vezes não bate com nenhum modelo do catálogo, e corrigir isso um a um em 250
+  // é o mesmo problema da loja.
+  const { data: modelosData } = await porCliente(
+    supabase.from("device_models").select("id, name, line"),
     filtro,
   ).order("name");
   const { data } = await porCliente(
@@ -272,80 +279,47 @@ export default async function FrotaPage({
         </p>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-line">
-        {devices.length > 0 ? (
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-surface-2 text-left text-muted">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t.fleet.colStatus}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colCode}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colName}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colModel}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colStore}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colMode}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colBattery}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colVersion}</th>
-                <th className="px-4 py-2 font-medium">{t.fleet.colLastSeen}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {devices.map((d) => (
-                <tr key={d.id} className="bg-surface">
-                  <td className="px-4 py-3">
-                    <StatusBadge status={effectiveStatus(d.status, d.last_seen_at)} />
-                  </td>
-                  <td className="px-4 py-3 text-muted">{d.code ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/frota/${d.id}`}
-                      className="font-medium hover:text-primary hover:underline"
-                    >
-                      {d.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {modelLabel(
-                      relName(d.device_models),
-                      d.hardware_model,
-                      t.device.detected,
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {d.store_id ? (
-                      <Link
-                        href={`/lojas/${d.store_id}`}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {relName(d.stores)}
-                      </Link>
-                    ) : (
-                      relName(d.stores)
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted">
-                    {d.battery_level != null ? `${d.battery_level}%` : "—"}
-                    {d.battery_charging ? " ⚡" : ""}
-                  </td>
-                  <td className="px-4 py-3 text-muted">{d.agent_version ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted">
-                    {relativeLastSeen(d.last_seen_at)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
+      {devices.length > 0 ? (
+        <FleetTable
+          linhas={devices.map((d) => ({
+            id: d.id,
+            status: effectiveStatus(d.status, d.last_seen_at),
+            codigo: d.code ?? "—",
+            nome: d.name,
+            modelo: modelLabel(
+              relName(d.device_models),
+              d.hardware_model,
+              t.device.detected,
+            ),
+            lojaId: d.store_id,
+            lojaNome: relName(d.stores),
+            modo: d.mode ? DEVICE_MODE_LABELS[d.mode] : "—",
+            bateria:
+              (d.battery_level != null ? `${d.battery_level}%` : "—") +
+              (d.battery_charging ? " ⚡" : ""),
+            versao: d.agent_version ?? "—",
+            visto: relativeLastSeen(d.last_seen_at),
+          }))}
+          lojas={(lojasData ?? []).map((l) => ({
+            id: l.id as string,
+            nome: l.name as string,
+          }))}
+          modelos={(modelosData ?? []).map((m) => ({
+            id: m.id as string,
+            nome: (m.line ? `${m.name} (${m.line})` : m.name) as string,
+          }))}
+          podeMexer={podeMexer}
+        />
+      ) : (
+        <div className="mt-6 overflow-x-auto rounded-xl border border-line">
           <p className="bg-surface px-4 py-8 text-center text-sm text-muted">
             {/* Lista vazia por causa de filtro não é frota vazia. Dizer
                 "nenhum aparelho cadastrado" com 250 no banco faz a pessoa achar
                 que perdeu tudo. */}
             {busca || loja || situacao ? t.fleet.noResults : t.fleet.empty}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
