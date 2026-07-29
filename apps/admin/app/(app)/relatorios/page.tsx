@@ -4,6 +4,7 @@ import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
 import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
+import { criarAtalhos } from "./atalhos";
 
 type Proibido = {
   loja: string;
@@ -194,7 +195,13 @@ export default async function RelatoriosPage({
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const [{ data: redesData }, { data: lojasData }, { data: aparelhosData }] =
+  const [
+    { data: redesData },
+    { data: lojasData },
+    { data: aparelhosData },
+    { data: idsDeAparelho },
+    { data: idsDeLoja },
+  ] =
     await Promise.all([
       porCliente(supabase.from("retail_chains").select("name"), filtro).order("name"),
       // A regra dos filtros: oferecem o que está EM OPERAÇÃO.
@@ -210,8 +217,21 @@ export default async function RelatoriosPage({
       emOperacao(supabase.from("devices").select("code, name"), filtro)
         .eq("exclude_from_reports", false)
         .order("code"),
+      // Mapa para os LINKS, e por isso sem o filtro de operação acima.
+      //
+      // O relatório mistura as duas naturezas de propósito: uso é histórico e
+      // conta aparelho arquivado. Se o mapa de links usasse "em operação", o
+      // aparelho recolhido apareceria nomeado na lista de uso e seria o único sem
+      // caminho — justo o caso em que a pessoa quer abrir a ficha para entender o
+      // que aconteceu com ele.
+      porCliente(supabase.from("devices").select("id, code"), filtro),
+      porCliente(supabase.from("stores").select("id, name"), filtro),
     ]);
   const r = data as Report | null;
+  const atalho = criarAtalhos(
+    (idsDeAparelho ?? []) as { id: string; code: string | null }[],
+    (idsDeLoja ?? []) as { id: string; name: string }[],
+  );
 
   if (error || !r) {
     return (
@@ -396,7 +416,11 @@ export default async function RelatoriosPage({
                 {r.proibidos_abertos.map((a) => (
                   <li key={`${a.codigo}-${a.app}`} className="text-muted">
                     <span className="text-warning">{a.app}</span>
-                    {` · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
+                    {" · "}
+                    {atalho.aparelho(a.codigo, a.aparelho)}
+                    {" · "}
+                    {atalho.loja(a.loja)}
+                    {" · "}
                     {plural(a.vezes, "vez", "vezes")}
                     {` · ${a.ultima_vez}`}
                   </li>
@@ -417,7 +441,11 @@ export default async function RelatoriosPage({
               <ul className="mt-2 flex flex-col gap-1 text-xs text-muted">
                 {r.proibidos_corrigidos.map((a) => (
                   <li key={`${a.codigo}-${a.app}`}>
-                    {`${a.app} · ${a.codigo ? `${a.codigo} · ` : ""}${a.aparelho} · ${a.loja} · `}
+                    {`${a.app} · `}
+                    {atalho.aparelho(a.codigo, a.aparelho)}
+                    {" · "}
+                    {atalho.loja(a.loja)}
+                    {" · "}
                     {plural(a.vezes, "vez", "vezes")}
                     {` · ${t.reports.lastTime} ${a.ultima_vez} · `}
                     {t.reports.leavesOn.replace("{d}", a.sai_em)}
@@ -513,7 +541,7 @@ export default async function RelatoriosPage({
                 <tbody className="divide-y divide-line">
                   {r.por_loja.map((l) => (
                     <tr key={`${l.rede}-${l.loja}`} className="bg-surface">
-                      <td className="px-4 py-3 font-medium">{l.loja}</td>
+                      <td className="px-4 py-3 font-medium">{atalho.loja(l.loja)}</td>
                       <td className="px-4 py-3 text-muted">{l.rede}</td>
                       <td className="px-4 py-3">{l.visitas}</td>
                       <td className="px-4 py-3 text-muted">{tempo(l.segundos)}</td>
@@ -767,8 +795,7 @@ export default async function RelatoriosPage({
                     {r.por_aparelho.map((a) => (
                       <tr key={a.codigo + a.aparelho} className="bg-surface">
                         <td className="px-4 py-3 font-medium">
-                          {a.codigo ? `${a.codigo} · ` : ""}
-                          {a.aparelho}
+                          {atalho.aparelho(a.codigo, a.aparelho)}
                         </td>
                         <td className="px-4 py-3 text-muted">{a.loja}</td>
                         <td className="px-4 py-3">{a.visitas}</td>
@@ -1087,8 +1114,7 @@ export default async function RelatoriosPage({
                 <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
                   {r.aparelhos_sem_visita.map((a) => (
                     <li key={`${a.codigo}-${a.aparelho}`}>
-                      {a.codigo ? `${a.codigo} · ` : ""}
-                      {a.aparelho} ({a.loja})
+                      {atalho.aparelho(a.codigo, a.aparelho)} ({atalho.loja(a.loja)})
                     </li>
                   ))}
                 </ul>

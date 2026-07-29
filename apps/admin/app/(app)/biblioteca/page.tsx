@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
@@ -40,7 +41,7 @@ export default async function BibliotecaPage() {
     // Quem está exibindo cada vídeo AGORA. Arquivado não exibe nada: contá-lo
     // fazia o vídeo parecer no ar em mais aparelhos do que a realidade.
     emOperacao(
-      supabase.from("devices").select("name, content_url"),
+      supabase.from("devices").select("id, name, content_url"),
       filtro,
     ).not("content_url", "is", null),
   ]);
@@ -48,12 +49,23 @@ export default async function BibliotecaPage() {
   const t = getMessages();
   const podeOperar = await podeOperarAgora();
   const media = (mediaData ?? []) as MediaRow[];
-  const devices = (deviceData ?? []) as { name: string; content_url: string }[];
+  const devices = (deviceData ?? []) as {
+    id: string;
+    name: string;
+    content_url: string;
+  }[];
 
   // Quem está exibindo o quê — evita apagar um vídeo que está no ar em loja.
-  const usedBy = new Map<string, string[]>();
+  //
+  // Guarda o id junto do nome porque o aviso "em uso em: razr 663E" era a única
+  // informação da tela sem caminho: a pessoa vê que o vídeo está no ar, decide
+  // conferir o aparelho, e tinha que decorar o nome e ir procurar na frota.
+  const usedBy = new Map<string, { id: string; name: string }[]>();
   for (const d of devices) {
-    usedBy.set(d.content_url, [...(usedBy.get(d.content_url) ?? []), d.name]);
+    usedBy.set(d.content_url, [
+      ...(usedBy.get(d.content_url) ?? []),
+      { id: d.id, name: d.name },
+    ]);
   }
 
   return (
@@ -83,7 +95,15 @@ export default async function BibliotecaPage() {
                     </p>
                     {users.length > 0 ? (
                       <p className="mt-2 text-xs text-success">
-                        {t.library.inUse}: {users.join(", ")}
+                        {t.library.inUse}:{" "}
+                        {users.map((u, i) => (
+                          <span key={u.id}>
+                            {i > 0 && ", "}
+                            <Link href={`/frota/${u.id}`} className="hover:underline">
+                              {u.name}
+                            </Link>
+                          </span>
+                        ))}
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-muted">{t.library.unused}</p>
