@@ -6,6 +6,7 @@ import { getSessionContext } from "@/lib/auth";
 import { ehOperadorDaPlataforma } from "@/lib/perms";
 import { PublishForm } from "./publish-form";
 import { RollbackButton } from "./rollback-button";
+import { dataHora } from "@/lib/datas";
 
 type Release = {
   id: string;
@@ -123,12 +124,7 @@ export default async function VersoesPage() {
                   </td>
                   <td className="px-4 py-3 text-muted">{r.notes ?? "—"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted">
-                    {new Date(r.created_at).toLocaleString("pt-BR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {dataHora(r.created_at)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     {!r.is_current && <RollbackButton id={r.id} version={r.version} />}

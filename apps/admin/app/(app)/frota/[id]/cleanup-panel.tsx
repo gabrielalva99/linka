@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { sendCommand, setCleanup } from "./actions";
+import { dataHora } from "@/lib/datas";
 
 /**
  * Faxina diária: horário, liga/desliga e o relato da última limpeza.
@@ -17,6 +18,7 @@ export function CleanupPanel({
   lastAt,
   lastResult,
   pendingCommand,
+  fuso,
 }: {
   deviceId: string;
   enabled: boolean;
@@ -24,6 +26,8 @@ export function CleanupPanel({
   lastAt: string | null;
   lastResult: string | null;
   pendingCommand: string | null;
+  /** Fuso da loja: a faxina aconteceu lá, não no fuso do servidor. */
+  fuso: string;
 }) {
   const t = getMessages();
   const router = useRouter();
@@ -83,7 +87,7 @@ export function CleanupPanel({
           }`}
         >
           {t.device.cleanupLast}
-          {lastAt ? ` (${new Date(lastAt).toLocaleString("pt-BR")})` : ""}: {lastResult}
+          {lastAt ? ` (${dataHora(lastAt, fuso)})` : ""}: {lastResult}
         </p>
       )}
     </div>

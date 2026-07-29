@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { arquivarAparelho, desarquivarAparelho } from "./actions";
+import { data } from "@/lib/datas";
 
 const MOTIVOS = ["Roubado", "Quebrado", "Devolvido ao fabricante", "Trocado"];
 
@@ -40,7 +41,7 @@ export function ArchiveCard({
           {desde && (
             <span className="text-muted">
               {" · desde "}
-              {new Date(desde).toLocaleDateString("pt-BR")}
+              {data(desde)}
             </span>
           )}
         </p>

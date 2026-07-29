@@ -5,6 +5,7 @@ import { podeOperarAgora } from "@/lib/perms";
 import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
 import { criarAtalhos } from "./atalhos";
+import { diaMes, hora } from "@/lib/datas";
 
 type Proibido = {
   loja: string;
@@ -251,14 +252,12 @@ export default async function RelatoriosPage({
   const fim = new Date();
   const inicio = new Date();
   inicio.setDate(fim.getDate() - (periodo - 1));
-  const dia = (d: Date) =>
-    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-  const periodoTexto = `${dia(inicio)} a ${dia(fim)}`;
+  const periodoTexto = `${diaMes(inicio)} a ${diaMes(fim)}`;
+  // O relógio de frescor era o pior caso do defeito de fuso: ele existe para o
+  // relatório não mentir por omissão, e mentia três horas — ninguém desconfia de
+  // um horário.
   const recebidoAte = ultimo?.[0]?.created_at
-    ? new Date(ultimo[0].created_at as string).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? hora(ultimo[0].created_at as string)
     : null;
 
   /** "1 aparelho" e não "1 aparelho(s)". Relatório de cliente não tem parêntese. */

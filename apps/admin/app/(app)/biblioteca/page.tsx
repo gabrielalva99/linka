@@ -6,6 +6,7 @@ import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
+import { data } from "@/lib/datas";
 
 type MediaRow = {
   id: string;
@@ -22,11 +23,7 @@ function humanSize(bytes: number | null): string {
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(1)} MB`;
 }
 
-const dateFmt = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
+
 
 export default async function BibliotecaPage() {
   const supabase = await createSupabaseServerClient();
@@ -91,7 +88,7 @@ export default async function BibliotecaPage() {
                     <p className="truncate text-sm font-medium">{m.name}</p>
                     <p className="mt-1 text-xs text-muted">
                       {humanSize(m.size_bytes)} ·{" "}
-                      {dateFmt.format(new Date(m.created_at))}
+                      {data(m.created_at)}
                     </p>
                     {users.length > 0 ? (
                       <p className="mt-2 text-xs text-success">

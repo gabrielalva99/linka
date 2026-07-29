@@ -5,6 +5,7 @@ import { podeOperarAgora } from "@/lib/perms";
 import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_LABELS, type ContentFit } from "@linka/shared";
 import { CampaignActions } from "./campaign-row";
+import { diaMes } from "@/lib/datas";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) => (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
@@ -29,7 +30,7 @@ type CampaignRow = {
   campaign_targets: Target[];
 };
 
-const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
+
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
 
 export default async function CampanhasPage() {
@@ -85,8 +86,8 @@ export default async function CampanhasPage() {
   function whenLabel(c: CampaignRow): string {
     const parts: string[] = [];
     if (c.starts_on || c.ends_on) {
-      const from = c.starts_on ? dateFmt.format(new Date(`${c.starts_on}T12:00`)) : "…";
-      const to = c.ends_on ? dateFmt.format(new Date(`${c.ends_on}T12:00`)) : "…";
+      const from = c.starts_on ? diaMes(`${c.starts_on}T12:00`) : "…";
+      const to = c.ends_on ? diaMes(`${c.ends_on}T12:00`) : "…";
       parts.push(`${from} → ${to}`);
     }
     const start = hhmm(c.start_time);

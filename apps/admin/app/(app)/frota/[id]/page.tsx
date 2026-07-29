@@ -22,6 +22,7 @@ import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
 import { UpdateRetry } from "./update-retry";
+import { FUSO_PADRAO, dataHora } from "@/lib/datas";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -64,7 +65,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name, timezone), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -115,6 +116,18 @@ export default async function DeviceDetailPage({
   const t = getMessages();
   const podeOperar = await podeOperarAgora();
   const media = (mediaData ?? []) as Media[];
+  // Hora do FATO é a hora da loja. Uma saída de manutenção às 20h em Manaus
+  // aconteceu às 20h para quem estava lá; mostrar convertido para São Paulo
+  // inventa um horário que ninguém viveu e atrapalha justamente quem vai
+  // conferir a câmera da loja naquele horário.
+  const lojaDoAparelho = (device as { stores: unknown }).stores as
+    | { timezone: string | null }
+    | { timezone: string | null }[]
+    | null;
+  const fusoDaLoja =
+    (Array.isArray(lojaDoAparelho)
+      ? lojaDoAparelho[0]?.timezone
+      : lojaDoAparelho?.timezone) ?? FUSO_PADRAO;
   const saidas = (saidasData ?? []) as {
     created_at: string;
     metadata: { loja?: string; detalhe?: string } | null;
@@ -160,7 +173,10 @@ export default async function DeviceDetailPage({
     archived_at: string | null;
     archive_reason: string | null;
     device_models: Rel;
-    stores: Rel;
+    stores:
+      | { name: string | null; timezone: string | null }
+      | { name: string | null; timezone: string | null }[]
+      | null;
     positions: { label: string | null } | { label: string | null }[] | null;
   };
 
@@ -337,6 +353,7 @@ export default async function DeviceDetailPage({
           lastAt={d.last_cleanup_at}
           lastResult={d.last_cleanup_result}
           pendingCommand={d.pending_command}
+          fuso={fusoDaLoja}
         />
         </>
         )}
@@ -426,12 +443,7 @@ export default async function DeviceDetailPage({
                 className="flex flex-wrap items-baseline gap-x-2 border-b border-line pb-2 text-sm last:border-0 last:pb-0"
               >
                 <span className="font-medium">
-                  {new Date(s.created_at).toLocaleString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {dataHora(s.created_at, fusoDaLoja)}
                 </span>
                 <span className="text-xs text-muted">
                   {s.metadata?.loja ?? "sem loja"} · {s.metadata?.detalhe ?? "—"}
