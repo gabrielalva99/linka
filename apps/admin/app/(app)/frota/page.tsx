@@ -186,17 +186,26 @@ export default async function FrotaPage({
   });
 
   const total = daAba.length;
-  const online = daAba.filter(
+  // Os que estão falando com o painel agora. Tudo que é ESTADO do aparelho é
+  // contado só entre eles.
+  //
+  // Antes a tela dizia "No ar 2 de 6" e, logo ao lado, "Protegidos 6 de 6".
+  // Não dá para afirmar que um aparelho está protegido, sincronizado ou
+  // atualizado quando ele não fala há três horas: o que existe é o último
+  // estado conhecido, e último estado conhecido de um aparelho sumido é
+  // exatamente o que não se deve exibir como fato.
+  const noAr = daAba.filter(
     (d) => effectiveStatus(d.status, d.last_seen_at) === "online",
-  ).length;
-  const synced = daAba.filter((d) => d.synced).length;
+  );
+  const online = noAr.length;
+  const synced = noAr.filter((d) => d.synced).length;
   const publicada = publicadaAgora;
   const updated = publicada
-    ? daAba.filter((d) => d.agent_version === publicada).length
+    ? noAr.filter((d) => d.agent_version === publicada).length
     : 0;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
-  const locked = daAba.filter((d) => d.kiosk_locked).length;
+  const locked = noAr.filter((d) => d.kiosk_locked).length;
   // Aparelho que se cadastrou sozinho chega sem loja. É o único dado que ele
   // não tem como descobrir, e sem ele nenhuma campanha alcança o aparelho.
   const semLoja = daAba.filter((d) => !d.store_id);
@@ -252,10 +261,12 @@ export default async function FrotaPage({
       )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
+        {/* "No ar" se mede contra a frota inteira. O resto se mede contra os
+            que estão no ar: de quem sumiu, a gente não sabe nada. */}
         <Kpi label={t.fleet.active} value={online} total={total} />
-        <Kpi label={t.fleet.locked} value={locked} total={total} />
-        <Kpi label={t.fleet.synced} value={synced} total={total} />
-        <Kpi label={t.fleet.updated} value={updated} total={total} />
+        <Kpi label={t.fleet.locked} value={locked} total={online} />
+        <Kpi label={t.fleet.synced} value={synced} total={online} />
+        <Kpi label={t.fleet.updated} value={updated} total={online} />
       </div>
 
       {semLoja.length > 0 && (
