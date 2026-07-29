@@ -179,8 +179,8 @@ class MainActivity : Activity() {
                             val cliente = resposta.optString("tenant_name")
                             val loja = resposta.optString("store_name")
                             status.text = when {
-                                loja.isNotEmpty() -> "Pronto — $cliente · $loja"
-                                else -> "Pronto — $cliente · SEM LOJA (avise o escritório)"
+                                loja.isNotEmpty() -> "Pronto: $cliente · $loja"
+                                else -> "Pronto: $cliente · SEM LOJA (avise o escritório)"
                             }
                             status.postDelayed({ showContent(t) }, 5000)
                         } else status.text = "Resposta inválida do servidor."

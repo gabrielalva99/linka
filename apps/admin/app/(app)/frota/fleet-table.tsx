@@ -147,7 +147,7 @@ export function FleetTable({
               precisa saber disso ANTES de clicar. */}
           {loja && (
             <span className="w-full text-xs text-muted">
-              A posição dentro da loja é apagada — a antiga era de outro endereço.
+              A posição dentro da loja é apagada: a antiga era de outro endereço.
             </span>
           )}
         </div>
