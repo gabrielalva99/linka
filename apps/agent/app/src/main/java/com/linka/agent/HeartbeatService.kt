@@ -30,6 +30,7 @@ class HeartbeatService : Service() {
                         Telemetry.beat(this@HeartbeatService)
                         checkCleanup()
                         coletarEEnviarEventos()
+                        reforcarPermissoes()
                     },
                     0L, 60_000L,
                 )
@@ -92,6 +93,29 @@ class HeartbeatService : Service() {
             }
         } finally {
             fila.close()
+        }
+    }
+
+    private var voltasDoRelogio = 0
+
+    /**
+     * Reaplica as permissões de demonstração de dez em dez minutos.
+     *
+     * Antes isso rodava só quando a tela do app abria. Um aparelho que se
+     * atualizou sozinho, ou que instalou um app depois, voltava a pedir
+     * permissão ao cliente — foi o que aconteceu com um Razr recém-atualizado,
+     * que pediu câmera na loja mesmo já estando na versão nova.
+     *
+     * O serviço está sempre de pé, então é ele que garante. Conceder de novo o
+     * que já está concedido não custa nada e não pisca na tela.
+     */
+    private fun reforcarPermissoes() {
+        voltasDoRelogio++
+        if (voltasDoRelogio % 10 != 1) return
+        try {
+            Kiosk.liberarPermissoesDeDemonstracao(this)
+            Kiosk.autorizarNoQuiosque(this)
+        } catch (_: Exception) {
         }
     }
 

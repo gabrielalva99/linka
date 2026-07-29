@@ -44,8 +44,17 @@ export default async function DashboardPage() {
           ),
         filtro,
       ),
+      // Só os aparelhos EM OPERAÇÃO.
+      //
+      // Sem este filtro a tela dizia "os 6 aparelhos estão reportando" com dois
+      // na mesa e quatro arquivados. A lista da frota já escondia os arquivados,
+      // então as duas telas discordavam entre si — e a que exagerava era
+      // justamente a que a pessoa abre primeiro.
       porCliente(
-        supabase.from("devices").select("id", { count: "exact", head: true }),
+        supabase
+          .from("devices")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true),
         filtro,
       ),
     ]);

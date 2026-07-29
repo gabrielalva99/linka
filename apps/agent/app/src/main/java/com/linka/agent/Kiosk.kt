@@ -321,7 +321,12 @@ object Kiosk {
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_EXTERNAL_STORAGE",
+        // Notificação entra porque o YouTube e vários outros pedem isso na
+        // PRIMEIRA abertura. Não é sobre notificar ninguém: é sobre o cliente
+        // da loja não receber um diálogo ao tocar no ícone.
+        "android.permission.POST_NOTIFICATIONS",
     )
 
     fun liberarPermissoesDeDemonstracao(ctx: Context) {
