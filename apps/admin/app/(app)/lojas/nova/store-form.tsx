@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { getMessages } from "@/lib/i18n";
 import { createStore, type CreateStoreState } from "./actions";
+import { CodeField } from "../code-field";
 
 const initial: CreateStoreState = { status: "idle" };
 
@@ -35,11 +36,7 @@ export function StoreForm({ chains }: { chains: { id: string; name: string }[] }
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t.stores.code}</span>
-          <input name="code" placeholder="SPC0000" className={fieldClass} />
-          <span className="text-xs text-muted">{t.stores.codeHint}</span>
-        </label>
+        <CodeField className={fieldClass} />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.stores.chain}</span>

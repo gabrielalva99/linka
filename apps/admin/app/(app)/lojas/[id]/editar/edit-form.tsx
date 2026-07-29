@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { getMessages } from "@/lib/i18n";
 import { updateStore, type EditStoreState } from "./actions";
+import { CodeField } from "../../code-field";
 
 const inicial: EditStoreState = { status: "idle" };
 
@@ -61,11 +62,7 @@ export function EditStoreForm({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t.stores.code}</span>
-          <input name="code" defaultValue={store.code ?? ""} className={campo} />
-          <span className="text-xs text-muted">{t.stores.codeHint}</span>
-        </label>
+        <CodeField defaultValue={store.code ?? ""} className={campo} />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.stores.chain}</span>
