@@ -64,6 +64,7 @@ export function EditStoreForm({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.stores.code}</span>
           <input name="code" defaultValue={store.code ?? ""} className={campo} />
+          <span className="text-xs text-muted">{t.stores.codeHint}</span>
         </label>
 
         <label className="flex flex-col gap-1.5">

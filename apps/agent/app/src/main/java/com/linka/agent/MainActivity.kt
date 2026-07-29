@@ -151,7 +151,8 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     button.isEnabled = true
                     if (result.code in 200..299) {
-                        val t = JSONObject(result.body).optString("device_token")
+                        val resposta = JSONObject(result.body)
+                        val t = resposta.optString("device_token")
                         if (t.isNotEmpty()) {
                             Prefs.setToken(this, t)
                             // Faxina de entrada: o aparelho entra na frota limpo.
@@ -166,9 +167,40 @@ class MainActivity : Activity() {
                                 Telemetry.beatAsync(this)
                             }.start()
                             startHeartbeat()
-                            showContent(t)
+
+                            // Mostra EM QUE LOJA o aparelho entrou, e segura a
+                            // tela alguns segundos para dar tempo de ler.
+                            //
+                            // Sem isto o técnico não tem como saber se acertou:
+                            // a tela pulava direto para o vídeo, e um código de
+                            // loja digitado errado ficava com a mesma cara de um
+                            // certo. São quinze aparelhos por visita — o erro
+                            // apareceria só semanas depois, num relatório.
+                            val cliente = resposta.optString("tenant_name")
+                            val loja = resposta.optString("store_name")
+                            status.text = when {
+                                loja.isNotEmpty() -> "Pronto — $cliente · $loja"
+                                else -> "Pronto — $cliente · SEM LOJA (avise o escritório)"
+                            }
+                            status.postDelayed({ showContent(t) }, 5000)
                         } else status.text = "Resposta inválida do servidor."
-                    } else status.text = "Falha (${result.code}): ${result.body}"
+                    } else {
+                        // Recado em português para o erro que o técnico pode
+                        // resolver ali mesmo; o resto vai cru, para a foto que
+                        // ele manda ao suporte servir de alguma coisa.
+                        val erro = try {
+                            JSONObject(result.body).optString("error")
+                        } catch (_: Exception) {
+                            ""
+                        }
+                        status.text = when (erro) {
+                            "store_not_found" ->
+                                "Loja não encontrada. Confira o código da loja e tente de novo."
+                            "code_not_found" ->
+                                "Código do cliente não confere. Confira a folha do kit."
+                            else -> "Falha (${result.code}): ${result.body}"
+                        }
+                    }
                 }
             }.start()
         }

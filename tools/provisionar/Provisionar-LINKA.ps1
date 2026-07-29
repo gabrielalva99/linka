@@ -308,8 +308,15 @@ Tire foto desta tela e avise o suporte ANTES de devolver o aparelho a vitrine.
 
 # 6. Entrada na frota ---------------------------------------------------------
 # O aparelho se cadastra sozinho: o codigo vai pelo cabo, o tecnico nao digita.
-# E um codigo so para o cliente inteiro, guardado em codigo-de-inscricao.txt no
-# kit. Se o arquivo nao existir, o script pergunta uma vez por visita.
+#
+# Sao DOIS codigos: o do cliente (um so, vale para a marca inteira, fica em
+# codigo-de-inscricao.txt) e o da LOJA onde a visita esta acontecendo. Juntos,
+# o aparelho entra na frota ja vinculado a loja certa.
+#
+# O da loja e perguntado UMA VEZ por visita e guardado em loja-atual.txt: sao
+# quinze aparelhos por loja, e digitar quinze vezes o mesmo codigo e como se
+# erra na decima. Apagar esse arquivo (ou responder outro codigo) e o que muda
+# de loja.
 Titulo "Entrando na frota"
 $arquivoCodigo = Join-Path $base "codigo-de-inscricao.txt"
 $codigo = ""
@@ -318,15 +325,48 @@ if (Test-Path $arquivoCodigo) {
 }
 if (-not $codigo) {
   Write-Host ""
-  $codigo = (Read-Host "  Codigo de inscricao (aparece no painel, em Dispositivos)").Trim().ToUpper()
+  $codigo = (Read-Host "  Codigo do cliente (esta na folha do kit)").Trim().ToUpper()
 }
 
+$arquivoLoja = Join-Path $base "loja-atual.txt"
+$loja = ""
+if (Test-Path $arquivoLoja) {
+  $loja = (Get-Content $arquivoLoja -Raw).Trim().ToUpper()
+}
+Write-Host ""
+if ($loja) {
+  $resposta = (Read-Host "  Codigo da loja [$loja] (Enter mantem, ou digite outro)").Trim().ToUpper()
+  if ($resposta) { $loja = $resposta }
+} else {
+  $loja = (Read-Host "  Codigo da loja desta visita (esta na ordem de servico)").Trim().ToUpper()
+}
+if ($loja) { Set-Content -Path $arquivoLoja -Value $loja }
+
 if ($codigo) {
+  $completo = if ($loja) { "$codigo-$loja" } else { $codigo }
   # -S para o app antes de abrir. Sem isso o Android entrega o codigo a uma tela
   # que ja esta aberta, e o pareamento nao acontece.
-  & $adb shell am start -S -n com.linka.agent/.MainActivity -e enroll $codigo 2>&1 | Out-Null
+  & $adb shell am start -S -n com.linka.agent/.MainActivity -e enroll $completo 2>&1 | Out-Null
   Start-Sleep -Seconds 8
   Ok "Codigo enviado ao aparelho"
+
+  $recado = if ($loja) {
+@"
+CONFIRA NA TELA DO APARELHO: ele mostra por 5 segundos o cliente e a
+LOJA em que entrou. Se a loja estiver errada, avise agora - depois
+alguem tem que corrigir aparelho por aparelho no escritorio.
+
+Se aparecer "Loja nao encontrada", o codigo da loja esta errado.
+Confira na ordem de servico e rode de novo.
+"@
+  } else {
+@"
+ATENCAO: este aparelho entrou SEM LOJA, porque nenhum codigo de loja
+foi informado. Alguem vai ter que dizer no escritorio em que loja ele
+esta. Da proxima vez, informe o codigo da loja.
+"@
+  }
+
   Fim $true @"
 Aparelho: $modelo (Android $android)
 
@@ -334,9 +374,8 @@ O aparelho ja entrou na frota sozinho. Ele aparece no painel em
 Dispositivos, em ate 1 minuto, com modelo e versao do Android
 preenchidos.
 
-NO ESCRITORIO: falta so dizer em que loja ele fica.
-
-Se a tela ainda pedir codigo, digite $codigo nela e aguarde.
+$recado
+Se a tela ainda pedir codigo, digite $completo nela e aguarde.
 "@
 }
 

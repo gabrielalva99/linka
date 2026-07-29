@@ -38,6 +38,7 @@ export function StoreForm({ chains }: { chains: { id: string; name: string }[] }
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">{t.stores.code}</span>
           <input name="code" placeholder="SPC0000" className={fieldClass} />
+          <span className="text-xs text-muted">{t.stores.codeHint}</span>
         </label>
 
         <label className="flex flex-col gap-1.5">

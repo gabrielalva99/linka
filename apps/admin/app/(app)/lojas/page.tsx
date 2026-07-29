@@ -84,7 +84,19 @@ export default async function LojasPage() {
                       {s.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-muted">{s.code ?? "—"}</td>
+                  {/* Loja sem código não recebe aparelho no campo: é o código
+                      que o técnico digita para o aparelho entrar já nesta loja.
+                      Sem aviso aqui, a equipe descobre isso dentro da loja, com
+                      quinze aparelhos na mão e ninguém para resolver. */}
+                  <td className="px-4 py-3">
+                    {s.code ? (
+                      <span className="font-mono text-xs">{s.code}</span>
+                    ) : (
+                      <span className="whitespace-nowrap rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">
+                        {t.stores.noCode}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-muted">{chainName(s.retail_chains)}</td>
                   <td className="px-4 py-3 text-muted">{kindLabel(s.kind)}</td>
                   <td className="px-4 py-3 text-muted">
