@@ -387,6 +387,8 @@
     "copy": "Copiar link",
     "copied": "Copiado",
     "linkExpires": "O link vale por tempo limitado. Se vencer, é só convidar de novo.",
+    "alreadyHadAccount": "{email} já tinha conta e agora tem acesso a este cliente.",
+    "alreadyHadHint": "Não geramos link de entrada para conta que já existe: quem entra é a própria pessoa, pela tela de login, que manda o link para o e-mail dela.",
     "empty": "Só você tem acesso a este cliente.",
     "readFailed": "Não consegui ler a lista de acessos. Recarregue a página.",
     "revoke": "Tirar acesso",

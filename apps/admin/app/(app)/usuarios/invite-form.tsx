@@ -54,7 +54,19 @@ export function InviteForm({ podeConcederAgencia }: { podeConcederAgencia: boole
         <p className="mt-3 text-xs text-warning">{state.error}</p>
       )}
 
-      {state.ok === true && (
+      {/* Pessoa que já tinha conta recebe acesso, mas nenhum link.
+          Gerar link de entrada para conta que já existe é entregar a conta dela
+          a quem convidou — foi assim que dava para tomar a conta do operador da
+          plataforma convidando o e-mail dele. Ela entra pelo login normal, que
+          manda o link para o e-mail dela e para mais ninguém. */}
+      {state.ok === true && state.jaExistia && (
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
+          <p className="text-sm">{t.users.alreadyHadAccount.replace("{email}", state.email)}</p>
+          <p className="mt-1 text-xs text-muted">{t.users.alreadyHadHint}</p>
+        </div>
+      )}
+
+      {state.ok === true && !state.jaExistia && (
         <div className="mt-4 rounded-lg border border-success/40 bg-success/5 p-4">
           <p className="text-sm text-success">
             {t.users.created.replace("{email}", state.email)}

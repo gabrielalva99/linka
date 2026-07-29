@@ -6,7 +6,7 @@ import { getActiveTenant } from "@/lib/tenant";
 import { logAction } from "@/lib/audit";
 
 export type InviteState =
-  | { ok: true; link: string; email: string }
+  | { ok: true; link: string; email: string; jaExistia?: boolean }
   | { ok: false; error: string }
   | { ok: null };
 
@@ -63,7 +63,16 @@ export async function inviteUser(
       return { ok: false, error: ERROS[body?.error] ?? "Não foi possível convidar." };
     }
     revalidatePath("/usuarios");
-    return { ok: true, link: body.link ?? "", email: body.email ?? email };
+    // Sem link quando a pessoa já tinha conta, e isso é de propósito: gerar um
+    // link de acesso para conta que já existe é entregar a conta dela a quem
+    // convidou. Ela entra pelo login normal, que manda o link para o e-mail
+    // dela e para mais ninguém.
+    return {
+      ok: true,
+      link: body.link ?? "",
+      email: body.email ?? email,
+      jaExistia: body.ja_existia === true,
+    };
   } catch {
     return { ok: false, error: "Não foi possível convidar. Verifique a conexão." };
   }
