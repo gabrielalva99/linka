@@ -351,6 +351,30 @@ object Kiosk {
         "android.permission.POST_NOTIFICATIONS",
     )
 
+    /**
+     * Concede a NOS MESMOS a permissao de notificacao, sem caixa de dialogo.
+     *
+     * Antes o app pedia com requestPermissions() no inicio. Como dono do aparelho
+     * ele nunca precisou pedir — e pedir tem um custo que so aparece na loja: a
+     * caixa "Permitir notificacoes?" nasce em cima da vitrine. Ficou visivel
+     * quando o app passou a voltar sozinho depois de se atualizar: a vitrine
+     * retornava certa, trancada, e com um dialogo do Android na frente da campanha.
+     *
+     * A notificacao existe porque o servico roda em primeiro plano; sem a permissao
+     * o Android nao mostra o aviso, mas o servico continua de pe.
+     */
+    fun liberarPropriasPermissoes(ctx: Context) {
+        if (!isDeviceOwner(ctx)) return
+        if (Build.VERSION.SDK_INT < 33) return
+        try {
+            dpm(ctx).setPermissionGrantState(
+                admin(ctx), ctx.packageName, "android.permission.POST_NOTIFICATIONS",
+                DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
+            )
+        } catch (_: Exception) {
+        }
+    }
+
     fun liberarPermissoesDeDemonstracao(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)

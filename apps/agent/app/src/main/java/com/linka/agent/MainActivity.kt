@@ -74,6 +74,16 @@ class MainActivity : Activity() {
          */
         const val MANUTENCAO_MS = 5 * 60_000L
 
+        /**
+         * Tempo que a tela de PIN espera antes de devolver a vitrine sozinha.
+         *
+         * Vitrine parada numa tela pedindo PIN e vitrine perdida: o cliente que fez
+         * os sete toques por acidente vai embora, e o proximo encontra um teclado
+         * numerico em vez da campanha. O retorno automatico normal nao cobre isso —
+         * ele so age quando alguem SAI do app, e a tela de PIN esta dentro dele.
+         */
+        const val PIN_SEM_TOQUE_MS = 45_000L
+
         /** Pedido do serviço para trancar de novo quando o tempo venceu. */
         const val EXTRA_RETRANCAR = "retrancar"
     }
@@ -94,7 +104,15 @@ class MainActivity : Activity() {
         // pode destravar a vitrine sem ninguém perceber. É inócuo se não somos dono.
         Kiosk.applyPolicies(this)
 
-        if (Build.VERSION.SDK_INT >= 33) {
+        // Dono do aparelho CONCEDE; so quem nao e dono precisa pedir.
+        //
+        // Pedir colocava a caixa "Permitir notificacoes?" em cima da vitrine. Isso
+        // ficou visivel quando o app passou a voltar sozinho depois de se atualizar:
+        // ele retornava certo e trancado, com um dialogo do Android na frente da
+        // campanha. Numa loja, e a campanha coberta por uma pergunta que ninguem
+        // vai responder.
+        Kiosk.liberarPropriasPermissoes(this)
+        if (Build.VERSION.SDK_INT >= 33 && !Kiosk.isDeviceOwner(this)) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
 
@@ -573,6 +591,7 @@ class MainActivity : Activity() {
     private var toquesDeManutencao = 0
     private var primeiroToqueEm = 0L
     private var relogioDaManutencao: Timer? = null
+    private var relogioDoPin: Timer? = null
 
     /** Envolve a vitrine com o alvo invisível do gesto. */
     private fun comSaidaEscondida(conteudo: View): View {
@@ -707,6 +726,19 @@ class MainActivity : Activity() {
             }
         }
         setContentView(root)
+
+        // Devolve a vitrine sozinha se ninguem concluir.
+        relogioDoPin?.cancel()
+        relogioDoPin = Timer().also {
+            it.schedule(
+                timerTask {
+                    runOnUiThread {
+                        if (!Prefs.emManutencao(this@MainActivity)) voltarParaVitrine()
+                    }
+                },
+                PIN_SEM_TOQUE_MS,
+            )
+        }
     }
 
     /**
@@ -717,6 +749,8 @@ class MainActivity : Activity() {
      * justamente o caso suspeito — viraria destravar sem registro.
      */
     private fun liberarParaManutencao() {
+        relogioDoPin?.cancel()
+        relogioDoPin = null
         Prefs.setSaidaPendente(this, "PIN correto na tela do aparelho")
         Prefs.setManutencaoAte(this, System.currentTimeMillis() + MANUTENCAO_MS)
         Telemetry.beatAsync(this)
@@ -764,7 +798,7 @@ class MainActivity : Activity() {
                 timerTask {
                     val restamMs = Prefs.manutencaoAte(this@MainActivity) - System.currentTimeMillis()
                     runOnUiThread {
-                        if (restamMs <= 0) voltarParaVitrine()
+                        if (restamMs <= 0) fecharManutencaoPorTempo()
                         else {
                             val s = (restamMs / 1000).toInt()
                             conta.text = "Tranca de novo em ${s / 60}:${"%02d".format(s % 60)}"
@@ -777,24 +811,54 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Fecha a manutenção: tranca de novo e devolve a vitrine.
+     * Fecha a manutenção quando o TEMPO VENCE — e só uma vez.
      *
-     * A guarda de entrada existe porque DOIS caminhos chegam aqui quando o tempo
-     * vence: o relógio desta tela e o serviço (que cuida do caso de a tela não
-     * estar mais na frente). Chamados os dois, o vídeo era liberado e recriado
-     * duas vezes e a vitrine piscava na cara do cliente. Quem chegar primeiro
-     * resolve; o segundo não faz nada.
+     * A trava existe porque dois caminhos chegam aqui no vencimento: o relógio
+     * desta tela e o serviço (que cobre o caso de a tela não estar mais na
+     * frente). Chamados os dois, o vídeo era liberado e recriado duas vezes e a
+     * vitrine piscava na cara do cliente.
+     *
+     * A trava vive AQUI, e não em voltarParaVitrine, e essa separação é o conserto
+     * de um defeito que eu mesmo criei: com a trava lá dentro, o botão "Voltar
+     * para a vitrine" da tela de PIN não fazia NADA. Naquela tela a marca é falsa
+     * — a tela de manutenção nunca abriu, porque a pessoa só digitou o PIN ou
+     * desistiu. Resultado na loja: sete toques por acidente, a vitrine vira uma
+     * tela pedindo PIN, e o botão de sair está morto. Nada recupera aquilo, porque
+     * o retorno automático só age quando alguém SAI do app — e a tela de PIN está
+     * dentro dele.
+     */
+    private fun fecharManutencaoPorTempo() {
+        if (!telaDeManutencaoAberta) return
+        voltarParaVitrine()
+    }
+
+    /**
+     * Devolve a vitrine: tranca de novo e volta a exibir.
+     *
+     * Sempre funciona, de qualquer tela, quantas vezes for chamada. É a saída de
+     * emergência do app — e saída de emergência com condição na porta é o mesmo
+     * que porta trancada.
      */
     private fun voltarParaVitrine() {
-        if (!telaDeManutencaoAberta) return
         telaDeManutencaoAberta = false
+        relogioDoPin?.cancel()
+        relogioDoPin = null
         relogioDaManutencao?.cancel()
         relogioDaManutencao = null
         Prefs.setManutencaoAte(this, 0L)
         Kiosk.trancar(this)
-        val url = currentUrl
-        if (url != null && MediaCache.isCached(this, url)) playVideo(url, currentFit)
-        else {
+        // Cai no que está gravado quando a memória da tela está vazia.
+        //
+        // A tela recriada DENTRO da manutenção vai direto para mostrarManutencao()
+        // e nunca passa pelo trecho que preenche currentUrl. Sem esta volta ao
+        // gravado, apertar "Trancar agora" levava a "Aguardando conteúdo" em vez do
+        // vídeo — do lado de fora, idêntico a um botão que não funciona.
+        val url = currentUrl ?: Prefs.playingUrl(this)
+        if (url != null && MediaCache.isCached(this, url)) {
+            currentUrl = url
+            currentFit = Prefs.playingFit(this) ?: FIT_ZOOM
+            playVideo(url, currentFit)
+        } else {
             setContentView(comSaidaEscondida(waitingView("Aguardando conteúdo")))
             enterImmersive()
         }
@@ -957,6 +1021,8 @@ class MainActivity : Activity() {
         contentTimer = null
         relogioDaManutencao?.cancel()
         relogioDaManutencao = null
+        relogioDoPin?.cancel()
+        relogioDoPin = null
         player?.release()
         player = null
         playerView = null

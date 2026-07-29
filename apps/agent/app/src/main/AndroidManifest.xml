@@ -92,6 +92,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <!-- Atualizacao do app tambem mata a vitrine: o processo morre e o
+                     Android nao levanta de volta. Sem isto, uma versao nova que
+                     entra com o cliente na camera deixa a loja apagada ate alguem
+                     reiniciar o aparelho. -->
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

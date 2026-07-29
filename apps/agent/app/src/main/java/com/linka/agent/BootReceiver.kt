@@ -23,6 +23,23 @@ import android.content.Intent
  * A lição que fica no código: num aparelho onde somos a tela inicial, qualquer
  * erro nosso durante o boot não é um app que quebra — é um aparelho que não liga.
  * Por isso agora tudo aqui é à prova de exceção, sem exceção.
+ *
+ * ── Atualizar o app também mata a vitrine (achado do Gabriel) ────────────────
+ * Instalar uma versão nova mata o processo, e o Android NÃO o levanta de volta.
+ * Isso ficava escondido porque a vitrine costuma ser a tela inicial e estar na
+ * frente: matando o processo, o sistema pede a tela inicial de novo e ela volta
+ * por acidente.
+ *
+ * O acidente falha exatamente quando mais custa. Depois de uma saída de
+ * manutenção — ou com o cliente na câmera, que é o caso comum na loja — quem
+ * está na frente é o launcher da Motorola. A atualização entra, o LINKA morre, e
+ * o Android levanta o launcher, não a gente. A vitrine fica morta até alguém
+ * reiniciar o aparelho, e o painel não acusa nada porque o aparelho simplesmente
+ * para de aparecer.
+ *
+ * Em 250 aparelhos que se atualizam sozinhos, isso é uma loja apagada por
+ * atualização. MY_PACKAGE_REPLACED é o aviso de "acabei de ser substituído", e é
+ * o unico momento em que dá para reagir.
  */
 class BootReceiver : BroadcastReceiver() {
 
@@ -32,7 +49,8 @@ class BootReceiver : BroadcastReceiver() {
         try {
             val acao = intent.action ?: return
             if (acao != Intent.ACTION_BOOT_COMPLETED &&
-                acao != "android.intent.action.QUICKBOOT_POWERON"
+                acao != "android.intent.action.QUICKBOOT_POWERON" &&
+                acao != Intent.ACTION_MY_PACKAGE_REPLACED
             ) {
                 return
             }
