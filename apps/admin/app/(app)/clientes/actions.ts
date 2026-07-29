@@ -107,6 +107,74 @@ export async function resetEnrollmentCode(id: string) {
   return { ok: true as const, codigo };
 }
 
+/**
+ * Exclui um cliente — e só passa se ele estiver VAZIO.
+ *
+ * A trava não é frescura: no banco, tudo que é do cliente cai junto em cascata.
+ * Aparelho, loja, campanha, vídeo, e o histórico de interação inteiro. Um clique
+ * errado aqui não perde um cadastro, perde meses de medição que não voltam de
+ * lugar nenhum — os eventos foram apagados do aparelho assim que o servidor
+ * confirmou que tinha gravado.
+ *
+ * Então a recusa diz O QUE segura, como no resto do painel. "Não foi possível"
+ * faz a pessoa tentar de novo achando que foi falha de rede.
+ */
+export async function deleteTenant(id: string) {
+  if (!ehOperadorDaPlataforma(await getSessionContext())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const conta = async (tabela: string) => {
+    const { count } = await supabase
+      .from(tabela)
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", id);
+    return count ?? 0;
+  };
+
+  const [aparelhos, lojas, redes, midias, campanhas, pessoas, total] = await Promise.all([
+    conta("devices"),
+    conta("stores"),
+    conta("retail_chains"),
+    conta("media_assets"),
+    conta("campaigns"),
+    conta("memberships"),
+    supabase
+      .from("tenants")
+      .select("id", { count: "exact", head: true })
+      .then((r) => r.count ?? 0),
+  ]);
+
+  const segura: string[] = [];
+  const item = (n: number, um: string, muitos: string) =>
+    n > 0 ? segura.push(`${n} ${n === 1 ? um : muitos}`) : null;
+  item(aparelhos, "aparelho", "aparelhos");
+  item(lojas, "loja", "lojas");
+  item(redes, "rede", "redes");
+  item(midias, "vídeo", "vídeos");
+  item(campanhas, "campanha", "campanhas");
+  item(pessoas, "pessoa com acesso", "pessoas com acesso");
+
+  if (segura.length > 0) {
+    return {
+      ok: false as const,
+      error: `Ainda tem ${segura.join(", ")}. Um cliente só sai vazio.`,
+    };
+  }
+  // Sem nenhum cliente, o painel fica sem chão: não há onde cadastrar nada.
+  if (total <= 1) {
+    return { ok: false as const, error: "É o único cliente que existe." };
+  }
+
+  const { error } = await supabase.from("tenants").delete().eq("id", id);
+  if (error) return { ok: false as const, error: "Não consegui excluir." };
+
+  await logAction("tenant.delete", "tenant", id);
+  revalidatePath("/clientes");
+  return { ok: true as const };
+}
+
 /** Entra no cliente: passa a ser ele em todas as telas. */
 export async function entrarNoCliente(id: string) {
   const supabase = await createSupabaseServerClient();

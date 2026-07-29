@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { entrarNoCliente, renameTenant, resetEnrollmentCode } from "./actions";
+import {
+  deleteTenant,
+  entrarNoCliente,
+  renameTenant,
+  resetEnrollmentCode,
+} from "./actions";
 
 /**
  * Linha do cliente: entrar, renomear e trocar o código de inscrição.
@@ -35,6 +40,7 @@ export function TenantRow({
   const [editando, setEditando] = useState(false);
   const [valor, setValor] = useState(nome);
   const [confirmandoCodigo, setConfirmandoCodigo] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   if (editando) {
@@ -127,20 +133,57 @@ export function TenantRow({
       </td>
       <td className="whitespace-nowrap px-4 py-3 text-right">
         {erro && <span className="mr-2 text-xs text-danger">{erro}</span>}
-        <button
-          onClick={() => setEditando(true)}
-          className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
-        >
-          Renomear
-        </button>
-        {!ativo && (
-          <button
-            onClick={() => startTransition(() => entrarNoCliente(id))}
-            disabled={pending}
-            className="ml-2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
-          >
-            Entrar
-          </button>
+        {confirmandoExclusao ? (
+          <>
+            <span className="mr-2 text-xs text-muted">
+              Excluir {nome}? Não tem volta.
+            </span>
+            <button
+              onClick={() =>
+                startTransition(async () => {
+                  const r = await deleteTenant(id);
+                  if (!r.ok) setErro(r.error);
+                  setConfirmandoExclusao(false);
+                  router.refresh();
+                })
+              }
+              disabled={pending}
+              className="rounded-md border border-danger/40 px-2 py-1 text-xs text-danger hover:bg-danger/10 disabled:opacity-40"
+            >
+              Excluir
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setEditando(true)}
+              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+            >
+              Renomear
+            </button>
+            {/* Excluir some do cliente aberto: apagar o chão em que você está
+                pisando é um estado que ninguém precisa alcançar. */}
+            {!ativo && (
+              <button
+                onClick={() => {
+                  setErro(null);
+                  setConfirmandoExclusao(true);
+                }}
+                className="ml-2 rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-danger hover:text-danger"
+              >
+                Excluir
+              </button>
+            )}
+            {!ativo && (
+              <button
+                onClick={() => startTransition(() => entrarNoCliente(id))}
+                disabled={pending}
+                className="ml-2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
+              >
+                Entrar
+              </button>
+            )}
+          </>
         )}
       </td>
     </tr>
