@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
-import { porCliente, tenantFilter } from "@/lib/tenant";
+import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 
 type StoreRow = {
   id: string;
@@ -15,20 +15,42 @@ type StoreRow = {
   opens_at: string | null;
   closes_at: string | null;
   retail_chains: { name: string | null } | { name: string | null }[] | null;
-  devices: { count: number }[] | null;
 };
 
 export default async function LojasPage() {
   const supabase = await createSupabaseServerClient();
-  const { data } = await porCliente(
-    supabase
-      .from("stores")
-      .select("id, name, code, kind, city, state, country, retail_chains(name)"),
-    await tenantFilter(),
-  ).order("name", { ascending: true });
+  const filtro = await tenantFilter();
+
+  // opens_at e closes_at estavam no tipo e na tela, mas NUNCA foram pedidos ao
+  // banco. A coluna de horário caía no valor de reserva e mostrava "09:00 às
+  // 22:00" para todas as lojas — inclusive para a que fecha às 20h. Erro que o
+  // TypeScript não pega: o `select` devolve um tipo largo e a asserção logo
+  // abaixo afirmava campos que não vinham.
+  const [{ data }, { data: porLoja }] = await Promise.all([
+    porCliente(
+      supabase
+        .from("stores")
+        .select(
+          "id, name, code, kind, city, state, country, opens_at, closes_at, retail_chains(name)",
+        ),
+      filtro,
+    ).order("name", { ascending: true }),
+    // A contagem de aparelhos tinha o mesmo problema, e pior: lia `s.devices`,
+    // que não existia no resultado. Toda loja aparecia com 0 aparelhos, mesmo
+    // cheia. Vem em consulta separada porque a contagem embutida do PostgREST
+    // não aceita filtro — e sem filtrar voltaria a somar arquivado.
+    emOperacao(supabase.from("devices").select("store_id"), filtro),
+  ]);
+
   const t = getMessages();
   const podeEditar = await podeOperarAgora();
   const stores = (data ?? []) as StoreRow[];
+
+  const aparelhosDaLoja = new Map<string, number>();
+  for (const d of (porLoja ?? []) as { store_id: string | null }[]) {
+    if (!d.store_id) continue;
+    aparelhosDaLoja.set(d.store_id, (aparelhosDaLoja.get(d.store_id) ?? 0) + 1);
+  }
 
   const kindLabel = (k: string) =>
     k === "shopping"
@@ -108,7 +130,7 @@ export default async function LojasPage() {
                     ).slice(0, 5)}`}
                   </td>
                   <td className="px-4 py-3 text-muted">
-                    {(s.devices as unknown as { count: number }[] | null)?.[0]?.count ?? 0}
+                    {aparelhosDaLoja.get(s.id) ?? 0}
                   </td>
                   {/* O caminho para editar tem que estar na LISTA. Escondido
                       dentro da ficha, ninguém descobre que dá para corrigir. */}

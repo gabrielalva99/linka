@@ -42,10 +42,13 @@ export async function deleteMedia(id: string): Promise<DeleteState> {
     .maybeSingle();
   if (!asset) return { ok: false, reason: "failed" };
 
+  // "Em uso" é só quem está em operação: aparelho arquivado não exibe nada, e
+  // contá-lo impedia apagar um vídeo que na prática já saiu do ar em todo lugar.
   const { count } = await supabase
     .from("devices")
     .select("id", { count: "exact", head: true })
-    .eq("content_url", asset.url);
+    .eq("content_url", asset.url)
+    .eq("is_active", true);
   if ((count ?? 0) > 0) return { ok: false, reason: "in_use", count: count ?? 0 };
 
   // Campanha também segura o vídeo. O banco já impede pela chave estrangeira,

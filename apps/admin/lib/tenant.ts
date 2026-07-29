@@ -81,3 +81,34 @@ export function porCliente<Q>(consulta: Q, tenantId: string | null): Q {
     tenantId,
   );
 }
+
+/**
+ * Aparelhos EM OPERAÇÃO: do cliente certo e não arquivados. Use em toda tela
+ * que conta, lista ou oferece aparelho para escolher.
+ *
+ * Existe por causa de um defeito que voltou quatro vezes. O painel dizia "os 6
+ * aparelhos estão reportando" com dois na mesa; a lista da frota mostrava 2; a
+ * tela de versões dizia "2 de 6". Cada tela tinha seu próprio filtro, então
+ * corrigir uma não corrigia as outras — e quem apontava a diferença era sempre o
+ * Gabriel, tela por tela. Número errado não dá erro em lugar nenhum: só faz duas
+ * telas do mesmo painel discordarem, e aí nenhuma das duas merece confiança.
+ *
+ * A tela de versões era o caso pior: além de somar arquivado, não filtrava
+ * cliente NENHUM. Para quem opera a plataforma, o RLS libera todos os clientes,
+ * então ela contava os aparelhos de outras marcas no denominador da Motorola.
+ *
+ * As duas condições andam juntas de propósito: separadas, esquecer uma é fácil,
+ * e é exatamente o que aconteceu. Uma chamada, um jeito certo.
+ *
+ * Onde NÃO usar: (1) histórico — visita que aconteceu aconteceu, e relatório de
+ * março tem que continuar batendo depois que o aparelho sai de linha; (2) travas
+ * de exclusão — impedir apagar um modelo tem que contar o arquivado também, ou o
+ * banco recusa por chave estrangeira e a tela devolve "falhou" sem motivo.
+ */
+export function emOperacao<Q>(consulta: Q, tenantId: string | null): Q {
+  return (
+    porCliente(consulta, tenantId) as {
+      eq(coluna: string, valor: boolean): Q;
+    }
+  ).eq("is_active", true);
+}

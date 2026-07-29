@@ -27,11 +27,13 @@ export default async function EditarLojaPage({
       await tenantFilter(),
     ).order("name"),
     // Quantos aparelhos obedecem a este horário. Muda o peso do que a pessoa
-    // está prestes a salvar.
+    // está prestes a salvar — e arquivado não obedece a horário nenhum, então
+    // inflava o aviso e fazia a mudança parecer maior do que é.
     supabase
       .from("devices")
       .select("id", { count: "exact", head: true })
-      .eq("store_id", id),
+      .eq("store_id", id)
+      .eq("is_active", true),
   ]);
 
   if (!store) notFound();

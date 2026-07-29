@@ -28,7 +28,20 @@ export default async function VersoesPage() {
       .select("id, version, notes, is_current, created_at")
       .order("created_at", { ascending: false }),
     // Quem já atualizou e quem não: a versão publicada não é a versão instalada.
-    supabase.from("devices").select("agent_version, update_error"),
+    //
+    // Sem is_active esta tela dizia "2 de 6" com dois aparelhos na mesa e quatro
+    // arquivados — e era a terceira tela do painel a contar a frota de um jeito
+    // diferente das outras duas.
+    //
+    // De propósito NÃO usa emOperacao(): aqui não entra recorte de cliente. Só
+    // quem opera a plataforma abre esta tela (o redirect acima), e publicar APK
+    // atinge a frota de TODOS os clientes de uma vez. Contar só o cliente
+    // escolhido no seletor esconderia justamente os aparelhos que a publicação
+    // também vai mexer. O texto abaixo diz isso em voz alta.
+    supabase
+      .from("devices")
+      .select("agent_version, update_error")
+      .eq("is_active", true),
   ]);
 
   const lista = (releases ?? []) as Release[];
@@ -48,6 +61,11 @@ export default async function VersoesPage() {
       <p className="mt-1 text-sm text-muted">
         O aparelho pergunta a cada minuto se existe versão mais nova e se instala
         sozinho. Não precisa de cabo nem de ninguém na loja.
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        Publicar atinge <strong className="font-medium text-fg">toda a frota, de
+        todos os clientes</strong> — e as contagens abaixo também. Aparelho
+        arquivado não entra.
       </p>
 
       <dl className="mt-6 grid grid-cols-3 gap-4">

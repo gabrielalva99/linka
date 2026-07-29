@@ -44,12 +44,16 @@ export default async function StoreDetailPage({
   // Os aparelhos DESTA loja. O painel inicial manda a pessoa para a loja onde
   // está o problema, e até agora a tela da loja não mostrava aparelho nenhum:
   // o caminho terminava exatamente onde o trabalho começa.
+  //
+  // Só os que estão lá de verdade: arquivado aparecia como instalado na loja,
+  // com posição e tudo, mandando alguém procurar o que já foi recolhido.
   const { data: aparelhos } = await supabase
     .from("devices")
     .select(
       "id, code, name, status, last_seen_at, playing_url, kiosk_locked, positions(label)",
     )
     .eq("store_id", id)
+    .eq("is_active", true)
     .order("code", { ascending: true });
 
   const t = getMessages();

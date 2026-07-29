@@ -52,14 +52,28 @@ export async function renamePosition(id: string, label: string, storeId: string)
  */
 export async function deletePosition(id: string, storeId: string) {
   const supabase = await createSupabaseServerClient();
-  const { count } = await supabase
-    .from("devices")
-    .select("id", { count: "exact", head: true })
-    .eq("position_id", id);
+  // Posição de aparelho arquivado ainda segura a exclusão (chave estrangeira),
+  // mas "mova antes de apagar" só faz sentido para quem está em operação. Sem
+  // separar os dois, a pessoa procura na loja um aparelho que já foi recolhido.
+  const [{ count }, { count: ativos }] = await Promise.all([
+    supabase
+      .from("devices")
+      .select("id", { count: "exact", head: true })
+      .eq("position_id", id),
+    supabase
+      .from("devices")
+      .select("id", { count: "exact", head: true })
+      .eq("position_id", id)
+      .eq("is_active", true),
+  ]);
   if ((count ?? 0) > 0) {
+    const arquivados = (count ?? 0) - (ativos ?? 0);
     return {
       ok: false as const,
-      error: `${count} aparelho(s) estão nesta posição. Mova antes de apagar.`,
+      error: ativos
+        ? `${ativos} aparelho(s) estão nesta posição. Mova antes de apagar.`
+        : `${arquivados} aparelho(s) arquivado(s) ainda apontam para esta posição. ` +
+          `Ela não pode ser apagada sem perder de onde eles vinham no histórico.`,
     };
   }
   const { error } = await supabase.from("positions").delete().eq("id", id);

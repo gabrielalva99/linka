@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
-import { porCliente, tenantFilter } from "@/lib/tenant";
+import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
 
 type Proibido = {
@@ -197,8 +197,17 @@ export default async function RelatoriosPage({
   const [{ data: redesData }, { data: lojasData }, { data: aparelhosData }] =
     await Promise.all([
       porCliente(supabase.from("retail_chains").select("name"), filtro).order("name"),
-      porCliente(supabase.from("stores").select("name"), filtro).order("name"),
-      porCliente(supabase.from("devices").select("code, name"), filtro)
+      // A regra dos filtros: oferecem o que está EM OPERAÇÃO.
+      //
+      // Não é para esconder histórico — o histórico de um aparelho recolhido
+      // continua na ficha dele. É porque o relatório mistura duas naturezas de
+      // número: uso (histórico, conta arquivado) e frota (agora, não conta). Ao
+      // escolher um aparelho arquivado o relatório não volta vazio: volta dizendo
+      // "0 aparelhos" no topo e "340 visitas" embaixo. Os dois números estão
+      // certos e a tela fica absurda — que é exatamente o defeito que esta
+      // varredura foi consertar.
+      emOperacao(supabase.from("stores").select("name"), filtro).order("name"),
+      emOperacao(supabase.from("devices").select("code, name"), filtro)
         .eq("exclude_from_reports", false)
         .order("code"),
     ]);

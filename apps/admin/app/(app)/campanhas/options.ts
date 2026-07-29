@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { porCliente, tenantFilter } from "@/lib/tenant";
+import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 
 /**
  * Listas usadas pelo formulário de campanha (criar e editar pedem as mesmas).
@@ -18,8 +18,11 @@ export async function loadCampaignOptions() {
         { ascending: false },
       ),
       porCliente(supabase.from("retail_chains").select("id, name"), filtro).order("name"),
-      porCliente(supabase.from("stores").select("id, name, code"), filtro).order("name"),
-      porCliente(supabase.from("devices").select("id, name, code"), filtro).order("code"),
+      // Loja desativada e aparelho arquivado saem da escolha. Oferecer um alvo
+      // que não existe mais faz a pessoa montar uma campanha que nunca vai ao ar
+      // e nunca avisa por quê — some no meio da lista e ninguém confere depois.
+      emOperacao(supabase.from("stores").select("id, name, code"), filtro).order("name"),
+      emOperacao(supabase.from("devices").select("id, name, code"), filtro).order("code"),
     ]);
 
   return {

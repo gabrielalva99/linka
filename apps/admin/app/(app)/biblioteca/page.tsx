@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
-import { porCliente, tenantFilter } from "@/lib/tenant";
+import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
@@ -37,7 +37,9 @@ export default async function BibliotecaPage() {
         .select("id, name, url, size_bytes, created_at, fit_mode"),
       filtro,
     ).order("created_at", { ascending: false }),
-    porCliente(
+    // Quem está exibindo cada vídeo AGORA. Arquivado não exibe nada: contá-lo
+    // fazia o vídeo parecer no ar em mais aparelhos do que a realidade.
+    emOperacao(
       supabase.from("devices").select("name, content_url"),
       filtro,
     ).not("content_url", "is", null),

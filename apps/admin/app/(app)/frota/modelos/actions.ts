@@ -59,12 +59,34 @@ export async function renameModel(id: string, name: string, line: string) {
  */
 export async function deleteModel(id: string) {
   const supabase = await createSupabaseServerClient();
-  const { count } = await supabase
-    .from("devices")
-    .select("id", { count: "exact", head: true })
-    .eq("model_id", id);
+  // Conta ARQUIVADO também, de propósito: o banco recusa por chave estrangeira
+  // de qualquer forma, e o histórico por modelo é o que sustenta o relatório de
+  // linha. Mas a mensagem tem que dizer que existe arquivado no meio — senão
+  // manda "troque o modelo deles" apontando para aparelhos que a pessoa não
+  // encontra em lista nenhuma, e ela fica travada sem entender o motivo.
+  const [{ count }, { count: ativos }] = await Promise.all([
+    supabase
+      .from("devices")
+      .select("id", { count: "exact", head: true })
+      .eq("model_id", id),
+    supabase
+      .from("devices")
+      .select("id", { count: "exact", head: true })
+      .eq("model_id", id)
+      .eq("is_active", true),
+  ]);
   if ((count ?? 0) > 0) {
-    return { ok: false as const, error: `${count} aparelho(s) usam este modelo. Troque o modelo deles antes.` };
+    const arquivados = (count ?? 0) - (ativos ?? 0);
+    const onde =
+      arquivados > 0
+        ? ativos
+          ? ` (${ativos} em operação e ${arquivados} arquivado(s))`
+          : ` — todos arquivados, veja em Frota › arquivados`
+        : "";
+    return {
+      ok: false as const,
+      error: `${count} aparelho(s) usam este modelo${onde}. Troque o modelo deles antes.`,
+    };
   }
   const { error } = await supabase.from("device_models").delete().eq("id", id);
   if (error) return { ok: false as const, error: "Não foi possível excluir." };
