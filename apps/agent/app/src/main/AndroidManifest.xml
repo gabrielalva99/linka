@@ -48,10 +48,24 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <!-- singleTask: UMA tarefa, UMA instancia, sempre.
+             Sem isto o Android usa LAUNCH_MULTIPLE, e tres caminhos nossos abrem
+             esta tela (o retorno automatico do servico, o pedido de retrancar e o
+             receptor de app substituido). Cada um criava uma tarefa NOVA ao lado
+             da anterior. O log de uma atualizacao mostra o estrago em duas linhas:
+
+                Add Task{#40} to hidden list because adding Task{#41}
+                Activity pause timeout for ActivityRecord{... t41}
+
+             Duas tarefas do mesmo app, o sistema malabarizando as duas ate
+             estourar o tempo de transicao de ciclo de vida. Sao os ~10 segundos
+             cronometrados entre a atualizacao e o video voltar. Com singleTask,
+             abrir a tela TRAZ A EXISTENTE para a frente em vez de criar outra. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
+            android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
             <intent-filter>
