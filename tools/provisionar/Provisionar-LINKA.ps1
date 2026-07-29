@@ -347,8 +347,67 @@ if ($codigo) {
   # -S para o app antes de abrir. Sem isso o Android entrega o codigo a uma tela
   # que ja esta aberta, e o pareamento nao acontece.
   & $adb shell am start -S -n com.linka.agent/.MainActivity -e enroll $completo 2>&1 | Out-Null
-  Start-Sleep -Seconds 8
-  Ok "Codigo enviado ao aparelho"
+
+  # ── Conferir em vez de contar ate oito ─────────────────────────────────────
+  #
+  # Antes aqui havia um "Start-Sleep 8" e um "deu certo" logo em seguida. Isso
+  # nao verificava nada: se um pedido de permissao aparecesse por cima da tela,
+  # o aparelho ficava parado esperando um toque humano, o script anunciava
+  # sucesso, e o tecnico ia embora com um aparelho que nunca entrou na frota.
+  # Aconteceu.
+  #
+  # Agora espera de verdade, ate 90 segundos, olhando a tela do aparelho. E
+  # quando o que esta na frente e um pedido de permissao, ele DIZ isso, em vez
+  # de deixar a pessoa olhando para um "aguarde" sem pista nenhuma.
+  Write-Host ""
+  $entrou = $false
+  $avisouPermissao = $false
+  for ($t = 0; $t -lt 45; $t++) {
+    Start-Sleep -Seconds 2
+    & $adb shell uiautomator dump /sdcard/linka-tela.xml 2>&1 | Out-Null
+    $tela = (& $adb shell cat /sdcard/linka-tela.xml 2>&1) -join " "
+
+    # Pedido de permissao na frente: so a pessoa resolve, e ela precisa saber.
+    if ($tela -match 'Permitir|PERMITIR|Allow|ALLOW|Continuar|permission') {
+      if (-not $avisouPermissao) {
+        Write-Host ""
+        Write-Host "  >>> OLHE A TELA DO APARELHO <<<" -ForegroundColor Yellow
+        Write-Host "  Ele esta pedindo uma permissao. Toque em PERMITIR." -ForegroundColor Yellow
+        Write-Host "  O programa continua sozinho assim que voce liberar." -ForegroundColor Yellow
+        Write-Host ""
+        $avisouPermissao = $true
+      }
+      continue
+    }
+
+    # Saiu da tela de pareamento = entrou na frota.
+    if ($tela -notmatch 'Codigo de pareamento|Código de pareamento') {
+      $entrou = $true
+      break
+    }
+    if ($t % 5 -eq 0) { Write-Host "  aguardando o aparelho entrar na frota..." }
+  }
+
+  if ($entrou) {
+    Ok "Aparelho entrou na frota"
+  } else {
+    # Fim $false encerra o programa. Nao pode seguir para a mensagem de
+    # "APARELHO PRONTO": foi exatamente esse "pronto" mentiroso que fez um
+    # aparelho voltar para a vitrine sem estar na frota.
+    Fim $false @"
+O aparelho NAO entrou na frota.
+
+Ele continua na tela de pareamento depois de 90 segundos. Os motivos
+mais comuns, nesta ordem:
+
+ 1. Um pedido de permissao ficou aberto na tela e ninguem tocou
+ 2. O aparelho esta sem internet (confira o Wi-Fi)
+ 3. O codigo do kit esta desatualizado
+
+Olhe a tela do aparelho AGORA e diga ao suporte o que aparece nela.
+NAO devolva o aparelho para a vitrine assim.
+"@
+  }
 
   $recado = if ($loja) {
 @"
