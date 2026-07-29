@@ -34,7 +34,15 @@
          vitrine ficava preta até alguém abrir o app. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- directBootAware no APLICATIVO inteiro, e não num componente solto.
+         O LINKA é a tela inicial obrigatória do aparelho. O Android precisa
+         encontrar uma tela inicial para terminar de iniciar o usuário, e nessa
+         fase ele só enxerga componentes preparados para rodar antes do
+         destravamento. Sem isto não existe tela inicial nenhuma no aparelho
+         (nem a nossa, nem a da Motorola), e o boot não termina nunca.
+         Por isso o Prefs mora no armazenamento protegido por aparelho. -->
     <application
+        android:directBootAware="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -49,17 +57,40 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <!-- HOME e DEFAULT existem por um motivo que custou caro para
+                     descobrir. O provisionamento diz ao Android, via dono do
+                     aparelho, "para a tela inicial use sempre o LINKA"
+                     (Kiosk.addPersistentPreferredActivity). Sem declarar aqui
+                     que esta tela SABE ser tela inicial, o Android fica com uma
+                     ordem apontando para uma tela que não atende, não encontra
+                     substituto, e o log diz exatamente isto:
+
+                        No home screen found for Intent { MAIN + HOME } user 0
+
+                     A partir daí o usuário do sistema nunca termina de iniciar e
+                     o aparelho fica na animação de boot para sempre. Não aparece
+                     no provisionamento porque o launcher antigo ainda está de pé:
+                     só o PRIMEIRO REINÍCIO revela. Dois aparelhos de teste
+                     ficaram inutilizáveis até isto ser encontrado. -->
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
-        <!-- A vitrine volta sozinha depois de qualquer reinício. -->
+        <!-- A vitrine volta sozinha depois de qualquer reinício.
+             SEM directBootAware e SEM LOCKED_BOOT_COMPLETED, e isso não é
+             detalhe: com eles, o receptor roda ANTES de o aparelho destravar,
+             fase em que a memória do app ainda não existe. A leitura falhava, o
+             processo morria — e como o LINKA é a tela inicial deste aparelho, o
+             sistema ficava esperando uma tela que nunca subia. Dois aparelhos de
+             teste ficaram presos na inicialização por minutos.
+             BOOT_COMPLETED sozinho chega depois do destravamento, que é quando
+             a vitrine tem como funcionar de verdade. -->
         <receiver
             android:name=".BootReceiver"
-            android:exported="true"
-            android:directBootAware="true">
-            <intent-filter android:priority="1000">
+            android:exported="true">
+            <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>

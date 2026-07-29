@@ -7,43 +7,61 @@ import android.content.Intent
 /**
  * Sobe a vitrine sozinha quando o aparelho liga.
  *
- * Isto faltava e o buraco era grande. O retorno automático depois de reiniciar
- * vinha só do cargo de DONO DO APARELHO, que marca o LINKA como tela inicial —
- * e a frota da Motorola é justamente a de instalação assistida, sem esse cargo.
- * Resultado: a loja tirava o aparelho da tomada, o Android reiniciava de
- * madrugada, e a vitrine ficava preta até alguém abrir o app à mão. Uma loja
- * inteira podia passar o fim de semana morta sem ninguém saber.
+ * Isto faltava e o buraco era grande: o retorno depois de reiniciar vinha só do
+ * cargo de DONO DO APARELHO, e a frota de instalação assistida não tem esse
+ * cargo. A loja tirava da tomada, o Android reiniciava de madrugada, e a vitrine
+ * ficava preta até alguém abrir o app à mão.
  *
- * Sobe o serviço primeiro e a tela depois: o serviço é quem reporta ao painel,
- * e ele precisa estar de pé mesmo que abrir a tela falhe.
+ * ── O que deu errado na primeira versão ─────────────────────────────────────
+ * Ela ouvia LOCKED_BOOT_COMPLETED e se declarava directBootAware, ou seja,
+ * rodava ANTES de o aparelho destravar. Nessa fase a memória do app ainda não
+ * está montada: ler o token estourava, o processo morria, e como o LINKA é a
+ * TELA INICIAL destes aparelhos, o sistema ficava esperando uma tela que nunca
+ * subia. Dois aparelhos de teste passaram minutos presos na inicialização,
+ * enquanto um aparelho sem o LINKA reiniciou em segundos.
+ *
+ * A lição que fica no código: num aparelho onde somos a tela inicial, qualquer
+ * erro nosso durante o boot não é um app que quebra — é um aparelho que não liga.
+ * Por isso agora tudo aqui é à prova de exceção, sem exceção.
  */
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val acao = intent.action ?: return
-        if (acao != Intent.ACTION_BOOT_COMPLETED &&
-            acao != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
-            acao != "android.intent.action.QUICKBOOT_POWERON"
-        ) {
-            return
-        }
-        // Aparelho que nunca entrou na frota não tem o que exibir: subir a tela
-        // de pareamento sozinha na prateleira só assusta quem passa.
-        if (Prefs.token(context) == null) return
+        // Nada aqui pode escapar. Exceção em receptor de boot derruba o processo
+        // que o sistema está esperando para terminar de ligar o aparelho.
+        try {
+            val acao = intent.action ?: return
+            if (acao != Intent.ACTION_BOOT_COMPLETED &&
+                acao != "android.intent.action.QUICKBOOT_POWERON"
+            ) {
+                return
+            }
+            // Aparelho que nunca entrou na frota não tem o que exibir: subir a
+            // tela de pareamento sozinha na prateleira só assusta quem passa.
+            val token = try {
+                Prefs.token(context)
+            } catch (_: Exception) {
+                null
+            }
+            if (token == null) return
 
-        try {
-            context.startForegroundService(Intent(context, HeartbeatService::class.java))
-        } catch (_: Exception) {
-            // Sem permissão de serviço em segundo plano logo após o boot: o
-            // ciclo normal do app assume quando a tela subir.
-        }
-        try {
-            context.startActivity(
-                Intent(context, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-        } catch (_: Exception) {
-            // Sem permissão de abrir em segundo plano: o provisionamento concede.
+            try {
+                context.startForegroundService(Intent(context, HeartbeatService::class.java))
+            } catch (_: Exception) {
+                // Sem permissão de serviço em segundo plano logo após o boot: o
+                // ciclo normal do app assume quando a tela subir.
+            }
+            try {
+                context.startActivity(
+                    Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            } catch (_: Exception) {
+                // Sem permissão de abrir em segundo plano: o provisionamento concede.
+            }
+        } catch (_: Throwable) {
+            // Ver o comentário do topo: aqui, falhar em silêncio é melhor do que
+            // deixar o aparelho sem ligar.
         }
     }
 }

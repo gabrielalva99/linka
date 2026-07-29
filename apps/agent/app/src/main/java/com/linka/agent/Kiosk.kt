@@ -102,20 +102,37 @@ object Kiosk {
         // Reaplica o bloqueio a cada início: atualização não pode reabrir a porta.
         applyAppBlocks(ctx, Prefs.blockSettings(ctx))
 
-        // Vira a tela inicial: reiniciar o aparelho volta para a vitrine sozinho,
-        // sem depender de watchdog (que o Android 15 quebrou).
-        try {
-            val filter = IntentFilter(android.content.Intent.ACTION_MAIN).apply {
-                addCategory(android.content.Intent.CATEGORY_HOME)
-                addCategory(android.content.Intent.CATEGORY_DEFAULT)
-            }
-            dpm.addPersistentPreferredActivity(
-                admin,
-                filter,
-                ComponentName(ctx, MainActivity::class.java),
-            )
-        } catch (_: Exception) {
-        }
+        // ── Tela inicial obrigatória: DESLIGADO ──────────────────────────────
+        //
+        // Aqui o LINKA se registrava como a tela inicial do aparelho, para a
+        // vitrine voltar sozinha depois de um reinício. Custou dois aparelhos
+        // inutilizados para descobrir o que isso faz de verdade:
+        //
+        // O Android precisa encontrar uma tela inicial para terminar de iniciar
+        // o usuário do sistema. Nessa fase o aparelho ainda está travado e o
+        // sistema só enxerga componentes preparados para rodar antes do
+        // destravamento. Com esta linha, a única tela inicial do aparelho passa
+        // a ser a nossa — e, não sendo encontrada nessa fase, o aparelho fica
+        // SEM tela inicial nenhuma:
+        //
+        //     E WindowManager: No home screen found for Intent
+        //       { MAIN cat=[HOME] } and user 0
+        //
+        // A partir daí ele nunca termina de ligar. Não aparece no
+        // provisionamento, porque o launcher antigo ainda está de pé: só o
+        // primeiro reinício revela, e aí o aparelho já está numa loja.
+        //
+        // A vitrine continua voltando por três caminhos que não podem impedir o
+        // aparelho de ligar: o modo quiosque (lock task), o retorno automático
+        // por inatividade e o BootReceiver. São menos garantidos que ser a tela
+        // inicial — e essa é a troca certa. Vitrine que às vezes precisa de um
+        // empurrão é um problema; aparelho que não liga é um chamado técnico
+        // numa loja a 40 km daqui.
+        //
+        // Para religar isto é preciso, antes, provar num aparelho de verdade
+        // que ele reinicia: o app declarando HOME e directBootAware, com os
+        // dados em armazenamento protegido por aparelho. Está tudo no lugar,
+        // mas não foi validado — e sem validação isto fica desligado.
     }
 
     // ── Bloqueio de apps de sabotagem ────────────────────────────────────────
