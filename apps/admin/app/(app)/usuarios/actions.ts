@@ -79,15 +79,73 @@ export async function inviteUser(
 }
 
 /** Tira o acesso de alguém. O acesso some; o histórico de auditoria fica. */
+const ERROS_REMOCAO: Record<string, string> = {
+  sem_sessao: "Sua sessão expirou. Saia e entre de novo.",
+  sem_permissao: "Você não pode remover pessoas deste cliente.",
+  nao_remova_a_si_mesmo: "Você não pode remover o seu próprio acesso.",
+  nao_remova_superadmin: "Conta do operador da plataforma não é removida por aqui.",
+  pessoa_nao_encontrada: "Essa pessoa não existe mais.",
+  faltam_dados: "Faltou dizer quem remover.",
+};
+
+/**
+ * Remove a pessoa do painel — e a CONTA DE LOGIN junto, quando for o caso.
+ *
+ * Antes esta ação apagava só o vínculo. A conta continuava no banco, então a
+ * pessoa desaparecia da tela e seguia conseguindo entrar, num painel vazio. O
+ * Gabriel achou isso na prática e chamou de "acesso fantasma" — nome certo:
+ * revogação que não revoga o login é revogação pela metade.
+ *
+ * Apagar conta exige a chave de serviço, que não pode viver no código do site;
+ * por isso o trabalho acontece na função remove-user, que confere a permissão de
+ * quem pediu antes de executar.
+ *
+ * O retorno diz QUAL DOS DOIS casos aconteceu, porque a diferença importa para
+ * quem está removendo: a conta sobrevive quando a pessoa também atende outro
+ * cliente.
+ */
 export async function revokeAccess(userId: string, tenantId: string) {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from("memberships")
-    .delete()
-    .eq("user_id", userId)
-    .eq("tenant_id", tenantId);
-  if (error) return { ok: false as const, error: "Não foi possível remover o acesso." };
-  await logAction("remover_acesso", "membership", undefined, { usuario: userId });
-  revalidatePath("/usuarios");
-  return { ok: true as const };
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return { ok: false as const, error: ERROS_REMOCAO.sem_sessao };
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  try {
+    const r = await fetch(`${base}/functions/v1/remove-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+      },
+      body: JSON.stringify({ user_id: userId, tenant_id: tenantId }),
+    });
+    const corpo = (await r.json()) as {
+      ok?: boolean;
+      conta_apagada?: boolean;
+      aviso?: string;
+      error?: string;
+    };
+
+    if (!r.ok || !corpo.ok) {
+      const chave = corpo.error ?? "";
+      return {
+        ok: false as const,
+        error: ERROS_REMOCAO[chave] ?? "Não foi possível remover o acesso.",
+      };
+    }
+
+    revalidatePath("/usuarios");
+    return {
+      ok: true as const,
+      contaApagada: corpo.conta_apagada === true,
+      // Caso honesto: o acesso saiu, mas a conta resistiu por falha nossa.
+      // Melhor dizer do que deixar a pessoa achando que apagou tudo.
+      avisoContaPermanece: corpo.aviso === "acesso_removido_mas_conta_permanece",
+    };
+  } catch {
+    return { ok: false as const, error: "Não foi possível falar com o servidor." };
+  }
 }

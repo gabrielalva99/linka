@@ -23,7 +23,9 @@
     "invalid": "E-mail ou senha inválidos.",
     "required": "Preencha e-mail e senha.",
     "signingIn": "Entrando…",
-    "linkExpired": "Este link de acesso não vale mais. Peça um novo convite a quem te enviou."
+    "linkExpired": "Este link de acesso não vale mais. Peça um novo convite a quem te enviou.",
+    "forgot": "Esqueci minha senha",
+    "backToLogin": "Voltar para entrar"
   },
   "dashboard": {
     "welcome": "Bem-vindo",
@@ -37,10 +39,10 @@
     "title": "Dispositivos",
     "all": "Todos",
     "active": "No ar",
-    "locked": "Protegidos, dos no ar",
+    "locked": "Protegidos (dos que estão no ar)",
     "unlockedWarning": "{n} aparelho(s) sem bloqueio: neles o Wi-Fi pode ser desligado pelo cliente e o app não se atualiza sozinho. Precisam do procedimento por cabo.",
-    "synced": "Com o vídeo certo, dos no ar",
-    "updated": "Atualizados, dos no ar",
+    "synced": "Com o vídeo certo (dos que estão no ar)",
+    "updated": "Atualizados (dos que estão no ar)",
     "charging": "Carregando",
     "empty": "Nenhum aparelho ainda. Eles aparecem quando o agente é instalado e conecta.",
     "colStatus": "Status",
@@ -469,5 +471,27 @@
     "lastDayHint": "O dia de hoje fica de fora: ainda está correndo, e comparado com dias inteiros todo modelo apareceria em queda toda manhã.",
     "profile": "Perfil por hora, por linha",
     "profileHint": "Cada barra é a fatia das visitas daquela linha naquela hora. O traço claro é a mesma fatia na operação inteira: barra acima do traço quer dizer que a linha atrai naquele horário mais do que o resto."
+  },
+  "recover": {
+    "title": "Recuperar acesso",
+    "subtitle": "Vamos te mandar um link por e-mail para você criar uma senha nova.",
+    "email": "E-mail",
+    "submit": "Mandar link",
+    "submitting": "Mandando…",
+    "sent": "Se existe conta com esse e-mail, o link acabou de sair. Confira a caixa de entrada e o spam.",
+    "required": "Digite o seu e-mail.",
+    "failed": "Não conseguimos mandar agora. Tente de novo em alguns minutos."
+  },
+  "newPassword": {
+    "title": "Criar senha nova",
+    "subtitle": "Escolha uma senha de pelo menos 8 caracteres.",
+    "password": "Senha nova",
+    "confirm": "Repita a senha",
+    "submit": "Salvar e entrar",
+    "submitting": "Salvando…",
+    "tooShort": "A senha precisa ter pelo menos 8 caracteres.",
+    "mismatch": "As duas senhas não são iguais.",
+    "noSession": "Este link não vale mais. Peça outro em “Esqueci minha senha”.",
+    "failed": "Não conseguimos salvar a senha. Peça um link novo."
   }
 }

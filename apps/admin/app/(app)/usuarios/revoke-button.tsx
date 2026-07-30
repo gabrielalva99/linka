@@ -20,6 +20,14 @@ export function RevokeButton({
   const [pending, startTransition] = useTransition();
   const [confirmando, setConfirmando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<string | null>(null);
+
+  // Depois de remover, a linha some da lista — então o recado tem que aparecer
+  // ANTES do refresh, e dizer qual dos dois casos aconteceu. "Removido" sozinho
+  // deixava a dúvida que gerou o problema: a conta de login foi embora ou não?
+  if (resultado) {
+    return <span className="text-xs text-muted">{resultado}</span>;
+  }
 
   if (confirmando) {
     return (
@@ -31,8 +39,18 @@ export function RevokeButton({
           onClick={() =>
             startTransition(async () => {
               const r = await revokeAccess(userId, tenantId);
-              if (!r.ok) setErro(r.error);
               setConfirmando(false);
+              if (!r.ok) {
+                setErro(r.error);
+                return;
+              }
+              setResultado(
+                r.avisoContaPermanece
+                  ? "Acesso removido, mas a conta de login continuou no sistema. Avise o suporte."
+                  : r.contaApagada
+                    ? "Removido. A conta de login também foi apagada."
+                    : "Acesso a este cliente removido. A conta continua porque a pessoa acessa outro cliente.",
+              );
               router.refresh();
             })
           }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { getMessages } from "@/lib/i18n";
 import { LinkaLogo } from "../../linka-logo";
 import { login, type LoginState } from "./actions";
@@ -68,6 +69,16 @@ export default function LoginPage() {
             {pending ? t.login.submitting : t.login.submit}
           </button>
         </form>
+
+        {/* Sem este link a tela era um beco: as contas nascem por convite e
+            ninguém definiu senha, então bastava a sessão expirar para a pessoa
+            ficar de fora sem caminho de volta. */}
+        <Link
+          href="/esqueci-senha"
+          className="mt-6 inline-block text-sm text-muted hover:text-fg hover:underline"
+        >
+          {t.login.forgot}
+        </Link>
       </div>
     </main>
   );
