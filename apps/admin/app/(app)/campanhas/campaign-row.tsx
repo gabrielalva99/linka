@@ -62,7 +62,10 @@ export function CampaignActions({
               router.refresh();
             });
           }}
-          className="rounded-md border border-line px-3 py-1.5 text-xs text-muted transition hover:border-danger hover:text-danger"
+          // Excluir vira texto discreto, e não uma caixa igual a "Editar" e
+          // "Pausar". Ação destrutiva com o mesmo peso das reversíveis é convite
+          // ao clique errado — o mesmo defeito que a tela de Clientes tinha.
+          className="ml-1 text-xs text-muted transition hover:text-danger hover:underline"
         >
           {t.campaigns.delete}
         </button>

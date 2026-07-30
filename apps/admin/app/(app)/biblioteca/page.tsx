@@ -28,7 +28,8 @@ function humanSize(bytes: number | null): string {
 export default async function BibliotecaPage() {
   const supabase = await createSupabaseServerClient();
   const filtro = await tenantFilter();
-  const [{ data: mediaData }, { data: deviceData }] = await Promise.all([
+  const [{ data: mediaData }, { data: deviceData }, { data: emCampanha }] =
+    await Promise.all([
     porCliente(
       supabase
         .from("media_assets")
@@ -41,6 +42,23 @@ export default async function BibliotecaPage() {
       supabase.from("devices").select("id, name, content_url"),
       filtro,
     ).not("content_url", "is", null),
+    // E quem está dentro de CAMPANHA.
+    //
+    // Faltava, e a tela mentia por isso: com a campanha "Geral" ativa tocando dois
+    // vídeos, a biblioteca dizia "Sem uso" nos dois. Quem confia nisso clica em
+    // Excluir para limpar a casa e tenta apagar o que está no ar na loja agora. O
+    // banco recusa (a chave estrangeira é RESTRICT), então não vira desastre —
+    // vira um erro sem explicação, que é a outra forma de perder a confiança.
+    //
+    // Conta só campanha ATIVA: peça de campanha pausada não está no ar, e tratar
+    // as duas igual travaria a limpeza de material antigo para sempre.
+    porCliente(
+      supabase
+        .from("campaign_items")
+        .select("media_id, campaigns!inner(name, is_active)")
+        .eq("campaigns.is_active", true),
+      filtro,
+    ),
   ]);
 
   const t = getMessages();
@@ -65,6 +83,20 @@ export default async function BibliotecaPage() {
     ]);
   }
 
+  // Campanhas ativas que usam cada vídeo, por id.
+  const campanhasDoVideo = new Map<string, string[]>();
+  for (const linha of (emCampanha ?? []) as {
+    media_id: string;
+    campaigns: { name: string } | { name: string }[] | null;
+  }[]) {
+    const c = Array.isArray(linha.campaigns) ? linha.campaigns[0] : linha.campaigns;
+    if (!c?.name) continue;
+    const atuais = campanhasDoVideo.get(linha.media_id) ?? [];
+    if (!atuais.includes(c.name)) {
+      campanhasDoVideo.set(linha.media_id, [...atuais, c.name]);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-xl font-semibold">{t.library.title}</h1>
@@ -78,6 +110,7 @@ export default async function BibliotecaPage() {
         <ul className="mt-6 flex flex-col gap-3">
           {media.map((m) => {
             const users = usedBy.get(m.url) ?? [];
+            const campanhas = campanhasDoVideo.get(m.id) ?? [];
             return (
               <li
                 key={m.id}
@@ -90,8 +123,18 @@ export default async function BibliotecaPage() {
                       {humanSize(m.size_bytes)} ·{" "}
                       {data(m.created_at)}
                     </p>
-                    {users.length > 0 ? (
+                    {/* "Sem uso" só quando é verdade nos DOIS caminhos que levam
+                        um vídeo à vitrine: fixado num aparelho e dentro de campanha
+                        ativa. Antes olhava só o primeiro, e um vídeo tocando numa
+                        campanha ativa aparecia como "Sem uso" — convite para apagar
+                        o que está no ar na loja. */}
+                    {campanhas.length > 0 && (
                       <p className="mt-2 text-xs text-success">
+                        Em campanha: {campanhas.join(", ")}
+                      </p>
+                    )}
+                    {users.length > 0 ? (
+                      <p className="mt-1 text-xs text-success">
                         {t.library.inUse}:{" "}
                         {users.map((u, i) => (
                           <span key={u.id}>
@@ -103,7 +146,9 @@ export default async function BibliotecaPage() {
                         ))}
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs text-muted">{t.library.unused}</p>
+                      campanhas.length === 0 && (
+                        <p className="mt-2 text-xs text-muted">{t.library.unused}</p>
+                      )
                     )}
                   </div>
                   {podeOperar && <DeleteButton mediaId={m.id} name={m.name} />}

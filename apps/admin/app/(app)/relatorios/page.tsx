@@ -117,10 +117,26 @@ function tempo(s: number): string {
   return m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
 
+/**
+ * Número decimal em português: VÍRGULA.
+ *
+ * Achado na varredura de 30/07, olhando a tela no navegador: o relatório inteiro
+ * mostrava "0.8/h", "1.2/h", "18.0" — sete números, nenhum com vírgula. É o
+ * relatório que vai para a marca, e ponto decimal em número brasileiro parece
+ * planilha exportada errada. Pior: "1.200" em português é mil e duzentos, então o
+ * formato inglês não é só estranho, é ambíguo.
+ */
+function decimal(valor: number, casas = 1): string {
+  return valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas,
+  });
+}
+
 /** Visitas por hora de vitrine. É o que compara lojas de tamanhos diferentes. */
 function taxa(visitas: number, segundosVitrine: number): string {
   if (segundosVitrine <= 0) return "—";
-  return (visitas / (segundosVitrine / 3600)).toFixed(1);
+  return decimal(visitas / (segundosVitrine / 3600));
 }
 
 /**
@@ -504,9 +520,11 @@ export default async function RelatoriosPage({
               <span>{plural(r.frota.aparelhos, "aparelho ativo", "aparelhos ativos")}</span>
               <span>·</span>
               <span>
+                {/* "1 de 1 lojas" estava errado: o plural acompanha o TOTAL. */}
                 {t.reports.storesWith
                   .replace("{n}", String(r.frota.lojas_com_aparelho))
-                  .replace("{t}", String(r.frota.lojas_total))}
+                  .replace("{t}", String(r.frota.lojas_total))
+                  .replace("{lojas}", r.frota.lojas_total === 1 ? "loja" : "lojas")}
               </span>
               <span>·</span>
               <span>{plural(r.frota.modelos, "modelo", "modelos")}</span>
@@ -628,7 +646,7 @@ export default async function RelatoriosPage({
                         <td className="px-4 py-3 text-muted">{m.lojas}</td>
                         <td className="px-4 py-3">{m.visitas}</td>
                         <td className="px-4 py-3 font-medium text-brand-500">
-                          {m.unidades > 0 ? (m.visitas / m.unidades).toFixed(1) : "—"}
+                          {m.unidades > 0 ? decimal(m.visitas / m.unidades) : "—"}
                         </td>
                         <td className="px-4 py-3 text-muted">
                           {taxa(m.visitas, m.segundos_vitrine)}/h
@@ -954,7 +972,7 @@ export default async function RelatoriosPage({
                 {semana.map((s) => (
                   <div key={s.nome} className="flex flex-1 flex-col items-center gap-1">
                     <span className="text-xs text-brand-500">
-                      {s.media > 0 ? s.media.toFixed(1) : ""}
+                      {s.media > 0 ? decimal(s.media) : ""}
                     </span>
                     {/* Largura fixa, como no gráfico por hora. Barra que estica
                         com o container vira bloco e some a leitura de altura. */}
