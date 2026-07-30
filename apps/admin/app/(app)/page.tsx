@@ -4,6 +4,8 @@ import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
 import { porCliente, tenantFilter } from "@/lib/tenant";
 import { AutoRefresh } from "./auto-refresh";
+import { ResumoDoDia, type ResumoDoDia as TipoResumo } from "./resumo-do-dia";
+import { FUSO_PADRAO, hora } from "@/lib/datas";
 
 type Issue = {
   device_id: string;
@@ -34,7 +36,32 @@ export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
 
   const filtro = await tenantFilter();
-  const [{ data: issuesData, error: issuesError }, { count: totalDevices }] =
+
+  // Janela de hoje e de ontem ATÉ A MESMA HORA. Comparar as 10h de hoje com as
+  // 24h de ontem faria toda manhã parecer um desastre.
+  const agora = new Date();
+  const hojeSP = new Date(
+    agora.toLocaleString("en-US", { timeZone: FUSO_PADRAO }),
+  );
+  const horaCorte = hora(agora);
+  const diaHoje = `${hojeSP.getFullYear()}-${String(hojeSP.getMonth() + 1).padStart(2, "0")}-${String(hojeSP.getDate()).padStart(2, "0")}`;
+  const ontemData = new Date(hojeSP);
+  ontemData.setDate(ontemData.getDate() - 1);
+  const diaOntem = `${ontemData.getFullYear()}-${String(ontemData.getMonth() + 1).padStart(2, "0")}-${String(ontemData.getDate()).padStart(2, "0")}`;
+  const horaLimite = hojeSP.getHours() + 1; // inclui a hora corrente
+
+  const [
+    { data: issuesData, error: issuesError },
+    { count: totalDevices },
+    { data: rollupHoje },
+    { data: rollupOntem },
+    { data: campanhaAtiva },
+    { count: semLoja },
+    { count: sincronizados },
+    { data: pacotesSemClasse },
+    { data: videosDoCliente },
+    { data: videosEmCampanha },
+  ] =
     await Promise.all([
       porCliente(
         supabase
@@ -57,6 +84,52 @@ export default async function DashboardPage() {
           .eq("is_active", true),
         filtro,
       ),
+      // Produção de hoje e de ontem — DO ROLLUP, nunca de device_events cru.
+      // Esta tela se recarrega sozinha; consulta caente aqui roda a cada minuto
+      // por aba aberta. A view antiga levava 49 ms e varria o histórico inteiro.
+      porCliente(
+        supabase
+          .from("rollup_visita_hora")
+          .select("visitas, segundos_vitrine")
+          .gte("hora_local", `${diaHoje}T00:00:00`)
+          .lt("hora_local", `${diaHoje}T${String(horaLimite).padStart(2, "0")}:00:00`),
+        filtro,
+      ),
+      porCliente(
+        supabase
+          .from("rollup_visita_hora")
+          .select("visitas, segundos_vitrine")
+          .gte("hora_local", `${diaOntem}T00:00:00`)
+          .lt("hora_local", `${diaOntem}T${String(horaLimite).padStart(2, "0")}:00:00`),
+        filtro,
+      ),
+      // A publicação chegou? Campanha ativa + quantos aparelhos já baixaram tudo.
+      porCliente(
+        supabase.from("campaigns").select("name").eq("is_active", true).limit(1),
+        filtro,
+      ),
+      porCliente(
+        supabase
+          .from("devices")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .is("store_id", null),
+        filtro,
+      ),
+      porCliente(
+        supabase
+          .from("devices")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .eq("synced", true),
+        filtro,
+      ),
+      // Pacote medido e não classificado: o P0 que a varredura de UX abriu. Vive
+      // aqui porque é pendência que não apita e cobra depois — o número de
+      // "recurso mais usado" fica errado sem ninguém perceber.
+      supabase.rpc("pacotes_sem_classificacao"),
+      porCliente(supabase.from("media_assets").select("id"), filtro),
+      porCliente(supabase.from("campaign_items").select("media_id"), filtro),
     ]);
 
   // Falha de leitura NÃO pode virar "tudo certo". Esta tela existe para avisar
@@ -80,6 +153,47 @@ export default async function DashboardPage() {
   }
 
   const issues = (issuesData ?? []) as Issue[];
+
+  const somar = (
+    linhas: { visitas: number | null; segundos_vitrine: number | null }[] | null,
+  ) =>
+    (linhas ?? []).reduce(
+      (acc, l) => ({
+        visitas: acc.visitas + (l.visitas ?? 0),
+        segundosVitrine: acc.segundosVitrine + Number(l.segundos_vitrine ?? 0),
+      }),
+      { visitas: 0, segundosVitrine: 0 },
+    );
+
+  // Vídeo que não está em nenhuma campanha: comparação de conjuntos, não consulta
+  // extra. É pendência de organização, não alarme.
+  const usados = new Set(
+    ((videosEmCampanha ?? []) as { media_id: string }[]).map((c) => c.media_id),
+  );
+  const videosOrfaos = ((videosDoCliente ?? []) as { id: string }[]).filter(
+    (v) => !usados.has(v.id),
+  ).length;
+
+  const nomeCampanha =
+    ((campanhaAtiva ?? []) as { name: string }[])[0]?.name ?? null;
+
+  const resumo: TipoResumo = {
+    hoje: somar(rollupHoje as never),
+    ontem: somar(rollupOntem as never),
+    horaCorte,
+    campanha: nomeCampanha
+      ? {
+          nome: nomeCampanha,
+          baixaram: sincronizados ?? 0,
+          total: totalDevices ?? 0,
+        }
+      : null,
+    pendencias: {
+      semLoja: semLoja ?? 0,
+      videosOrfaos,
+      pacotesSemClasse: Number(pacotesSemClasse ?? 0),
+    },
+  };
   const criticos = issues.filter((i) => i.gravidade === "critico");
   const atencao = issues.filter((i) => i.gravidade !== "critico");
   const aparelhosComProblema = new Set(issues.map((i) => i.device_id)).size;
@@ -120,6 +234,9 @@ export default async function DashboardPage() {
       {issues.length === 0 ? (
         <div className="mt-6 rounded-xl border border-success/40 bg-success/5 p-6">
           <p className="text-lg font-semibold text-success">{t.home.allWell}</p>
+          {/* Antes esta frase afirmava TRÊS coisas de uma vez — "reportando, com
+              vídeo na tela e travados" — sem checar as três. Agora diz só o que a
+              consulta realmente sabe: não há aviso aberto. */}
           <p className="mt-1 text-sm text-muted">
             {t.home.allWellDetail.replace("{n}", String(total))}
           </p>
@@ -200,7 +317,14 @@ export default async function DashboardPage() {
         </>
       )}
 
-      <AutoRefresh ms={30000} />
+      {/* O resumo aparece SEMPRE — com alarme ou sem. Era a tela mais visitada do
+          painel entregando uma frase e 90% de tela preta nos dias bons. */}
+      <ResumoDoDia resumo={resumo} />
+
+      {/* 60s e não 30s: a tela ganhou consultas. Todas leem o rollup (0,2 ms),
+          mas dobrar o intervalo é de graça — ninguém opera loja em janela de
+          trinta segundos. */}
+      <AutoRefresh ms={60000} />
     </div>
   );
 }

@@ -1,0 +1,169 @@
+import Link from "next/link";
+import { getMessages } from "@/lib/i18n";
+import { decimal } from "@/lib/numeros";
+
+/**
+ * O resumo do dia na tela inicial.
+ *
+ * POR QUE ISTO EXISTE. A tela inicial respondia uma pergunta só — "tem alarme?" —
+ * e, quando não tinha, entregava uma frase e 90% de tela preta. É a tela mais
+ * visitada do painel: o check da manhã, os trinta segundos antes de começar a
+ * trabalhar.
+ *
+ * O BLOCO QUE MAIS IMPORTA é o primeiro: hoje contra ontem no mesmo horário. Ele
+ * pega a falha que NENHUM alarme vê — tudo reportando, tudo verde, e ninguém
+ * interagindo. Aparelho virado para a parede, dentro da gaveta, vitrine com vídeo
+ * que não roda. O alarme de frota não enxerga porque o aparelho está saudável.
+ *
+ * "No mesmo horário" e não "o dia inteiro": comparar as 10h de hoje com as 24h de
+ * ontem faria toda manhã parecer um desastre.
+ *
+ * TUDO AQUI VEM DO ROLLUP, nunca de device_events cru. Esta tela se recarrega
+ * sozinha, então uma consulta caente aqui roda a cada minuto, por aba aberta. A
+ * medição que motivou o rollup: a view antiga levava 49 ms com 1.345 eventos e
+ * varre o histórico inteiro; o rollup responde em 0,2 ms e não piora com o tempo.
+ */
+export type ResumoDoDia = {
+  hoje: { visitas: number; segundosVitrine: number };
+  ontem: { visitas: number; segundosVitrine: number };
+  horaCorte: string;
+  campanha: { nome: string; baixaram: number; total: number } | null;
+  pendencias: { semLoja: number; videosOrfaos: number; pacotesSemClasse: number };
+};
+
+/** "3h12" / "44min" — hora cheia só quando existe. */
+function tempo(segundos: number): string {
+  if (segundos <= 0) return "—";
+  const h = Math.floor(segundos / 3600);
+  const m = Math.round((segundos % 3600) / 60);
+  return h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m}min`;
+}
+
+/** Variação em pontos percentuais, só quando há base para comparar. */
+function variacao(hoje: number, ontem: number): { texto: string; cor: string } | null {
+  if (ontem <= 0) return null;
+  const pct = ((hoje - ontem) / ontem) * 100;
+  if (Math.abs(pct) < 1) return { texto: "igual a ontem", cor: "text-muted" };
+  const sinal = pct > 0 ? "+" : "";
+  return {
+    texto: `${sinal}${decimal(pct, 0)}% que ontem`,
+    cor: pct > 0 ? "text-success" : "text-warning",
+  };
+}
+
+export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
+  const t = getMessages();
+  const { hoje, ontem, horaCorte, campanha, pendencias } = resumo;
+  const temBase = ontem.visitas > 0 || ontem.segundosVitrine > 0;
+  const varVisitas = variacao(hoje.visitas, ontem.visitas);
+
+  const listaPendencias: { texto: string; href: string }[] = [];
+  if (pendencias.semLoja > 0) {
+    listaPendencias.push({
+      texto: (pendencias.semLoja === 1 ? t.home.pendNoStore : t.home.pendNoStoreP).replace(
+        "{n}",
+        String(pendencias.semLoja),
+      ),
+      href: "/frota?loja=sem",
+    });
+  }
+  if (pendencias.videosOrfaos > 0) {
+    listaPendencias.push({
+      texto: (pendencias.videosOrfaos === 1
+        ? t.home.pendOrphanMedia
+        : t.home.pendOrphanMediaP
+      ).replace("{n}", String(pendencias.videosOrfaos)),
+      href: "/biblioteca",
+    });
+  }
+  if (pendencias.pacotesSemClasse > 0) {
+    listaPendencias.push({
+      texto: (pendencias.pacotesSemClasse === 1
+        ? t.home.pendUnclassified
+        : t.home.pendUnclassifiedP
+      ).replace("{n}", String(pendencias.pacotesSemClasse)),
+      href: "/relatorios",
+    });
+  }
+
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      {/* 1. A operação está produzindo? */}
+      <section className="rounded-xl border border-line bg-surface p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-medium">{t.home.producing}</h2>
+          <span className="text-xs text-muted">
+            {t.home.today.replace("{hora}", horaCorte)}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
+          <p className="text-2xl font-semibold">
+            {hoje.visitas}
+            <span className="ml-1.5 text-sm font-normal text-muted">{t.home.visits}</span>
+          </p>
+          <p className="text-2xl font-semibold">
+            {tempo(hoje.segundosVitrine)}
+            <span className="ml-1.5 text-sm font-normal text-muted">
+              {t.home.showcaseTime}
+            </span>
+          </p>
+          {varVisitas && (
+            <span className={`text-xs ${varVisitas.cor}`}>{varVisitas.texto}</span>
+          )}
+        </div>
+
+        {temBase ? (
+          <p className="mt-2 text-xs text-muted">
+            {t.home.yesterday}: {ontem.visitas} {t.home.visits} ·{" "}
+            {tempo(ontem.segundosVitrine)} {t.home.showcaseTime}
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-muted">{t.home.noBaseline}</p>
+        )}
+
+        <p className="mt-3 border-t border-line pt-3 text-xs text-muted">
+          {t.home.producingHint}
+        </p>
+      </section>
+
+      {/* 2. O que está no ar — a publicação chegou nas lojas? */}
+      <section className="rounded-xl border border-line bg-surface p-5">
+        <h2 className="text-sm font-medium">{t.home.onAir}</h2>
+        {campanha ? (
+          <p className="mt-2 text-sm">
+            <Link href="/campanhas" className="font-medium hover:text-primary hover:underline">
+              {campanha.nome}
+            </Link>
+            <span className="text-muted">
+              {" · "}
+              {t.home.onAirDownloaded
+                .replace("{n}", String(campanha.baixaram))
+                .replace("{t}", String(campanha.total))}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted">{t.home.onAirNone}</p>
+        )}
+      </section>
+
+      {/* 3. Pendências que não apitam hoje e cobram depois. */}
+      <section className="rounded-xl border border-line bg-surface p-5">
+        <h2 className="text-sm font-medium">{t.home.pending}</h2>
+        {listaPendencias.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">{t.home.pendingNone}</p>
+        ) : (
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {listaPendencias.map((p) => (
+              <li key={p.href + p.texto}>
+                <Link href={p.href} className="text-sm text-muted hover:text-primary hover:underline">
+                  {p.texto}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
