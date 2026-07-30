@@ -86,6 +86,12 @@ class MainActivity : Activity() {
 
         /** Pedido do serviço para trancar de novo quando o tempo venceu. */
         const val EXTRA_RETRANCAR = "retrancar"
+
+        /** Pulso do relogio de conteudo. Nem toda volta vira pergunta ao servidor. */
+        const val PULSO_MS = 20_000L
+
+        /** Assentado, pergunta a cada 6 voltas de 20s = 2 minutos. */
+        const val VOLTAS_ASSENTADO = 6
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -384,9 +390,54 @@ class MainActivity : Activity() {
         }
         if (contentTimer == null) {
             contentTimer = Timer().also {
-                it.scheduleAtFixedRate(timerTask { checkContent(token) }, 20_000L, 20_000L)
+                it.scheduleAtFixedRate(
+                    timerTask { if (horaDePerguntar()) checkContent(token) },
+                    PULSO_MS, PULSO_MS,
+                )
             }
         }
+    }
+
+    private var voltasDeConteudo = 0
+
+    /**
+     * Decide se ESTA volta do relogio vira uma pergunta ao servidor.
+     *
+     * POR QUE ISTO EXISTE. O agente perguntava a cada 20 segundos, sempre. Sao 3
+     * chamadas por minuto por aparelho, mais 1 do heartbeat: com 250 aparelhos, 43
+     * milhoes de chamadas por mes. E o pior: **o custo crescia com a frota mesmo
+     * quando nada mudava**. Vitrine parada custava igual a vitrine trocando
+     * campanha, porque quem falava era o relogio, nao o fato.
+     *
+     * O RITMO E ADAPTATIVO, e nao um numero fixo maior, porque os dois momentos
+     * sao diferentes:
+     *
+     *   ESPERANDO (sem video na tela, ou campanha ainda baixando) — o aparelho
+     *   esta no meio de alguma coisa e alguem pode estar olhando para ele numa
+     *   loja. Continua perguntando a cada 20s. Deixar um aparelho recem-instalado
+     *   dois minutos em "Carregando conteudo" e o tecnico concluindo que falhou.
+     *
+     *   ASSENTADO (video tocando, campanha inteira no aparelho) — que e 99% do
+     *   tempo. Pergunta a cada 2 minutos. A campanha nova demora no maximo dois
+     *   minutos para entrar na vitrine, e numa loja isso e imperceptivel.
+     *
+     * Contar voltas em vez de reagendar o relogio e proposital: reagendar mexe no
+     * ciclo de vida do Timer, e foi exatamente ai que eu ja errei hoje — o relogio
+     * que nao ligava deixou um aparelho surdo por uma hora.
+     *
+     * ISTO NAO E A SOLUCAO FINAL. A solucao e o servidor AVISAR quando muda (FCM),
+     * com uma coleta lenta como rede de seguranca — ver
+     * docs/COMO-O-APARELHO-FALA-COM-O-SERVIDOR.md. Isto aqui e o corte de 62% que
+     * custa uma constante e nao precisa esperar o push existir.
+     */
+    private fun horaDePerguntar(): Boolean {
+        voltasDeConteudo++
+        val esperando = currentUrl == null || !Prefs.synced(this)
+        if (esperando) {
+            voltasDeConteudo = 0
+            return true
+        }
+        return voltasDeConteudo % VOLTAS_ASSENTADO == 0
     }
 
     // Busca o conteúdo periodicamente; troca o vídeo ou o enquadramento se mudou no painel.
