@@ -1,0 +1,27 @@
+-- LINKA — as duas views de BI voltaram a respeitar o isolamento entre clientes.
+--
+-- FURO CRITICO, achado numa varredura do que EU tinha acabado de escrever, antes
+-- de o Gabriel publicar a versao nova. `create or replace view` NAO preserva
+-- `security_invoker`: ao repontuar v_bi_visits_hourly e v_bi_showcase_hourly para
+-- o rollup (migration 20260730020000), as duas perderam a trava.
+--
+-- Sem security_invoker a view roda com os direitos de QUEM A CRIOU e atravessa o
+-- RLS das tabelas de baixo. Medido com um cliente-alvo real: como agencia do
+-- cliente "Teste", li visitas e vitrine do cliente "ALVO-BI".
+--
+--   visitas do ALVO via v_bi_visits_hourly:    1  ← vazou
+--   vitrine do ALVO via v_bi_showcase_hourly:  1  ← vazou
+--   rollup do ALVO direto na tabela:           0  ← a tabela protegia certo
+--
+-- A tabela estava correta; a VIEW furava a parede. E o relatorio inteiro le
+-- dessas views: a Motorola veria o movimento da Claro. E o pior tipo de
+-- vazamento, porque nao parece um vazamento — parece um relatorio.
+--
+-- Depois da correcao, medido de novo: ataque 0 e 0, e as 14 linhas legitimas do
+-- proprio cliente continuam.
+--
+-- A LICAO, escrita aqui porque vai se repetir: toda vez que uma view for
+-- recriada, o security_invoker precisa ser reafirmado. Nao e opcao esteticaica —
+-- e a diferenca entre isolar e nao isolar.
+alter view public.v_bi_visits_hourly   set (security_invoker = on);
+alter view public.v_bi_showcase_hourly set (security_invoker = on);

@@ -86,6 +86,21 @@ Deno.serve(async (req) => {
   if (!alvo) return json({ error: "pessoa_nao_encontrada" }, 404);
   if (alvo.is_superadmin) return json({ error: "nao_remova_superadmin" }, 403);
 
+  // O ALVO PRECISA TER VÍNCULO COM ESTE CLIENTE. Sem esta checagem havia um furo
+  // real, encontrado revisando o próprio código antes de publicar:
+  //
+  //   1. o delete do vínculo não encontrava nada (zero linhas, sem erro)
+  //   2. a contagem de vínculos restantes dava zero
+  //   3. a função concluía "era o único acesso" e APAGAVA A CONTA
+  //
+  // Resultado medido: uma agência do cliente A apagou a conta de login de alguém
+  // que nunca teve relação com o cliente A. Bastava saber o id da pessoa. Quem
+  // opera uma marca não pode destruir acesso fora da própria casa.
+  const { data: vinculoAlvo } = await admin
+    .from("memberships").select("role")
+    .eq("user_id", alvoId).eq("tenant_id", tenantId).maybeSingle();
+  if (!vinculoAlvo) return json({ error: "sem_vinculo_com_este_cliente" }, 404);
+
   // 1. O vínculo com este cliente sai sempre.
   const { error: errVinculo } = await admin
     .from("memberships").delete()
