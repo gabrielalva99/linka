@@ -391,7 +391,21 @@ class MainActivity : Activity() {
         if (contentTimer == null) {
             contentTimer = Timer().also {
                 it.scheduleAtFixedRate(
-                    timerTask { if (horaDePerguntar()) checkContent(token) },
+                    // LE O TOKEN DO DISCO A CADA VOLTA, e nao o que foi capturado
+                    // quando o relogio ligou.
+                    //
+                    // Achado nos registros do servidor: agent-content recusado (401)
+                    // a cada 20 segundos, sem parar, enquanto o heartbeat do MESMO
+                    // aparelho era aceito. O servico le o token do disco toda vez; a
+                    // tela carregava uma copia do valor no momento em que o relogio
+                    // ligou. Trocado o token (o provisionamento troca a cada entrada),
+                    // a tela ficava chamando com o morto PARA SEMPRE — vitrine
+                    // congelada, sem receber campanha nova, com o painel dizendo que
+                    // o aparelho esta bem porque o heartbeat funciona.
+                    timerTask {
+                        val atual = Prefs.token(this@MainActivity) ?: return@timerTask
+                        if (horaDePerguntar()) checkContent(atual)
+                    },
                     PULSO_MS, PULSO_MS,
                 )
             }
@@ -448,9 +462,24 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 Api.Result(-1, "")
             }
+            // 401 aqui conta junto com o do heartbeat.
+            //
+            // Antes so o heartbeat contava recusa, entao um aparelho cujo token
+            // morreu podia bater 401 no conteudo a cada volta, indefinidamente, sem
+            // nunca acionar a volta ao pareamento.
+            if (result.code == 401) {
+                if (Prefs.contarRecusaDeToken(this@MainActivity) >= 5) {
+                    Prefs.esquecerToken(this@MainActivity)
+                    runOnUiThread { showPairing() }
+                }
+                return@Thread
+            }
             // Sem resposta do servidor não é o mesmo que "sem conteúdo": rede da loja
             // caindo não pode apagar a vitrine. Só resposta válida manda trocar.
             if (result.code !in 200..299) return@Thread
+            if (Prefs.recusasDeToken(this@MainActivity) > 0) {
+                Prefs.limparRecusasDeToken(this@MainActivity)
+            }
 
             var url: String? = null
             var fit = FIT_ZOOM
