@@ -1,5 +1,6 @@
 import { getMessages } from "@/lib/i18n";
 import { ReportToggle } from "./report-toggle";
+import { decimal } from "@/lib/numeros";
 
 /**
  * O que aconteceu com este aparelho na loja hoje.
@@ -157,9 +158,7 @@ export function JourneyPanel({
               {j.segundos_vitrine > 0 && (
                 <dd className="mt-0.5 text-xs text-muted">
                   {t.device.journeyRate}{" "}
-                  {(
-                    (j.visitas / (j.segundos_vitrine / 3600)) || 0
-                  ).toFixed(1)}
+                  {decimal((j.visitas / (j.segundos_vitrine / 3600)) || 0)}
                   /h
                 </dd>
               )}

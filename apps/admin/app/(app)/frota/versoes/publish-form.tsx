@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { publishRelease, type PublishState } from "./actions";
+import { tamanho } from "@/lib/numeros";
 
 const inicial: PublishState = { ok: null };
 const field =
@@ -54,7 +55,7 @@ export function PublishForm() {
       }
       const { data } = supabase.storage.from("releases").getPublicUrl(path);
       setUrl(data.publicUrl);
-      setArquivo(`${file.name} · ${(file.size / 1048576).toFixed(1)} MB`);
+      setArquivo(`${file.name} · ${tamanho(file.size)}`);
     } catch {
       setErro("Não foi possível enviar o arquivo.");
     } finally {

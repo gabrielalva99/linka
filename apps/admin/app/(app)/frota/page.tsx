@@ -169,9 +169,14 @@ export default async function FrotaPage({
   const publicadaAgora = release?.version ?? null;
   const devices = daAba.filter((d) => {
     if (busca) {
+      // Inclui o nome do CATÁLOGO, e não só o do hardware.
+      //
+      // Sem isso, buscar "Razr 60 Ultra" (o nome comercial que a tela de Modelos
+      // mostra) só funcionava por coincidência, quando o texto do hardware era
+      // parecido. É também o que faz o link vindo de Modelos cair na lista certa.
       const alvo = `${d.code ?? ""} ${d.name} ${relName(d.stores)} ${
         d.hardware_model ?? ""
-      }`.toLowerCase();
+      } ${relName(d.device_models)}`.toLowerCase();
       if (!alvo.includes(busca)) return false;
     }
     if (loja === "sem") {

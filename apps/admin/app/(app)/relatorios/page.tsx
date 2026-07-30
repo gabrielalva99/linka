@@ -6,6 +6,7 @@ import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
 import { criarAtalhos } from "./atalhos";
 import { diaMes, hora } from "@/lib/datas";
+import { decimal } from "@/lib/numeros";
 
 type Proibido = {
   loja: string;
@@ -126,13 +127,6 @@ function tempo(s: number): string {
  * planilha exportada errada. Pior: "1.200" em português é mil e duzentos, então o
  * formato inglês não é só estranho, é ambíguo.
  */
-function decimal(valor: number, casas = 1): string {
-  return valor.toLocaleString("pt-BR", {
-    minimumFractionDigits: casas,
-    maximumFractionDigits: casas,
-  });
-}
-
 /** Visitas por hora de vitrine. É o que compara lojas de tamanhos diferentes. */
 function taxa(visitas: number, segundosVitrine: number): string {
   if (segundosVitrine <= 0) return "—";

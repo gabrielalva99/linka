@@ -23,6 +23,7 @@ import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
 import { UpdateRetry } from "./update-retry";
 import { FUSO_PADRAO, dataHora } from "@/lib/datas";
+import { decimal } from "@/lib/numeros";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) =>
@@ -207,7 +208,7 @@ export default async function DeviceDetailPage({
   const health: [string, string][] = [
     [
       t.device.temperature,
-      temp != null ? `${temp.toFixed(1)} °C${temp >= 40 ? " ⚠️" : ""}` : "—",
+      temp != null ? `${decimal(temp)} °C${temp >= 40 ? " ⚠️" : ""}` : "—",
     ],
     [t.device.uptime, humanUptime(d.uptime_seconds)],
     [

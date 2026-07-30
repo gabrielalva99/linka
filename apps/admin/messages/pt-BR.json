@@ -321,7 +321,7 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "confirmDelete": "Excluir este modelo?",
-    "devices": "{n} aparelho(s)"
+    "devices": "{n} {aparelhos}"
   },
   "deviceForm": {
     "new": "Novo dispositivo",

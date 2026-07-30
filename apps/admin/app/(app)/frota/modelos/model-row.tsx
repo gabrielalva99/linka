@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { deleteModel, renameModel } from "./actions";
+import Link from "next/link";
 
 /**
  * Linha do modelo: corrigir o nome e excluir com trava.
@@ -84,9 +85,26 @@ export function ModelRow({
     <tr className="bg-surface">
       <td className="px-4 py-3 font-medium">
         {nome}
-        <span className="ml-2 text-xs text-muted">
-          {t.models.devices.replace("{n}", String(aparelhos))}
-        </span>
+        {/* A contagem leva à lista. Antes era número morto: a tela dizia
+            "Razr 60 Ultra · 2 aparelhos" e não havia como ver QUAIS são os dois —
+            a pessoa ia à frota e filtrava na mão. Modelo sem aparelho não vira
+            link, porque levaria a uma lista vazia. */}
+        {aparelhos > 0 ? (
+          <Link
+            href={`/frota?q=${encodeURIComponent(nome)}`}
+            className="ml-2 text-xs text-muted hover:text-primary hover:underline"
+          >
+            {t.models.devices
+              .replace("{n}", String(aparelhos))
+              .replace("{aparelhos}", aparelhos === 1 ? "aparelho" : "aparelhos")}
+          </Link>
+        ) : (
+          <span className="ml-2 text-xs text-muted">
+            {t.models.devices
+              .replace("{n}", String(aparelhos))
+              .replace("{aparelhos}", "aparelhos")}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3 text-muted">{linha ?? "—"}</td>
       <td className="whitespace-nowrap px-4 py-3 text-right">
@@ -123,7 +141,7 @@ export function ModelRow({
                 setErro(null);
                 setConfirmando(true);
               }}
-              className="ml-2 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-danger hover:text-danger"
+              className="ml-3 text-xs text-muted transition hover:text-danger hover:underline"
             >
               {t.models.delete}
             </button>

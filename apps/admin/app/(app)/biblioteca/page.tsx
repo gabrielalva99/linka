@@ -7,6 +7,7 @@ import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
 import { data } from "@/lib/datas";
+import { tamanho } from "@/lib/numeros";
 
 type MediaRow = {
   id: string;
@@ -17,11 +18,7 @@ type MediaRow = {
   fit_mode: ContentFit;
 };
 
-function humanSize(bytes: number | null): string {
-  if (!bytes) return "—";
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(1)} MB`;
-}
+
 
 
 
@@ -120,7 +117,7 @@ export default async function BibliotecaPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{m.name}</p>
                     <p className="mt-1 text-xs text-muted">
-                      {humanSize(m.size_bytes)} ·{" "}
+                      {tamanho(m.size_bytes)} ·{" "}
                       {data(m.created_at)}
                     </p>
                     {/* "Sem uso" só quando é verdade nos DOIS caminhos que levam
