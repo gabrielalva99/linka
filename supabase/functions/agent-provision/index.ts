@@ -91,6 +91,13 @@ Deno.serve(async (req) => {
   if (!code) return json({ error: "missing_code" }, 400);
 
   const androidId = payload.android_id ? String(payload.android_id) : "";
+  // Identidade que sobrevive à restauração de fábrica. É por ela que um aparelho
+  // restaurado volta para o PRÓPRIO cadastro em vez de criar um segundo.
+  const FONTES_ID = new Set(["esid", "serial", "android_id"]);
+  const stableId = payload.stable_id ? String(payload.stable_id).slice(0, 120) : "";
+  const stableIdSource = FONTES_ID.has(String(payload.stable_id_source))
+    ? String(payload.stable_id_source)
+    : null;
   const hardwareModel = payload.hardware_model ? String(payload.hardware_model) : "";
 
   const supabase = createClient(url, serviceKey);
@@ -168,9 +175,32 @@ Deno.serve(async (req) => {
       storeName = String(store.name);
     }
 
+    // A IDENTIDADE ESTÁVEL VEM PRIMEIRO, e é o conserto do aparelho fantasma.
+    //
+    // O android_id MUDA numa restauração de fábrica. Na loja isso acontece: o
+    // cliente mexe, ninguém consegue destravar, alguém restaura. O aparelho voltava
+    // como número novo, o provisionamento criava um cadastro novo, e o antigo ficava
+    // de fantasma — com a posição, o histórico e a loja dele. Em 250 aparelhos é o
+    // painel dizer 260 e ninguém conseguir apontar qual sobra.
+    //
+    // Procurando pela identidade estável primeiro, o aparelho restaurado cai no
+    // próprio cadastro: mantém código, loja, posição e histórico.
+    if (stableId) {
+      const { data: mesmoFerro } = await supabase
+        .from("devices")
+        .select("id, device_token, tenant_id, model_id, store_id")
+        .eq("tenant_id", tenant.id)
+        .eq("stable_id", stableId)
+        .maybeSingle();
+      if (mesmoFerro) device = mesmoFerro;
+    }
+
     // Reinstalar o app no MESMO aparelho não pode criar um segundo cadastro:
     // o identificador do Android é o que diz que é o mesmo ferro.
-    if (androidId) {
+    //
+    // Continua como segunda tentativa: aparelho que ainda não reportou identidade
+    // estável (agente antigo) precisa de um caminho.
+    if (!device && androidId) {
       const { data: existente } = await supabase
         .from("devices")
         .select("id, device_token, tenant_id, model_id, store_id")
@@ -222,6 +252,10 @@ Deno.serve(async (req) => {
   if (storeId) update.store_id = storeId;
   if (androidId) update.android_id = androidId;
   if (hardwareModel) update.hardware_model = hardwareModel;
+  if (stableId) {
+    update.stable_id = stableId;
+    if (stableIdSource) update.stable_id_source = stableIdSource;
+  }
   if (payload.os_version) update.os_version = String(payload.os_version);
   if (payload.agent_version) update.agent_version = String(payload.agent_version);
   if (payload.platform === "android" || payload.platform === "ios") {

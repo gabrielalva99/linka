@@ -401,4 +401,43 @@ object Prefs {
 
     fun emManutencao(ctx: Context): Boolean =
         System.currentTimeMillis() < manutencaoAte(ctx)
+
+    // ── Token recusado pelo servidor ─────────────────────────────────────────
+    //
+    // O servidor responde 401 quando o token nao vale mais. Isso acontece de
+    // verdade: o provisionamento troca o token a cada entrada (protecao contra
+    // quem tem o codigo de inscricao), entao um aparelho reprovisionado em outro
+    // lugar deixa o antigo com um token morto.
+    //
+    // Antes o agente simplesmente parava: 401 caia no mesmo `return` de "sem
+    // rede" e o aparelho ficava mudo PARA SEMPRE, com a vitrine tocando o ultimo
+    // video e o painel dizendo "fora do ar" sem motivo visivel. Nao havia caminho
+    // de volta sem cabo.
+
+    private const val KEY_RECUSAS = "token_recusado_vezes"
+
+    fun recusasDeToken(ctx: Context): Int =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_RECUSAS, 0)
+
+    fun contarRecusaDeToken(ctx: Context): Int {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val n = p.getInt(KEY_RECUSAS, 0) + 1
+        p.edit().putInt(KEY_RECUSAS, n).apply()
+        return n
+    }
+
+    fun limparRecusasDeToken(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_RECUSAS).apply()
+
+    /**
+     * Esquece o token e volta a ser um aparelho sem frota.
+     *
+     * Nao apaga mais nada de proposito: o aparelho continua dono de si, continua
+     * com o video em cache e continua sabendo o horario da loja. So perde a
+     * credencial — que e justamente o que esta errado.
+     */
+    fun esquecerToken(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_TOKEN).remove(KEY_RECUSAS).apply()
 }

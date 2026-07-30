@@ -150,6 +150,18 @@ Deno.serve(async (req) => {
   if (typeof payload.screen_lock_set === "boolean") {
     update.screen_lock_set = payload.screen_lock_set;
   }
+  // Identidade que sobrevive à restauração de fábrica.
+  //
+  // Chega pelo heartbeat de propósito: os aparelhos que já estão na rua nunca vão
+  // reprovisionar, e é assim que eles aprendem. Sem isto, a proteção contra
+  // aparelho fantasma só valeria para aparelho novo.
+  const FONTES = new Set(["esid", "serial", "android_id"]);
+  if (typeof payload.stable_id === "string" && payload.stable_id.length > 0) {
+    update.stable_id = payload.stable_id.slice(0, 120);
+    if (FONTES.has(String(payload.stable_id_source))) {
+      update.stable_id_source = payload.stable_id_source;
+    }
+  }
 
   // O comando só sai da fila quando o aparelho confirma ter executado.
   const done = payload.command_done ? String(payload.command_done) : null;

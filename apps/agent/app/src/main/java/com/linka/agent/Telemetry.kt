@@ -15,7 +15,22 @@ object Telemetry {
     fun beat(ctx: Context) {
         val token = Prefs.token(ctx) ?: return
         val result = send(ctx, token) ?: return
+
+        // 401 nao e "sem rede": e o servidor dizendo que este token nao vale mais.
+        //
+        // Cinco recusas seguidas (cinco minutos) e o aparelho esquece o token e
+        // volta para o pareamento, onde o kit ou o tecnico resolvem. Cinco, e nao
+        // uma, porque um 401 isolado por um deploy no meio da batida nao pode
+        // custar a credencial de um aparelho que estava bem.
+        if (result.code == 401) {
+            val vezes = Prefs.contarRecusaDeToken(ctx)
+            if (vezes >= 5) Prefs.esquecerToken(ctx)
+            return
+        }
         if (result.code !in 200..299) return
+        // Deu certo: zera o contador, senao recusas espalhadas por semanas
+        // acabariam somando cinco e derrubariam um aparelho saudavel.
+        if (Prefs.recusasDeToken(ctx) > 0) Prefs.limparRecusasDeToken(ctx)
         // Entregue: pode esquecer o relato da faxina.
         Prefs.setPendingCleanupReport(ctx, null)
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.
@@ -112,6 +127,15 @@ object Telemetry {
             // tem que saber antes de o aparelho ir para a prateleira.
             .put("screen_lock_set", Kiosk.screenLockSet(ctx))
             .put("blocked_apps", Kiosk.blockedApps(ctx))
+        // Identidade que sobrevive a restauracao de fabrica, e DE ONDE ela veio.
+        //
+        // Vai no heartbeat, e nao so no provisionamento, porque os aparelhos que ja
+        // estao na rua nunca vao reprovisionar — eles aprendem aqui. Sem isso, a
+        // correcao so valeria para aparelho novo, e o fantasma continuaria possivel
+        // justamente na frota que ja existe.
+        val identidade = Identidade.estavel(ctx)
+        body.put("stable_id", identidade.valor)
+        body.put("stable_id_source", identidade.fonte)
         // "Está atualizado?" não é mais respondido aqui. O aparelho só sabia a
         // versão publicada por um valor em cache, então respondia com atraso e o
         // painel contava errado. Quem compara agora é o servidor, que tem as duas

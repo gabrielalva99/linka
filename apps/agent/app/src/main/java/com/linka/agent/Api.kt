@@ -57,10 +57,21 @@ object Api {
         }
     }
 
-    fun provision(code: String, androidId: String, osVersion: String): Result {
+    fun provision(
+        code: String,
+        androidId: String,
+        osVersion: String,
+        stableId: String = "",
+        stableIdSource: String = "",
+    ): Result {
         val body = JSONObject()
             .put("provisioning_code", code)
             .put("android_id", androidId)
+            // A identidade estavel vai junto: e por ela que o servidor reconhece um
+            // aparelho que voltou de restauracao de fabrica, em vez de criar um
+            // registro novo e deixar o antigo de fantasma na frota.
+            .put("stable_id", stableId)
+            .put("stable_id_source", stableIdSource)
             .put("hardware_model", HARDWARE_MODEL)
             .put("os_version", osVersion)
             .put("agent_version", AGENT_VERSION)

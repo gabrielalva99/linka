@@ -241,7 +241,11 @@ class MainActivity : Activity() {
             button.isEnabled = false
             Thread {
                 val result = try {
-                    Api.provision(code, androidId(), Build.VERSION.RELEASE)
+                    Identidade.estavel(this).let { id ->
+                        Api.provision(
+                            code, androidId(), Build.VERSION.RELEASE, id.valor, id.fonte,
+                        )
+                    }
                 } catch (e: Exception) {
                     Api.Result(-1, e.message ?: "erro de rede")
                 }
@@ -371,6 +375,13 @@ class MainActivity : Activity() {
      */
     private fun ligarRelogioDeConteudo(token: String) {
         checkContent(token)
+        // O servico pode ter esquecido o token no meio do caminho (401 repetido).
+        // Sem isto a tela continuaria pedindo conteudo com credencial morta, e o
+        // aparelho ficaria numa vitrine congelada sem ninguem entender por que.
+        if (Prefs.token(this) == null) {
+            showPairing()
+            return
+        }
         if (contentTimer == null) {
             contentTimer = Timer().also {
                 it.scheduleAtFixedRate(timerTask { checkContent(token) }, 20_000L, 20_000L)
