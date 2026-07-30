@@ -54,8 +54,8 @@ function variacao(hoje: number, ontem: number): { texto: string; cor: string } |
 export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
   const t = getMessages();
   const { hoje, ontem, horaCorte, campanha, pendencias } = resumo;
-  const temBase = ontem.visitas > 0 || ontem.segundosVitrine > 0;
   const varVisitas = variacao(hoje.visitas, ontem.visitas);
+  const varVitrine = variacao(hoje.segundosVitrine, ontem.segundosVitrine);
 
   const listaPendencias: { texto: string; href: string }[] = [];
   if (pendencias.semLoja > 0) {
@@ -97,30 +97,53 @@ export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
           </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
-          <p className="text-2xl font-semibold">
-            {hoje.visitas}
-            <span className="ml-1.5 text-sm font-normal text-muted">{t.home.visits}</span>
-          </p>
-          <p className="text-2xl font-semibold">
-            {tempo(hoje.segundosVitrine)}
-            <span className="ml-1.5 text-sm font-normal text-muted">
-              {t.home.showcaseTime}
-            </span>
-          </p>
-          {varVisitas && (
-            <span className={`text-xs ${varVisitas.cor}`}>{varVisitas.texto}</span>
-          )}
-        </div>
+        {/* UMA variação por número, e não uma solta ao lado dos dois.
+            Na primeira versão desta tela o rótulo "+175% que ontem" ficava depois
+            dos dois valores — e descrevia só as visitas. Naquele mesmo momento a
+            vitrine tinha CAÍDO de 25h55 para 16h20. Quem lesse concluiria que tudo
+            melhorou. Número que engana é pior que número ausente, e aqui o engano
+            era meu. */}
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-2xl font-semibold">
+              {hoje.visitas}
+              <span className="ml-1.5 text-sm font-normal text-muted">
+                {t.home.visits}
+              </span>
+            </p>
+            {varVisitas ? (
+              <p className={`mt-0.5 text-xs ${varVisitas.cor}`}>
+                {varVisitas.texto}
+                <span className="text-muted">
+                  {" · "}
+                  {t.home.yesterday.toLowerCase()}: {ontem.visitas}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-muted">{t.home.noBaseline}</p>
+            )}
+          </div>
 
-        {temBase ? (
-          <p className="mt-2 text-xs text-muted">
-            {t.home.yesterday}: {ontem.visitas} {t.home.visits} ·{" "}
-            {tempo(ontem.segundosVitrine)} {t.home.showcaseTime}
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-muted">{t.home.noBaseline}</p>
-        )}
+          <div>
+            <p className="text-2xl font-semibold">
+              {tempo(hoje.segundosVitrine)}
+              <span className="ml-1.5 text-sm font-normal text-muted">
+                {t.home.showcaseTime}
+              </span>
+            </p>
+            {varVitrine ? (
+              <p className={`mt-0.5 text-xs ${varVitrine.cor}`}>
+                {varVitrine.texto}
+                <span className="text-muted">
+                  {" · "}
+                  {t.home.yesterday.toLowerCase()}: {tempo(ontem.segundosVitrine)}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-muted">{t.home.noBaseline}</p>
+            )}
+          </div>
+        </div>
 
         <p className="mt-3 border-t border-line pt-3 text-xs text-muted">
           {t.home.producingHint}
