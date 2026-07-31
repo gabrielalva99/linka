@@ -135,12 +135,23 @@ export default async function LojasPage() {
                       dentro da ficha, ninguém descobre que dá para corrigir. */}
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     {podeEditar && (
-                      <Link
-                        href={`/lojas/${s.id}/editar`}
-                        className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
-                      >
-                        {t.stores.edit}
-                      </Link>
+                      <span className="flex justify-end gap-2">
+                        {/* Fica ao lado de Editar porque é o que a pessoa vai
+                            procurar no dia da instalação, e procurar numa lista
+                            de 15 lojas é onde ela desiste. */}
+                        <Link
+                          href={`/lojas/${s.id}/instalacao`}
+                          className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+                        >
+                          Instalar aparelho
+                        </Link>
+                        <Link
+                          href={`/lojas/${s.id}/editar`}
+                          className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2"
+                        >
+                          {t.stores.edit}
+                        </Link>
+                      </span>
                     )}
                   </td>
                 </tr>
