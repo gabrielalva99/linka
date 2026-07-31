@@ -170,46 +170,9 @@ where t.vale;
 alter view public.v_device_issues set (security_invoker = on);
 
 -- ---------------------------------------------------------------------------
--- O relatorio para de perguntar ao interruptor e passa a perguntar ao aparelho.
+-- O relatorio (fleet_report) tambem passou a ler a prova, mas a mudanca dele
+-- MUDOU DE ARQUIVO: mora na 20260731130000, que e o ponto de convergencia da
+-- funcao. O bloco cirurgico que vivia aqui escolhia a funcao so pelo nome, e
+-- num rebuild com a copia velha de quatro parametros ainda de pe isso era
+-- sorteio — podia cair na copia errada e parar o rebuild inteiro.
 -- ---------------------------------------------------------------------------
---
--- Trocamos a condicao INTEIRA de `corrigido`. O que estava errado nao era o texto
--- que ela procurava — era ela estar perguntando a quem nao sabe a resposta.
---
--- Aparelho que ainda nao sabe reportar cai na regra antiga (protecao_de_pe
--- devolve nulo, e o coalesce cai para o criterio velho): sem essa saida, todo
--- aviso ficaria "aberto" ate a ultima loja se atualizar — a mesma classe de
--- alarme falso que este arquivo existe para fechar.
---
--- TROCA CIRURGICA, E NAO RECOPIA. O relatorio tem ~170 linhas; recopia-lo para
--- mexer numa e como as duas versoes se separam. Aqui a definicao publicada e
--- lida do proprio banco e so este trecho e substituido — e se ele nao for
--- encontrado exatamente, a migration FALHA em vez de aplicar pela metade. Um
--- replace que nao encontra nada tem sucesso silencioso, que e o pior desfecho:
--- diria "aplicado" e deixaria o relatorio mentindo igual.
-do $migr$
-declare
-  v_def text;
-  v_antigo constant text :=
-    $a$bool_and(d.block_settings and coalesce(d.blocked_apps,'') like '%vending%') as corrigido$a$;
-  v_novo constant text :=
-    $n$bool_and(coalesce(public.protecao_de_pe(d.protecoes), d.block_settings and coalesce(d.blocked_apps,'') like '%vending%')) as corrigido$n$;
-begin
-  select pg_get_functiondef(p.oid) into v_def
-    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname = 'fleet_report';
-
-  if v_def is null then
-    raise exception 'fleet_report nao existe';
-  end if;
-  -- Ja aplicado: sai quieto. Migration que so funciona uma vez e uma armadilha
-  -- para quem for restaurar o banco do zero.
-  if position(v_novo in v_def) > 0 then
-    return;
-  end if;
-  if position(v_antigo in v_def) = 0 then
-    raise exception 'o trecho do corrigido mudou de forma - conferir antes de trocar';
-  end if;
-
-  execute replace(v_def, v_antigo, v_novo);
-end $migr$;

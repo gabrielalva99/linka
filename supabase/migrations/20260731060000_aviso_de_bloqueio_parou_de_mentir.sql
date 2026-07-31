@@ -1,5 +1,12 @@
 -- LINKA — o aviso de "app proibido aberto" para de gritar sem motivo.
 --
+-- AVISO DE DRIFT (varredura de 31/07 a noite): o CREATE abaixo recria uma
+-- fleet_report de QUATRO parametros — uma foto velha; a funcao viva tem cinco
+-- (p_tenant, da migration relatorio_por_cliente). No banco esta mudanca foi
+-- aplicada como troca cirurgica na funcao certa; num rebuild, este arquivo cria
+-- uma copia extra, que a 20260731130000 derruba e converge. Fica registrado
+-- para ninguem "corrigir" copiando daqui.
+--
 -- O SINTOMA. O painel mostrava "Aparelho com Ajustes ou Play Store liberados
 -- agora" para os dois aparelhos, com data de 29/07, sem parar. Medido no aparelho
 -- antes de mexer em qualquer coisa:
