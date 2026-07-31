@@ -39,6 +39,12 @@ const PAPEIS = new Set(["agency", "client", "field"]);
 // pedido e ia inteiro para o gerador de link: um convite legítimo podia
 // carregar a pessoa para fora do painel.
 const DESTINOS = [
+  // Endereço definitivo do painel. O site da marca fica no domínio raiz, na
+  // Hostinger; aqui só entra o que é painel, e é por isso que a raiz NÃO está
+  // nesta lista — link de convite não pode levar para uma página institucional.
+  "https://painel.linkaretail.com.br",
+  // Fica durante a migração e sai quando o domínio novo estiver respondendo.
+  // Tirar antes seria cortar o caminho de quem já tem convite na caixa de entrada.
   "https://linka-admin.vercel.app",
   "http://localhost:3000",
 ];
