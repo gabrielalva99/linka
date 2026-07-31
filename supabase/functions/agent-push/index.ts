@@ -98,21 +98,41 @@ Deno.serve(async (req) => {
     return json({ error: "sem_guarda" }, 401);
   }
 
-  let payload: { device_id?: string; tenant_id?: string };
+  let payload: {
+    device_id?: string;
+    store_id?: string;
+    tenant_id?: string;
+    motivo?: string;
+  };
   try {
     payload = await req.json();
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
 
-  // Um aparelho, ou a frota de um cliente. Aparelho sem endereço no FCM é pulado
-  // em silêncio: ele continua sendo atendido pelo heartbeat.
+  // Um aparelho, os de uma loja, ou a frota de um cliente. Aparelho sem endereço
+  // no FCM é pulado em silêncio: ele continua sendo atendido pelo heartbeat.
+  //
+  // A loja entrou junto com o push de conteúdo: mudar o horário de funcionamento
+  // muda o que TODOS os aparelhos daquela loja fazem (acordar a tela, dormir), e
+  // acordar o cliente inteiro por causa de uma loja é chamada jogada fora nas
+  // outras catorze.
   let q = supabase.from("devices").select("id, push_token").not("push_token", "is", null);
   if (payload.device_id) q = q.eq("id", payload.device_id);
+  else if (payload.store_id) q = q.eq("store_id", payload.store_id).eq("is_active", true);
   else if (payload.tenant_id) q = q.eq("tenant_id", payload.tenant_id).eq("is_active", true);
   else return json({ error: "sem_alvo" }, 400);
+  // O motivo não muda nada do que é enviado — ele existe para o registro. Sem
+  // ele, "comando" e "conteúdo" ficam indistinguíveis na hora de conferir se o
+  // gatilho novo está mesmo disparando, e a única alternativa seria adivinhar
+  // pelo horário.
+  const motivo = String(payload.motivo ?? "?").slice(0, 40);
+
   const { data: alvos } = await q;
-  if (!alvos || alvos.length === 0) return json({ ok: true, enviados: 0 });
+  if (!alvos || alvos.length === 0) {
+    console.log(`push ${motivo}: nenhum aparelho com endereço`);
+    return json({ ok: true, enviados: 0 });
+  }
 
   const { data: contaJson } = await supabase.rpc("ler_segredo", {
     p_nome: "fcm_service_account",
@@ -163,5 +183,8 @@ Deno.serve(async (req) => {
       .in("id", mortos);
   }
 
+  console.log(
+    `push ${motivo}: ${enviados}/${alvos.length} enviados, ${mortos.length} endereços limpos`,
+  );
   return json({ ok: true, enviados, limpos: mortos.length });
 });

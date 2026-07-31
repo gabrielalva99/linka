@@ -1,5 +1,8 @@
 package com.linka.agent
 
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -35,6 +38,62 @@ class PushService : FirebaseMessagingService() {
         if (message.data["acao"] != "falar_agora") return
         // Uma batida imediata resolve tudo: ela ja traz o comando pendente e o
         // aviso de conteudo novo. Nenhuma logica nova precisa existir aqui.
-        Telemetry.beatAsync(this)
+        falarAgora(this)
+    }
+
+    companion object {
+        /**
+         * Dois avisos colados viram uma conversa so.
+         *
+         * POR QUE. O FCM entrega "pelo menos uma vez" — mensagem repetida e
+         * comportamento normal dele, nao defeito. E do lado do servidor uma unica
+         * acao pode virar varios avisos: salvar campanha mexe na campanha, nos
+         * videos e no alvo. O banco ja junta os avisos de uma mesma gravacao, mas
+         * ele so enxerga o que passa por ele — repeticao do FCM e aviso vindo de
+         * duas gravacoes seguidas escapam.
+         *
+         * COMO. Aviso que chega logo depois de uma conversa nao e jogado fora: ele
+         * marca uma conversa para daqui a pouco. Nada se perde, e uma rajada vira
+         * duas conversas em vez de dez.
+         *
+         * O ATRASO NAO CUSTA NADA NA PRATICA. Comando avulso chega sozinho, entao
+         * cai no caminho imediato. So a rajada espera — e rajada e sempre alguem
+         * mexendo no painel, nao alguem parado na loja esperando a tela virar.
+         */
+        private const val JANELA_MS = 5_000L
+
+        private val relogio = Handler(Looper.getMainLooper())
+        private val trava = Any()
+
+        /** Nulo = ainda nao houve nenhuma; o primeiro aviso passa direto. */
+        private var ultimaConversa: Long? = null
+        private var jaMarcada = false
+
+        fun falarAgora(service: PushService) {
+            // O contexto da aplicacao, e nao o do servico: o Android encerra o
+            // servico assim que esta funcao retorna, e daqui a cinco segundos ele
+            // ja nao existe mais.
+            val app = service.applicationContext
+            val espera: Long
+            synchronized(trava) {
+                val agora = SystemClock.elapsedRealtime()
+                val ultima = ultimaConversa
+                if (ultima == null || agora - ultima >= JANELA_MS) {
+                    ultimaConversa = agora
+                    Telemetry.beatAsync(app)
+                    return
+                }
+                if (jaMarcada) return
+                jaMarcada = true
+                espera = JANELA_MS - (agora - ultima)
+            }
+            relogio.postDelayed({
+                synchronized(trava) {
+                    jaMarcada = false
+                    ultimaConversa = SystemClock.elapsedRealtime()
+                }
+                Telemetry.beatAsync(app)
+            }, espera)
+        }
     }
 }

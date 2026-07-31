@@ -1,7 +1,32 @@
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type ActiveTenant = { id: string; name: string; slug: string };
+export type ActiveTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  /** Sem contato por mais que isto, o aparelho é dado como fora do ar. */
+  toleranciaSemContatoMs: number;
+};
+
+/**
+ * Quanto tempo de silêncio significa "fora do ar".
+ *
+ * NÃO É UM NÚMERO ESCOLHIDO AQUI. Vem do banco, calculado a partir do ritmo com
+ * que o aparelho avisa que está vivo — três avisos perdidos. Isso importa porque
+ * o ritmo é ajustável: espaçá-lo com um "3 minutos" escrito na tela pintaria a
+ * frota inteira de vermelho.
+ *
+ * Existia em três lugares, com dois valores diferentes: 3 minutos na lista de
+ * aparelhos, 3 minutos de novo escritos à mão na tela da loja, e 5 minutos na
+ * lista de pendências. Duas telas do mesmo painel discordando sobre quem está no
+ * ar é pior do que as duas erradas — nenhuma das duas merece confiança.
+ */
+const TOLERANCIA_PADRAO_MS = 3 * 60 * 1000;
+
+export function toleranciaSemContatoMs(tenant: ActiveTenant | null): number {
+  return tenant?.toleranciaSemContatoMs ?? TOLERANCIA_PADRAO_MS;
+}
 
 /** Cookie que guarda o cliente escolhido por quem opera a plataforma. */
 export const TENANT_COOKIE = "linka_tenant";
@@ -25,10 +50,16 @@ export async function listTenants(): Promise<ActiveTenant[]> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("tenants")
-    .select("id, name, slug")
+    .select("id, name, slug, tolerancia_sem_contato_segundos")
     .eq("is_active", true)
     .order("name");
-  return (data ?? []) as ActiveTenant[];
+  return (data ?? []).map((t) => ({
+    id: t.id as string,
+    name: t.name as string,
+    slug: t.slug as string,
+    toleranciaSemContatoMs:
+      Number(t.tolerancia_sem_contato_segundos ?? 180) * 1000,
+  }));
 }
 
 /**

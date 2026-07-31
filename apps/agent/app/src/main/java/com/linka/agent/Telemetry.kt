@@ -3,6 +3,7 @@ package com.linka.agent
 import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
+import android.os.SystemClock
 import org.json.JSONObject
 
 /**
@@ -11,6 +12,46 @@ import org.json.JSONObject
  * (que no Android é caro em bateria).
  */
 object Telemetry {
+
+    /**
+     * Quando o aparelho falou com o servidor pela ultima vez, por qualquer
+     * motivo. Vale para o processo — reiniciou, fala de novo na hora, que e o
+     * comportamento certo depois de um susto.
+     *
+     * NULO, e nao zero. O relogio do Android conta desde que o aparelho ligou,
+     * entao logo apos um reinicio ele vale poucos segundos — e "poucos segundos
+     * menos zero" da menos que o intervalo, o que faria a PRIMEIRA batida depois
+     * do reinicio ser pulada. Com 5 minutos de intervalo, um aparelho que acabou
+     * de voltar ficaria mudo por cinco minutos, aparecendo como fora do ar
+     * justamente na hora em que alguem esta olhando para ele.
+     */
+    private var ultimaConversa: Long? = null
+
+    /**
+     * A batida do relogio, que so acontece se ninguem falou antes.
+     *
+     * POR QUE ELA MUDOU. Enquanto a batida era o caminho de tudo — comando,
+     * conteudo, "estou aqui" — ela nao podia ficar lenta: reiniciar a vitrine
+     * levar cinco minutos com gente esperando na loja e inaceitavel. Com o push
+     * entregando comando e conteudo em segundos, sobrou para ela um papel so:
+     * "esta loja esta no ar?". Esse aguenta ser lento, e e ele que responde por
+     * quase toda a conta de chamadas da frota.
+     *
+     * QUALQUER conversa conta, e nao so esta. Um push acabou de chegar, o video
+     * trocou, a faxina reportou: o servidor ja sabe que este aparelho esta vivo, e
+     * repetir a informacao 20 segundos depois e chamada jogada fora. Por isso o
+     * relogio zera em `send`, e nao aqui.
+     *
+     * O RITMO VEM DO PAINEL. Sem isso, descobrir que 5 minutos e demais custaria
+     * uma versao nova e uma volta na frota inteira. A cadencia real e multipla de
+     * 60s, que e o passo do relogio do servico — 300s da exatamente 5 minutos.
+     */
+    fun batidaPeriodica(ctx: Context) {
+        val ultima = ultimaConversa
+        val intervalo = Prefs.heartbeatSeconds(ctx) * 1000L
+        if (ultima != null && SystemClock.elapsedRealtime() - ultima < intervalo) return
+        beat(ctx)
+    }
 
     fun beat(ctx: Context) {
         val token = Prefs.token(ctx) ?: return
@@ -114,6 +155,11 @@ object Telemetry {
         commandDone: String? = null,
         commandResult: String? = null,
     ): Api.Result? {
+        // O relogio da batida periodica zera AQUI, e nao no fim: assim toda
+        // conversa conta, inclusive as que nasceram de um push ou de uma troca de
+        // video. Marcar na tentativa, e nao no sucesso, tambem evita o aparelho
+        // insistir sem parar quando a rede da loja cai.
+        ultimaConversa = SystemClock.elapsedRealtime()
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val body = JSONObject()
             .put("status", "online")

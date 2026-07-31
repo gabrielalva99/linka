@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
+import { getActiveTenant, toleranciaSemContatoMs } from "@/lib/tenant";
 import { PositionForm } from "./position-form";
 import { PositionRow } from "./position-row";
 
@@ -57,6 +58,10 @@ export default async function StoreDetailPage({
     .order("code", { ascending: true });
 
   const t = getMessages();
+  // Mesma régua da lista de aparelhos e da lista de pendências. Aqui já esteve
+  // escrito "3 minutos" na mão, e duas telas do mesmo painel discordando sobre
+  // quem está no ar é pior do que as duas erradas.
+  const toleranciaMs = toleranciaSemContatoMs(await getActiveTenant());
   const rel = store.retail_chains;
   const chainName = (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
   const kindLabel =
@@ -105,7 +110,7 @@ export default async function StoreDetailPage({
                   const visto = a.last_seen_at
                     ? Date.now() - new Date(a.last_seen_at as string).getTime()
                     : null;
-                  const fora = visto == null || visto > 3 * 60 * 1000;
+                  const fora = visto == null || visto > toleranciaMs;
                   const pos = Array.isArray(a.positions)
                     ? a.positions[0]?.label
                     : (a.positions as { label: string | null } | null)?.label;

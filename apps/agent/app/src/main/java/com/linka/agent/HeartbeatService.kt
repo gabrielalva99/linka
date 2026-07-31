@@ -12,7 +12,19 @@ import android.os.IBinder
 import java.util.Timer
 import kotlin.concurrent.timerTask
 
-/** Serviço em primeiro plano que reporta o heartbeat a cada 60s. */
+/**
+ * Serviço em primeiro plano que mantém a vitrine de pé.
+ *
+ * O RELÓGIO CONTINUA EM 60s, E A BATIDA NÃO. São coisas diferentes que antes
+ * andavam juntas: o relógio cuida do que é LOCAL e não custa chamada nenhuma
+ * (hora da faxina, leitura de uso do aparelho, permissões), e a batida é o
+ * "estou aqui" que vai ao servidor.
+ *
+ * Espaçar o relógio inteiro para economizar chamadas sairia caro do jeito errado:
+ * a faxina das 23h passaria a poder rodar às 23h05, e o uso do aparelho seria
+ * lido de cinco em cinco minutos. Quem espaça é só a batida, e quem decide o
+ * ritmo dela é o painel.
+ */
 class HeartbeatService : Service() {
 
     private var timer: Timer? = null
@@ -27,7 +39,7 @@ class HeartbeatService : Service() {
             timer = Timer().also {
                 it.scheduleAtFixedRate(
                     timerTask {
-                        Telemetry.beat(this@HeartbeatService)
+                        Telemetry.batidaPeriodica(this@HeartbeatService)
                         checkCleanup()
                         coletarEEnviarEventos()
                         reforcarPermissoes()

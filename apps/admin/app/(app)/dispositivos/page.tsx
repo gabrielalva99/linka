@@ -11,7 +11,12 @@ import {
 import { modelLabel } from "@/lib/device-display";
 import { getSessionContext } from "@/lib/auth";
 import { podeOperar, ehOperadorDaPlataforma } from "@/lib/perms";
-import { getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
+import {
+  getActiveTenant,
+  porCliente,
+  tenantFilter,
+  toleranciaSemContatoMs,
+} from "@/lib/tenant";
 import { TypeTabs } from "./type-tabs";
 import { Filters } from "./filters";
 import { FleetTable } from "./fleet-table";
@@ -39,13 +44,19 @@ type DeviceRow = {
 const relName = (rel: Rel) =>
   (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
 
-// Um aparelho que parou de reportar não envia "offline" — ele só some. Então o status
-// honesto é derivado do último contato: sem sinal há > 3 min = fora do ar.
-const STALE_MS = 3 * 60 * 1000;
-function effectiveStatus(status: DeviceStatus, lastSeen: string | null): DeviceStatus {
+// Um aparelho que parou de reportar não envia "offline" — ele só some. Então o
+// status honesto é derivado do último contato. Quanto tempo de silêncio conta
+// como fora do ar não é decidido aqui: vem do ritmo configurado (ver
+// toleranciaSemContatoMs), porque esse ritmo é ajustável e um número escrito
+// nesta tela ficaria para trás sozinho.
+function effectiveStatus(
+  status: DeviceStatus,
+  lastSeen: string | null,
+  toleranciaMs: number,
+): DeviceStatus {
   if (!lastSeen) return status;
   const age = Date.now() - new Date(lastSeen).getTime();
-  if (age > STALE_MS) return "offline";
+  if (age > toleranciaMs) return "offline";
   return status;
 }
 
@@ -113,6 +124,7 @@ export default async function FrotaPage({
   // aparelhos entrariam na frota de outro cliente.
   const cliente = await getActiveTenant();
   const filtro = await tenantFilter();
+  const toleranciaMs = toleranciaSemContatoMs(cliente);
   const { data: tenant } = cliente
     ? await supabase
         .from("tenants")
@@ -186,7 +198,7 @@ export default async function FrotaPage({
     }
     // "arquivados" já foi resolvido na consulta; aqui ele não filtra mais nada.
     if (situacao && situacao !== "arquivados") {
-      const fora = effectiveStatus(d.status, d.last_seen_at) !== "online";
+      const fora = effectiveStatus(d.status, d.last_seen_at, toleranciaMs) !== "online";
       if (situacao === "offline" && !fora) return false;
       if (situacao === "sem_travas" && d.kiosk_locked) return false;
       if (
@@ -216,7 +228,7 @@ export default async function FrotaPage({
   // estado conhecido, e último estado conhecido de um aparelho sumido é
   // exatamente o que não se deve exibir como fato.
   const noAr = daAba.filter(
-    (d) => effectiveStatus(d.status, d.last_seen_at) === "online",
+    (d) => effectiveStatus(d.status, d.last_seen_at, toleranciaMs) === "online",
   );
   const online = noAr.length;
   const synced = noAr.filter((d) => d.synced).length;
@@ -336,7 +348,7 @@ export default async function FrotaPage({
         <FleetTable
           linhas={devices.map((d) => ({
             id: d.id,
-            status: effectiveStatus(d.status, d.last_seen_at),
+            status: effectiveStatus(d.status, d.last_seen_at, toleranciaMs),
             codigo: d.code ?? "—",
             nome: d.name,
             modelo: modelLabel(

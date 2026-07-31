@@ -21,7 +21,7 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // função chamadora (ela já faz esse SELECT por outros motivos), então a lista
 // mora aqui para as duas pedirem a mesma coisa.
 export const CAMPOS_DO_APARELHO =
-  "id, tenant_id, content_fit, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)";
+  "id, tenant_id, content_fit, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at), tenants(heartbeat_seconds)";
 
 export type AparelhoParaConteudo = {
   id: string;
@@ -33,6 +33,10 @@ export type AparelhoParaConteudo = {
   cleanup_time: string | null;
   block_settings: boolean | null;
   stores: { opens_at: string; closes_at: string } | { opens_at: string; closes_at: string }[] | null;
+  tenants:
+    | { heartbeat_seconds: number }
+    | { heartbeat_seconds: number }[]
+    | null;
 };
 
 export async function montarConteudo(
@@ -150,6 +154,21 @@ export async function montarConteudo(
     prefetch,
     playlist,
     rotation_seconds: rotationSeconds,
+    // DE QUANTO EM QUANTO TEMPO O APARELHO DIZ "ESTOU AQUI".
+    //
+    // Vem daqui, e não escrito no aplicativo, porque agora é ajustável: com o
+    // push cobrindo comando e conteúdo, a batida ficou responsável só pelo "esta
+    // loja está no ar?" — e esse papel aguenta ser lento. Se o número morasse no
+    // APK, descobrir que 5 minutos é demais custaria uma versão nova e uma volta
+    // na frota inteira.
+    //
+    // Está no hash de propósito: mudar o ritmo avisa os aparelhos na hora, pelo
+    // mesmo caminho da campanha, em vez de valer só para quem for provisionado
+    // depois.
+    heartbeat_seconds: Number(
+      (Array.isArray(device.tenants) ? device.tenants[0] : device.tenants)
+        ?.heartbeat_seconds ?? 60,
+    ),
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
     idle_return_seconds: device.idle_return_seconds ?? 30,
     volume_percent: device.volume_percent ?? 0,

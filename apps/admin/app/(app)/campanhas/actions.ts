@@ -16,7 +16,12 @@ const emptyToNull = (v: FormDataEntryValue | null) => {
 type Item = { mediaId: string; fitMode: string | null };
 
 type Parsed = {
-  fields: Record<string, unknown>;
+  name: string;
+  startsOn: string | null;
+  endsOn: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  rotationSeconds: number;
   items: Item[];
   scope: string;
   targetId: string | null;
@@ -37,36 +42,52 @@ function parse(formData: FormData): Parsed | null {
 
   const minutes = Number(formData.get("rotation_minutes") ?? 20);
   return {
-    fields: {
-      name,
-      starts_on: emptyToNull(formData.get("starts_on")),
-      ends_on: emptyToNull(formData.get("ends_on")),
-      start_time: emptyToNull(formData.get("start_time")),
-      end_time: emptyToNull(formData.get("end_time")),
-      rotation_seconds:
-        Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : 1200,
-    },
+    name,
+    startsOn: emptyToNull(formData.get("starts_on")),
+    endsOn: emptyToNull(formData.get("ends_on")),
+    startTime: emptyToNull(formData.get("start_time")),
+    endTime: emptyToNull(formData.get("end_time")),
+    rotationSeconds:
+      Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : 1200,
     items,
     scope: String(formData.get("scope") ?? "tenant"),
     targetId: emptyToNull(formData.get("target_id")),
   };
 }
 
-function targetRow(
+/**
+ * Salvar é uma escrita só, no banco.
+ *
+ * Eram cinco — campanha, apagar vídeos, apagar alvo, gravar vídeos, gravar alvo —
+ * e cada uma valia na hora. Entre apagar e regravar os vídeos a campanha ficava
+ * sem nenhum, e o aparelho que perguntasse nesse instante recebia lista vazia e
+ * apagava a vitrine na loja. Aqui as cinco acontecem juntas ou nenhuma acontece:
+ * quem lê vê a campanha inteira antiga ou a inteira nova, nunca o meio.
+ */
+async function salvar(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
-  campaignId: string,
-  scope: string,
-  targetId: string | null,
+  campaignId: string | null,
+  parsed: Parsed,
 ) {
-  const row: Record<string, unknown> = {
-    tenant_id: tenantId,
-    campaign_id: campaignId,
-    scope,
-  };
-  if (scope === "chain") row.chain_id = targetId;
-  if (scope === "store") row.store_id = targetId;
-  if (scope === "device") row.device_id = targetId;
-  return row;
+  return supabase.rpc("salvar_campanha", {
+    p_campaign_id: campaignId,
+    p_tenant_id: tenantId,
+    p_nome: parsed.name,
+    p_starts_on: parsed.startsOn,
+    p_ends_on: parsed.endsOn,
+    p_start_time: parsed.startTime,
+    p_end_time: parsed.endTime,
+    p_rotation: parsed.rotationSeconds,
+    p_itens: parsed.items.map((item) => ({
+      media_id: item.mediaId,
+      fit_mode: item.fitMode,
+    })),
+    p_scope: parsed.scope,
+    p_chain_id: parsed.scope === "chain" ? parsed.targetId : null,
+    p_store_id: parsed.scope === "store" ? parsed.targetId : null,
+    p_device_id: parsed.scope === "device" ? parsed.targetId : null,
+  });
 }
 
 export async function createCampaign(
@@ -81,31 +102,9 @@ export async function createCampaign(
   if (!tenant) return { status: "error" };
 
   const supabase = await createSupabaseServerClient();
-  const { data: campaign, error } = await supabase
-    .from("campaigns")
-    .insert({ tenant_id: tenant.id, ...parsed.fields })
-    .select("id")
-    .single();
-  if (error || !campaign) return { status: "error" };
-
-  const { error: itemsError } = await supabase.from("campaign_items").insert(
-    parsed.items.map((item, i) => ({
-      tenant_id: tenant.id,
-      campaign_id: campaign.id,
-      media_id: item.mediaId,
-      fit_mode: item.fitMode,
-      position: i + 1,
-    })),
-  );
-  const { error: targetError } = await supabase
-    .from("campaign_targets")
-    .insert(targetRow(tenant.id, campaign.id, parsed.scope, parsed.targetId));
-
-  if (itemsError || targetError) {
-    // Campanha pela metade é pior que campanha nenhuma.
-    await supabase.from("campaigns").delete().eq("id", campaign.id);
-    return { status: "error" };
-  }
+  // Campanha pela metade deixou de ser possível: ou entra inteira, ou não entra.
+  const { error } = await salvar(supabase, tenant.id, null, parsed);
+  if (error) return { status: "error" };
 
   revalidatePath("/campanhas");
   redirect("/campanhas");
@@ -124,26 +123,10 @@ export async function updateCampaign(
   if (!tenant) return { status: "error" };
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("campaigns").update(parsed.fields).eq("id", id);
+  // Lista e alvo continuam sendo reescritos por inteiro — mas agora junto com a
+  // campanha, numa transação só, para nenhum aparelho pegar a campanha vazia.
+  const { error } = await salvar(supabase, tenant.id, id, parsed);
   if (error) return { status: "error" };
-
-  // Lista e alvo são reescritos: mais simples e sem estado intermediário estranho.
-  await supabase.from("campaign_items").delete().eq("campaign_id", id);
-  await supabase.from("campaign_targets").delete().eq("campaign_id", id);
-
-  const { error: itemsError } = await supabase.from("campaign_items").insert(
-    parsed.items.map((item, i) => ({
-      tenant_id: tenant.id,
-      campaign_id: id,
-      media_id: item.mediaId,
-      fit_mode: item.fitMode,
-      position: i + 1,
-    })),
-  );
-  const { error: targetError } = await supabase
-    .from("campaign_targets")
-    .insert(targetRow(tenant.id, id, parsed.scope, parsed.targetId));
-  if (itemsError || targetError) return { status: "error" };
 
   revalidatePath("/campanhas");
   redirect("/campanhas");

@@ -238,6 +238,26 @@ object Prefs {
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putInt(KEY_IDLE_RETURN, value).apply()
 
+    private const val KEY_BATIDA = "heartbeat_seconds"
+
+    /**
+     * De quantos em quantos segundos o aparelho diz "estou aqui".
+     *
+     * VEM DO PAINEL, e o padrao e 60 — o mesmo ritmo de sempre, para um aparelho
+     * que ainda nao conversou com o servidor nao inventar cadencia propria.
+     *
+     * A folga de 30 a 900 nao e enfeite: e uma resposta corrompida, ou um campo
+     * que um dia venha zerado, transformando a frota inteira num aparelho que
+     * fala sem parar (conta estourada) ou que some por horas (frota cega). O
+     * limite mora nos dois lados de proposito.
+     */
+    fun heartbeatSeconds(ctx: Context): Int =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_BATIDA, 60)
+
+    fun setHeartbeatSeconds(ctx: Context, value: Int) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_BATIDA, value.coerceIn(30, 900)).apply()
+
     private const val KEY_SYNCED = "synced"
     private const val KEY_REVISAO = "revisao_aplicada"
     private const val KEY_PUSH = "push_token"

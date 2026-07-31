@@ -652,6 +652,12 @@ const val PASSADAS_DA_NUVEM = 3
                 if (!body.isNull("volume_percent")) {
                     Prefs.setVolumePercent(this@MainActivity, body.optInt("volume_percent", 0))
                 }
+                // Ritmo da batida. Como o urgente (comando, conteudo) chega por
+                // push, este numero decide so a frequencia do "estou aqui" — e e
+                // ele que responde por quase toda a conta de chamadas da frota.
+                body.optInt("heartbeat_seconds", 0).takeIf { it > 0 }?.let {
+                    Prefs.setHeartbeatSeconds(this@MainActivity, it)
+                }
                 // Expediente da loja: manda a decisão de acender a tela.
                 if (!body.isNull("store_opens_at") && !body.isNull("store_closes_at")) {
                     Prefs.setStoreHours(
