@@ -106,5 +106,20 @@ $function$;
 comment on function public.salvar_campanha is
   'Salva campanha, videos e alvo numa transacao so. Separado, o intervalo entre apagar e regravar os videos deixava a vitrine sem nada para exibir. Ver migration 20260731080000.';
 
+-- QUEM PROTEGE AQUI E O RLS, e nao estas duas linhas.
+--
+-- O Supabase concede EXECUTE em funcao publica para `anon` por padrao, e essa
+-- concessao e explicita — o revoke abaixo tira do PUBLIC e nao encosta nela.
+-- Ou seja: um anonimo CONSEGUE chamar esta funcao. Nao ha problema nisso, e vale
+-- entender por que, para ninguem "consertar" errado depois: sem `security
+-- definer`, ela roda como quem chamou, e as politicas de campaigns,
+-- campaign_items e campaign_targets exigem has_tenant_role(..., 'agency'). Um
+-- anonimo nao satisfaz isso e para no primeiro INSERT.
+--
+-- E a mesma divisao do resto do projeto, conferida funcao a funcao: TODA funcao
+-- que ignora o RLS (ler_segredo, guardar_segredo, log_action, log de
+-- manutencao...) tem `anon` barrado; toda funcao que RESPEITA o RLS e aberta,
+-- porque a barreira ja esta uma camada abaixo. Barrar so esta seria a unica
+-- excecao da casa, sem ganhar seguranca nenhuma.
 revoke all on function public.salvar_campanha from public;
 grant execute on function public.salvar_campanha to authenticated;
