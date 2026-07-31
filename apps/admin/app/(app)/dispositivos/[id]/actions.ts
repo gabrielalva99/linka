@@ -21,7 +21,7 @@ export async function sendCommand(
     .update({ pending_command: command })
     .eq("id", deviceId);
   await logAction("comando", "device", deviceId, { comando: command });
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /**
@@ -39,7 +39,7 @@ export async function uninstallApp(deviceId: string, pkg: string) {
     .update({ pending_command: `uninstall:${pkg}` })
     .eq("id", deviceId);
   await logAction("remover_app", "device", deviceId, { app: pkg });
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /** Pede a lista de apps agora, sem esperar a próxima hora. */
@@ -49,7 +49,7 @@ export async function refreshApps(deviceId: string) {
     .from("devices")
     .update({ pending_command: "inventory_now" })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /** Bloquear Ajustes e Play Store — fecha o caminho para criar senha de tela. */
@@ -59,7 +59,7 @@ export async function setBlockSettings(deviceId: string, blocked: boolean) {
     .from("devices")
     .update({ block_settings: blocked })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /** Horário e liga/desliga da faxina diária (horário local do aparelho). */
@@ -69,7 +69,7 @@ export async function setCleanup(deviceId: string, enabled: boolean, time: strin
     .from("devices")
     .update({ cleanup_enabled: enabled, cleanup_time: time })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /** Tempo fora do app antes de a vitrine voltar sozinha. */
@@ -80,7 +80,7 @@ export async function setIdleReturn(deviceId: string, seconds: number) {
     .from("devices")
     .update({ idle_return_seconds: value })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /** Devolve o aparelho ao controle das campanhas (tira o vídeo fixado). */
@@ -90,7 +90,7 @@ export async function unpinContent(deviceId: string) {
     .from("devices")
     .update({ content_url: null, content_fit: null })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 /**
@@ -100,7 +100,7 @@ export async function unpinContent(deviceId: string) {
 export async function setDeviceFit(deviceId: string, fit: ContentFit | null) {
   const supabase = await createSupabaseServerClient();
   await supabase.from("devices").update({ content_fit: fit }).eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 export type AssignState = { ok: boolean };
@@ -119,7 +119,7 @@ export async function assignContent(
     .from("devices")
     .update({ content_url: url.length > 0 ? url : null })
     .eq("id", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath(`/dispositivos/${deviceId}`);
   return { ok: true };
 }
 
@@ -148,7 +148,7 @@ export async function addMedia(input: {
     .from("devices")
     .update({ content_url: input.url })
     .eq("id", input.deviceId);
-  revalidatePath(`/frota/${input.deviceId}`);
+  revalidatePath(`/dispositivos/${input.deviceId}`);
 }
 
 /**
@@ -185,8 +185,8 @@ export async function arquivarAparelho(deviceId: string, motivo: string) {
   if (error) return { ok: false as const, error: "Não consegui arquivar." };
 
   await logAction("device.archive", "device", deviceId, { motivo: limpo });
-  revalidatePath("/frota");
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath("/dispositivos");
+  revalidatePath(`/dispositivos/${deviceId}`);
   return { ok: true as const };
 }
 
@@ -203,8 +203,8 @@ export async function desarquivarAparelho(deviceId: string) {
   if (error) return { ok: false as const, error: "Não consegui reativar." };
 
   await logAction("device.unarchive", "device", deviceId);
-  revalidatePath("/frota");
-  revalidatePath(`/frota/${deviceId}`);
+  revalidatePath("/dispositivos");
+  revalidatePath(`/dispositivos/${deviceId}`);
   return { ok: true as const };
 }
 
@@ -232,7 +232,7 @@ export async function tentarAtualizarDeNovo(deviceId: string) {
   if (error) return { ok: false as const, error: "Não consegui enviar." };
 
   await logAction("atualizar_de_novo", "device", deviceId);
-  revalidatePath(`/frota/${deviceId}`);
-  revalidatePath("/frota");
+  revalidatePath(`/dispositivos/${deviceId}`);
+  revalidatePath("/dispositivos");
   return { ok: true as const };
 }

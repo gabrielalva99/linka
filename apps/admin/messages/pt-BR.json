@@ -67,7 +67,7 @@
     "noResults": "Nenhum aparelho encontrado com esses filtros."
   },
   "device": {
-    "back": "Frota",
+    "back": "Dispositivos",
     "code": "Código",
     "model": "Modelo",
     "store": "Loja",
@@ -482,7 +482,7 @@
     "storesWith": "{n} de {t} {lojas} com aparelho",
     "withoutStore": "{n} sem loja definida",
     "coverage": "Cobertura por linha",
-    "coverageHint": "Lojas que têm a linha instalada, sobre o total de lojas do recorte. Sai do cadastro da frota, não do movimento: linha instalada e nunca tocada continua instalada, e é esse o caso que precisa aparecer.",
+    "coverageHint": "Lojas que têm a linha instalada, sobre o total de lojas do recorte. Sai do cadastro de dispositivos, não do movimento: linha instalada e nunca tocada continua instalada, e é esse o caso que precisa aparecer.",
     "lastDay": "Último dia contra a média",
     "lastDayColumn": "Último dia",
     "average": "Média dos outros dias",

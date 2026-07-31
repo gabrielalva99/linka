@@ -36,7 +36,7 @@ export function Filters({
       const p = new URLSearchParams(params.toString());
       if (texto) p.set("q", texto);
       else p.delete("q");
-      router.replace(`/frota?${p.toString()}`);
+      router.replace(`/dispositivos?${p.toString()}`);
     }, 500);
     return () => clearTimeout(id);
   }, [texto, busca, params, router]);
@@ -45,7 +45,7 @@ export function Filters({
     const p = new URLSearchParams(params.toString());
     if (valor) p.set(chave, valor);
     else p.delete(chave);
-    router.replace(`/frota?${p.toString()}`);
+    router.replace(`/dispositivos?${p.toString()}`);
   }
 
   const field =
@@ -89,7 +89,7 @@ export function Filters({
       </select>
       {limpou && (
         <button
-          onClick={() => router.replace("/frota")}
+          onClick={() => router.replace("/dispositivos")}
           className="rounded-md border border-line px-3 py-2 text-xs text-muted hover:bg-surface-2"
         >
           {t.fleet.clearFilters}

@@ -136,7 +136,7 @@ export default async function BibliotecaPage() {
                         {users.map((u, i) => (
                           <span key={u.id}>
                             {i > 0 && ", "}
-                            <Link href={`/frota/${u.id}`} className="hover:underline">
+                            <Link href={`/dispositivos/${u.id}`} className="hover:underline">
                               {u.name}
                             </Link>
                           </span>

@@ -91,7 +91,7 @@ export function ModelRow({
             link, porque levaria a uma lista vazia. */}
         {aparelhos > 0 ? (
           <Link
-            href={`/frota?q=${encodeURIComponent(nome)}`}
+            href={`/dispositivos?q=${encodeURIComponent(nome)}`}
             className="ml-2 text-xs text-muted hover:text-primary hover:underline"
           >
             {t.models.devices

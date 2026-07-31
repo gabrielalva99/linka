@@ -21,7 +21,7 @@ export default async function VersoesPage() {
   const t = getMessages();
   // Publicar APK muda o software de TODA a frota, de todos os clientes.
   // Não é permissão de agência: é da plataforma.
-  if (!ehOperadorDaPlataforma(await getSessionContext())) redirect("/frota");
+  if (!ehOperadorDaPlataforma(await getSessionContext())) redirect("/dispositivos");
 
   const [{ data: releases }, { data: devices }] = await Promise.all([
     supabase
@@ -55,7 +55,7 @@ export default async function VersoesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/frota" className="text-sm text-muted hover:underline">
+      <Link href="/dispositivos" className="text-sm text-muted hover:underline">
         ← {t.fleet.title}
       </Link>
       <h1 className="mt-2 text-xl font-semibold">Versões do agente</h1>

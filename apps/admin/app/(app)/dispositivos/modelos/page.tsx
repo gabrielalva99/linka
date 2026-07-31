@@ -26,7 +26,7 @@ export default async function ModelosPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/frota" className="text-sm text-muted hover:underline">
+      <Link href="/dispositivos" className="text-sm text-muted hover:underline">
         ← {t.fleet.title}
       </Link>
       <h1 className="mt-2 text-xl font-semibold">{t.models.title}</h1>

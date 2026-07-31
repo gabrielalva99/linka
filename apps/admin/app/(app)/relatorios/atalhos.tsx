@@ -56,7 +56,7 @@ export function criarAtalhos(
       const rotulo = codigo ? `${codigo} · ${nome}` : nome;
       if (!id) return rotulo;
       return (
-        <Link href={`/frota/${id}`} className={CLASSE}>
+        <Link href={`/dispositivos/${id}`} className={CLASSE}>
           {rotulo}
         </Link>
       );

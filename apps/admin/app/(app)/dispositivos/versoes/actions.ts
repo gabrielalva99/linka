@@ -55,7 +55,7 @@ export async function publishRelease(
   }
 
   await logAction("publicar_versao", "agent_release", undefined, { versao: version });
-  revalidatePath("/frota/versoes");
+  revalidatePath("/dispositivos/versoes");
   return { ok: true, version };
 }
 
@@ -73,5 +73,5 @@ export async function makeCurrent(id: string) {
     .update({ is_current: false })
     .eq("is_current", true);
   await supabase.from("agent_releases").update({ is_current: true }).eq("id", id);
-  revalidatePath("/frota/versoes");
+  revalidatePath("/dispositivos/versoes");
 }

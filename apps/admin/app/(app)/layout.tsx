@@ -24,7 +24,7 @@ export default async function AppLayout({
 
   const nav = [
     { label: t.nav.dashboard, href: "/" },
-    { label: t.nav.fleet, href: "/frota" },
+    { label: t.nav.fleet, href: "/dispositivos" },
     { label: t.nav.campaigns, href: "/campanhas" },
     { label: t.nav.reports, href: "/relatorios" },
     { label: t.nav.library, href: "/biblioteca" },

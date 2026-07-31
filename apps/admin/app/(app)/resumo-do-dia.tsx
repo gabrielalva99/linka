@@ -64,7 +64,7 @@ export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
         "{n}",
         String(pendencias.semLoja),
       ),
-      href: "/frota?loja=sem",
+      href: "/dispositivos?loja=sem",
     });
   }
   if (pendencias.videosOrfaos > 0) {

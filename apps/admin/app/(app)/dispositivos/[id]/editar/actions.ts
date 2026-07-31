@@ -39,7 +39,7 @@ export async function updateDevice(
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };
 
-  revalidatePath("/frota");
-  revalidatePath(`/frota/${id}`);
-  redirect(`/frota/${id}`);
+  revalidatePath("/dispositivos");
+  revalidatePath(`/dispositivos/${id}`);
+  redirect(`/dispositivos/${id}`);
 }

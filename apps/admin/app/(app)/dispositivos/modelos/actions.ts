@@ -25,7 +25,7 @@ export async function createModel(
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };
 
-  revalidatePath("/frota/modelos");
+  revalidatePath("/dispositivos/modelos");
   return { status: "ok" };
 }
 
@@ -45,8 +45,8 @@ export async function renameModel(id: string, name: string, line: string) {
     };
   }
   await logAction("renomear_modelo", "device_model", id, { nome });
-  revalidatePath("/frota/modelos");
-  revalidatePath("/frota");
+  revalidatePath("/dispositivos/modelos");
+  revalidatePath("/dispositivos");
   return { ok: true as const };
 }
 
@@ -91,6 +91,6 @@ export async function deleteModel(id: string) {
   const { error } = await supabase.from("device_models").delete().eq("id", id);
   if (error) return { ok: false as const, error: "Não foi possível excluir." };
   await logAction("excluir_modelo", "device_model", id);
-  revalidatePath("/frota/modelos");
+  revalidatePath("/dispositivos/modelos");
   return { ok: true as const };
 }

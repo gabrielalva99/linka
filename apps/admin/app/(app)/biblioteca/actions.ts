@@ -10,7 +10,7 @@ export async function setMediaFit(id: string, fit: ContentFit, deviceId?: string
   const supabase = await createSupabaseServerClient();
   await supabase.from("media_assets").update({ fit_mode: fit }).eq("id", id);
   revalidatePath("/biblioteca");
-  if (deviceId) revalidatePath(`/frota/${deviceId}`);
+  if (deviceId) revalidatePath(`/dispositivos/${deviceId}`);
 }
 
 export type DeleteState =

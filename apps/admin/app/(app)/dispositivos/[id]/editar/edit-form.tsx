@@ -73,7 +73,7 @@ export function EditDeviceForm({
           {pending ? t.deviceForm.saving : t.deviceForm.save}
         </button>
         <Link
-          href={`/frota/${deviceId}`}
+          href={`/dispositivos/${deviceId}`}
           className="text-sm text-muted hover:underline"
         >
           {t.deviceForm.back}

@@ -113,7 +113,7 @@ export default async function StoreDetailPage({
                     <tr key={a.id as string} className="bg-surface">
                       <td className="px-4 py-3">
                         <Link
-                          href={`/frota/${a.id}`}
+                          href={`/dispositivos/${a.id}`}
                           className="font-medium hover:text-primary hover:underline"
                         >
                           {a.code ? `${a.code} · ` : ""}

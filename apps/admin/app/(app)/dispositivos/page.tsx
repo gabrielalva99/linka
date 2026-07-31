@@ -245,18 +245,18 @@ export default async function FrotaPage({
         <h1 className="text-xl font-semibold">{t.fleet.title}</h1>
         <div className="flex items-center gap-3">
           {ehPlataforma && (
-            <Link href="/frota/versoes" className="text-sm text-muted hover:underline">
+            <Link href="/dispositivos/versoes" className="text-sm text-muted hover:underline">
               Versões do agente
             </Link>
           )}
           {podeMexer && (
-            <Link href="/frota/modelos" className="text-sm text-muted hover:underline">
+            <Link href="/dispositivos/modelos" className="text-sm text-muted hover:underline">
               {t.models.manage}
             </Link>
           )}
           {podeMexer && (
           <Link
-            href="/frota/novo"
+            href="/dispositivos/novo"
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             {t.deviceForm.new}
@@ -310,7 +310,7 @@ export default async function FrotaPage({
             {semLoja.map((d) => (
               <Link
                 key={d.id}
-                href={`/frota/${d.id}/editar`}
+                href={`/dispositivos/${d.id}/editar`}
                 className="hover:text-primary hover:underline"
               >
                 {d.name}

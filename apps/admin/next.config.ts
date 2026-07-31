@@ -35,6 +35,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // /frota virou /dispositivos: a tela sempre se chamou "Dispositivos" e a URL
+  // dizia outra coisa. Quem tiver o endereco antigo salvo continua chegando —
+  // link quebrado nao avisa que quebrou, so parece que o sistema sumiu.
+  async redirects() {
+    return [
+      { source: "/frota", destination: "/dispositivos", permanent: true },
+      { source: "/frota/:caminho*", destination: "/dispositivos/:caminho*", permanent: true },
+    ];
+  },
+
   transpilePackages: ["@linka/ui", "@linka/shared"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

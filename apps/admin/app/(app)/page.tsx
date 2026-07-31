@@ -298,7 +298,7 @@ export default async function DashboardPage() {
                         {rotulo[i.tipo] ?? i.tipo}
                       </span>
                       <Link
-                        href={`/frota/${i.device_id}`}
+                        href={`/dispositivos/${i.device_id}`}
                         className="text-sm font-medium hover:text-primary hover:underline"
                       >
                         {i.code ? `${i.code} · ` : ""}

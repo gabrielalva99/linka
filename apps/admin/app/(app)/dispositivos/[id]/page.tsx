@@ -260,14 +260,14 @@ export default async function DeviceDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/frota" className="text-sm text-muted hover:underline">
+      <Link href="/dispositivos" className="text-sm text-muted hover:underline">
         ← {t.device.back}
       </Link>
       <div className="mt-2 flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{d.name}</h1>
         {podeOperar && (
         <Link
-          href={`/frota/${d.id}/editar`}
+          href={`/dispositivos/${d.id}/editar`}
           className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-surface-2"
         >
           {t.device.edit}

@@ -43,7 +43,7 @@ export function DeviceForm({
         >
           {pending ? t.deviceForm.creating : t.deviceForm.create}
         </button>
-        <Link href="/frota" className="text-sm text-muted hover:underline">
+        <Link href="/dispositivos" className="text-sm text-muted hover:underline">
           {t.deviceForm.back}
         </Link>
       </div>

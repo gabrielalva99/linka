@@ -71,6 +71,6 @@ export async function definirEmMassa(
     total: data?.length ?? 0,
   });
 
-  revalidatePath("/frota");
+  revalidatePath("/dispositivos");
   return { ok: true as const, n: data?.length ?? 0 };
 }

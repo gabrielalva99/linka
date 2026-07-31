@@ -223,7 +223,7 @@ export function FleetTable({
                 <td className="px-4 py-3 text-muted">{d.codigo}</td>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/frota/${d.id}`}
+                    href={`/dispositivos/${d.id}`}
                     className="font-medium hover:text-primary hover:underline"
                   >
                     {d.nome}

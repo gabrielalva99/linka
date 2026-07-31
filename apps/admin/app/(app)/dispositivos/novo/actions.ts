@@ -37,6 +37,6 @@ export async function createDevice(
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };
 
-  revalidatePath("/frota");
-  redirect("/frota");
+  revalidatePath("/dispositivos");
+  redirect("/dispositivos");
 }

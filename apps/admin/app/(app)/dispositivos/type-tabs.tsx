@@ -30,7 +30,7 @@ export function TypeTabs({
           return (
             <Link
               key={tab.key ?? "all"}
-              href={tab.key ? `/frota?tipo=${tab.key}` : "/frota"}
+              href={tab.key ? `/dispositivos?tipo=${tab.key}` : "/dispositivos"}
               className={`-mb-px border-b-2 px-3 py-2 text-sm transition ${
                 on
                   ? "border-primary font-medium text-foreground"
