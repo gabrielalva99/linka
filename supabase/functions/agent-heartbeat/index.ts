@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
   const { data: device } = await supabase
     .from("devices")
-    .select(`model_id, pending_command, ${CAMPOS_DO_APARELHO}`)
+    .select(`model_id, pending_command, push_token, ${CAMPOS_DO_APARELHO}`)
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -165,6 +165,20 @@ Deno.serve(async (req) => {
     update.stable_id = payload.stable_id.slice(0, 120);
     if (FONTES.has(String(payload.stable_id_source))) {
       update.stable_id_source = payload.stable_id_source;
+    }
+  }
+
+  // Endereço do aparelho no FCM, para o servidor poder chamá-lo.
+  //
+  // Chega na batida e não num cadastro à parte, pelo mesmo motivo do stable_id: se
+  // o servidor perder o endereço, a próxima batida devolve. Atalho que se registra
+  // uma vez só some em silêncio — o aparelho continuaria verde no painel, só mais
+  // lento, e ninguém reporta isso.
+  if (typeof payload.push_token === "string" && payload.push_token.length > 0) {
+    const novo = payload.push_token.slice(0, 400);
+    if (novo !== device.push_token) {
+      update.push_token = novo;
+      update.push_token_at = new Date().toISOString();
     }
   }
 
