@@ -132,6 +132,19 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Responde ao assistente do Android durante a leitura do QR. Sem ela,
+             o provisionamento e cancelado no meio a partir do Android 10. -->
+        <activity
+            android:name=".ProvisioningActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <intent-filter>
+                <action android:name="android.app.action.GET_PROVISIONING_MODE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- Recebe o "fale comigo agora". Nao exportado para outros apps: quem
              fala com ele e o Google Play Services, que usa a permissao abaixo. -->
         <service

@@ -143,9 +143,12 @@ class MainActivity : Activity() {
             //
             // Arquivo não depende de o app estar aberto, nem de tempo, nem de a
             // tela estar na frente. O kit grava, o app lê e apaga.
+            // O QR vem primeiro: e a unica fonte em que ninguem digitou nada, e
+            // por isso a unica que nao pode estar errada.
+            val doQr = Prefs.codigoDoQr(this)
             val doArquivo = lerCodigoDoKit()
             val doCabo = intent?.getStringExtra("enroll")?.trim()?.uppercase()
-            showPairing((doArquivo ?: doCabo)?.takeIf { it.isNotEmpty() })
+            showPairing((doQr ?: doArquivo ?: doCabo)?.takeIf { it.isNotEmpty() })
         }
     }
 
@@ -194,6 +197,11 @@ class MainActivity : Activity() {
         if (Prefs.token(this) != null) return
         // Arquivo primeiro, aqui também: o kit pode ter gravado depois de a tela
         // já estar aberta.
+        val doQr = Prefs.codigoDoQr(this)
+        if (!doQr.isNullOrEmpty()) {
+            showPairing(doQr)
+            return
+        }
         val doArquivo = lerCodigoDoKit()
         if (!doArquivo.isNullOrEmpty()) {
             showPairing(doArquivo)

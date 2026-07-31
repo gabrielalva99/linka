@@ -241,6 +241,21 @@ object Prefs {
     private const val KEY_SYNCED = "synced"
     private const val KEY_REVISAO = "revisao_aplicada"
     private const val KEY_PUSH = "push_token"
+    private const val KEY_QR = "codigo_do_qr"
+
+    /**
+     * Codigo da loja que veio dentro do QR de instalacao.
+     *
+     * Fica gravado ate o pareamento dar certo: o provisionamento termina antes de
+     * haver rede utilizavel, e perder o codigo por causa disso obrigaria alguem a
+     * digitar — que e exatamente o que o QR existe para evitar.
+     */
+    fun codigoDoQr(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_QR, null)
+
+    fun setCodigoDoQr(ctx: Context, valor: String?) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_QR, valor).apply()
 
     /** Endereco deste aparelho no FCM. Nulo = so o heartbeat acorda ele. */
     fun pushToken(ctx: Context): String? =
