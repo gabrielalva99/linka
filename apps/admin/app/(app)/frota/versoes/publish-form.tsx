@@ -27,6 +27,28 @@ export function PublishForm() {
   const fileRef = useRef<HTMLInputElement>(null);
   const versaoRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Traduz a recusa do Storage para algo acionavel.
+   *
+   * So diz "superadmin" quando o servidor de fato recusou por permissao. O resto
+   * sai com o motivo que veio, porque quem esta na tela precisa saber se troca de
+   * conta, troca de arquivo ou espera a rede voltar.
+   */
+  function motivoDoEnvio(error: { message?: string; statusCode?: string }): string {
+    const codigo = String(error.statusCode ?? "");
+    const texto = (error.message ?? "").toLowerCase();
+    const semPermissao = codigo === "403" || codigo === "401" ||
+      texto.includes("row-level security") || texto.includes("unauthorized") ||
+      texto.includes("violates");
+    if (semPermissao) {
+      return "Envio recusado: publicar versão é só do superadmin, e esta conta não é. Entre com a conta de superadmin da plataforma.";
+    }
+    if (codigo === "413" || texto.includes("too large") || texto.includes("exceeded")) {
+      return "Arquivo grande demais para o limite do Storage.";
+    }
+    return `Não foi possível enviar: ${error.message ?? "erro desconhecido"}`;
+  }
+
   async function onFile(file: File) {
     setEnviando(true);
     setErro(null);
@@ -49,15 +71,24 @@ export function PublishForm() {
           upsert: true,
         });
       if (error) {
-        setErro("Envio recusado. Só o superadmin pode publicar versões.");
+        // A CAUSA REAL, e não a mais provável.
+        //
+        // Aqui estava escrito "Só o superadmin pode publicar versões" para
+        // QUALQUER falha. Acertava quando era permissão e mentia no resto —
+        // arquivo grande, rede caindo, bucket errado — mandando procurar no
+        // lugar errado. Mensagem que chuta a causa custa mais tempo do que
+        // mensagem que não diz nada.
+        setErro(motivoDoEnvio(error));
         setEnviando(false);
         return;
       }
       const { data } = supabase.storage.from("releases").getPublicUrl(path);
       setUrl(data.publicUrl);
       setArquivo(`${file.name} · ${tamanho(file.size)}`);
-    } catch {
-      setErro("Não foi possível enviar o arquivo.");
+    } catch (e) {
+      // Idem: o que estourou vai para a tela. "Não foi possível" sozinho manda a
+      // pessoa adivinhar.
+      setErro(`Não foi possível enviar o arquivo: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setEnviando(false);
     }

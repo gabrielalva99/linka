@@ -46,7 +46,10 @@ export function ContentManager({
         .from("content")
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) {
-        setError(t.device.uploadError);
+        // A mensagem traduzida diz O QUE falhou; o motivo do servidor diz POR QUÊ.
+        // Sem o segundo, "falha ao enviar" manda a pessoa tentar de novo para
+        // sempre quando o problema é o arquivo, e não a rede.
+        setError(`${t.device.uploadError} ${upErr.message}`);
         setUploading(false);
         return;
       }

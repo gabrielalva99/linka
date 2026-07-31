@@ -29,6 +29,8 @@ export function DeleteButton({ mediaId, name }: { mediaId: string; name: string 
               setError(
                 t.library.inCampaignBlock.replace("{n}", String(result.count)),
               );
+            } else if (result.reason === "denied") {
+              setError(t.library.deniedBlock);
             } else setError(t.library.deleteError);
           });
         }}

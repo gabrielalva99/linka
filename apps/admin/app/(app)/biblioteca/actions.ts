@@ -17,6 +17,11 @@ export type DeleteState =
   | { ok: true }
   | { ok: false; reason: "in_use"; count: number }
   | { ok: false; reason: "in_campaign"; count: number }
+  // "denied" existe separado de "failed" porque as duas exigem coisas
+  // diferentes de quem está na tela: uma é trocar de conta, a outra é tentar de
+  // novo. Juntar as duas num "não deu" manda a pessoa insistir num caminho que
+  // nunca vai abrir.
+  | { ok: false; reason: "denied" }
   | { ok: false; reason: "failed" };
 
 /**
@@ -61,10 +66,34 @@ export async function deleteMedia(id: string): Promise<DeleteState> {
     return { ok: false, reason: "in_campaign", count: emCampanha ?? 0 };
   }
 
-  const { error } = await supabase.from("media_assets").delete().eq("id", id);
+  // CONTA AS LINHAS, não confia na ausência de erro.
+  //
+  // DELETE barrado por RLS não estoura: apaga zero linhas e volta sem erro
+  // nenhum. Só o INSERT reclama. Com `if (error)` sozinho, quem não é agência via
+  // "vídeo excluído" na tela, o vídeo continuava lá, e a auditoria registrava uma
+  // exclusão que nunca aconteceu — logo depois de eu ter posto uma lista de ações
+  // conhecidas justamente para a trilha não aceitar fato inventado.
+  const { error, count: apagadas } = await supabase
+    .from("media_assets")
+    .delete({ count: "exact" })
+    .eq("id", id);
   if (error) return { ok: false, reason: "failed" };
-  await supabase.storage.from("content").remove([asset.storage_path]);
-  await logAction("excluir_video", "media_asset", id);
+  if ((apagadas ?? 0) === 0) return { ok: false, reason: "denied" };
+
+  // O ARQUIVO: se a remoção falhar, isso precisa aparecer em algum lugar.
+  //
+  // Estava sem conferência nenhuma. O caso ruim é silencioso: banco apagou,
+  // Storage não, e sobra um arquivo que ninguém mais alcança — sem linha
+  // apontando para ele, não há como listar nem cobrar de volta. Vira conta de
+  // armazenamento subindo sem explicação.
+  const { error: errArquivo } = await supabase
+    .storage.from("content").remove([asset.storage_path]);
+  await logAction("excluir_video", "media_asset", id, {
+    storage_path: asset.storage_path,
+    // Com isto, o órfão fica localizável pela própria trilha.
+    arquivo_removido: !errArquivo,
+    ...(errArquivo ? { arquivo_erro: errArquivo.message } : {}),
+  });
 
   revalidatePath("/biblioteca");
   return { ok: true };
