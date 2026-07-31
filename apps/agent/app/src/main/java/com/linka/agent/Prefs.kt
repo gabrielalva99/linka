@@ -244,6 +244,33 @@ object Prefs {
     private const val KEY_QR = "codigo_do_qr"
 
     /**
+     * Quantas passadas da NUVEM ja foram gastas com um video.
+     *
+     * Existe porque "tocar da nuvem so uma vez" e uma intencao, e intencao nao
+     * sobrevive a reinicio: tela apaga e acende, app atualiza, quiosque re-entra —
+     * cada volta e uma "primeira vez" nova. Dez reinicios numa hora viravam dez
+     * downloads do arquivo inteiro.
+     *
+     * Gravado em disco de proposito. Contador na memoria zeraria junto com o
+     * processo, que e exatamente quando ele mais precisa lembrar.
+     */
+    fun passadasDaNuvem(ctx: Context, url: String): Int =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getInt("nuvem_" + url.hashCode(), 0)
+
+    fun contarPassadaDaNuvem(ctx: Context, url: String): Int {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val n = p.getInt("nuvem_" + url.hashCode(), 0) + 1
+        p.edit().putInt("nuvem_" + url.hashCode(), n).apply()
+        return n
+    }
+
+    /** O arquivo desceu: o orcamento deste video nao serve mais para nada. */
+    fun limparPassadasDaNuvem(ctx: Context, url: String) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().remove("nuvem_" + url.hashCode()).apply()
+
+    /**
      * Codigo da loja que veio dentro do QR de instalacao.
      *
      * Fica gravado ate o pareamento dar certo: o provisionamento termina antes de

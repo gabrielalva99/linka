@@ -96,6 +96,20 @@ class MainActivity : Activity() {
 
         /** Assentado, pergunta a cada 6 voltas de 20s = 2 minutos. */
         const val REDE_DE_SEGURANCA_MS = 30 * 60_000L
+
+/**
+ * Teto de passadas tocando da NUVEM, por video, gravado no aparelho.
+ *
+ * Nao e para durar: assim que o arquivo desce, tudo passa a tocar do disco. O teto
+ * existe para o caso de o download nao terminar — rede de loja ruim, arquivo
+ * grande, aparelho reiniciando. Sem ele, "tocar da nuvem enquanto baixa" vira
+ * "tocar da nuvem para sempre", e ninguem descobre ate a fatura chegar.
+ *
+ * Pior caso com o teto: 18 MB x 3 x 2 videos x 250 aparelhos = 27 GB, uma vez.
+ * Sao 11% do incluso no plano, mesmo se TODOS os aparelhos estourarem o teto.
+ * Sem o teto, o pior caso nao tem numero.
+ */
+const val PASSADAS_DA_NUVEM = 3
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1079,9 +1093,18 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
+        // DA NUVEM NUNCA SE REPETE. Este e o unico lugar do produto com risco de
+        // estourar a conta de verdade.
+        //
+        // A conta, medida: um video de 13 MB em repeticao continua consome de 1 a
+        // 2 GB por hora, por aparelho. Com 250 aparelhos sem cache no dia da
+        // instalacao, isso e 250 a 500 GB por HORA — o plano inteiro em menos de
+        // uma hora. Baixar o mesmo video 250 vezes custa 7,8 GB e nao preocupa
+        // ninguem; o loop e que e caro.
+        val daNuvem = !playingLocal
         val exo = ExoPlayer.Builder(this).build().apply {
             setMediaItem(MediaItem.fromUri(sourceFor(url)))
-            repeatMode = Player.REPEAT_MODE_ALL
+            repeatMode = if (daNuvem) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
             // Vitrine é muda por padrão: som só quando o painel liberar para este
             // aparelho — e mesmo assim nunca com o app em segundo plano.
             volume = Prefs.volumePercent(this@MainActivity) / 100f
@@ -1093,6 +1116,23 @@ class MainActivity : Activity() {
                     if (isPlaying && Prefs.mode(this@MainActivity) != MODE_SHOW) {
                         Prefs.setMode(this@MainActivity, MODE_SHOW)
                         Telemetry.beatAsync(this@MainActivity)
+                    }
+                }
+
+                override fun onPlaybackStateChanged(state: Int) {
+                    // Acabou uma passada vinda da nuvem. Enquanto o arquivo nao
+                    // desce, mostra que esta preparando em vez de recomecar: a
+                    // vitrine fica alguns minutos sem video na instalacao, e isso
+                    // custa infinitamente menos que a rede da loja saturada e a
+                    // conta estourada.
+                    if (state == Player.STATE_ENDED && daNuvem) {
+                        val n = Prefs.contarPassadaDaNuvem(this@MainActivity, url)
+                        currentUrl = null
+                        if (n < PASSADAS_DA_NUVEM && MediaCache.isCached(this@MainActivity, url)) {
+                            playVideo(url, fit)  // ja desceu: segue local, sem custo
+                        } else {
+                            applyContent(null, fit)
+                        }
                     }
                 }
 
