@@ -162,13 +162,71 @@ Deno.serve(async (req) => {
     link = gerado?.properties?.action_link ?? null;
   }
 
+  // ENTREGA O CONVITE.
+  //
+  // Antes o link era só devolvido para a tela, e alguém tinha que copiar e mandar
+  // por fora. Isso é ruim por dois motivos: um link de acesso circulando por
+  // WhatsApp fica lá para sempre, e "convidei" virava sinônimo de "gerei um link
+  // e torci".
+  //
+  // A chave vem do cofre, não de variável de ambiente: ela envia e-mail em nome
+  // da marca, e não pode morar no repositório nem no painel.
+  let emailEnviado = false;
+  let erroEmail: string | null = null;
+  try {
+    const { data: chave } = await admin.rpc("ler_segredo", { p_nome: "resend_api_key" });
+    const { data: cliente } = await admin
+      .from("tenants").select("name").eq("id", tenantId).maybeSingle();
+    const marca = cliente?.name ?? "LINKA";
+
+    if (!chave) throw new Error("chave do Resend ausente no cofre");
+
+    const assunto = link
+      ? "Seu acesso ao painel LINKA"
+      : `Você recebeu acesso a ${marca} no painel LINKA`;
+
+    // Sem link para conta que já existe: o corpo apenas avisa. Mandar link de
+    // entrada para uma conta de outra pessoa seria entregar a conta dela.
+    const miolo = link
+      ? `<p>Você foi convidado para o painel <strong>LINKA</strong>, no cliente <strong>${marca}</strong>.</p>
+         <p style="margin:28px 0">
+           <a href="${link}" style="background:#00f24f;color:#000;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">Entrar no painel</a>
+         </p>
+         <p style="color:#666;font-size:13px">Este link é pessoal e vale por uma hora. Se expirar, peça um convite novo — não repasse este e-mail.</p>`
+      : `<p>Sua conta agora tem acesso ao cliente <strong>${marca}</strong> no painel <strong>LINKA</strong>.</p>
+         <p>Entre normalmente com o seu e-mail e senha de sempre.</p>`;
+
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "LINKA <nao-responda@linkaretail.com.br>",
+        to: [email],
+        subject: assunto,
+        html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#111">
+                 <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;margin-bottom:24px">LINKA</div>
+                 ${miolo}
+                 <hr style="border:none;border-top:1px solid #eee;margin:32px 0">
+                 <p style="color:#999;font-size:12px">Se você não esperava este e-mail, pode ignorá-lo.</p>
+               </div>`,
+      }),
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 160)}`);
+    emailEnviado = true;
+  } catch (e) {
+    // NÃO derruba o convite: o vínculo já foi criado e a pessoa já tem acesso.
+    // O que não pode é a tela dizer "convidado" com o e-mail no chão — por isso o
+    // motivo volta na resposta, e o link junto, para o operador poder repassar.
+    erroEmail = e instanceof Error ? e.message : String(e);
+  }
+
   await admin.from("audit_log").insert({
     actor_id: user.id,
     tenant_id: tenantId,
     action: "convidar_usuario",
     entity: "membership",
-    metadata: { email, papel: role, conta_nova: criadoAgora },
+    metadata: { email, papel: role, conta_nova: criadoAgora, email_enviado: emailEnviado },
   });
 
-  return json({ ok: true, link, email, ja_existia: !criadoAgora });
+  return json({ ok: true, link, email, ja_existia: !criadoAgora, email_enviado: emailEnviado, erro_email: erroEmail });
 });
