@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import com.google.firebase.messaging.FirebaseMessaging
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -100,6 +101,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Api.init(this)
+        pegarEnderecoDePush()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Deixa esta tela ACENDER o aparelho, não só mantê-lo aceso. Sem isto,
         // uma vitrine que apagou durante o expediente ficava preta até alguém
@@ -416,6 +418,29 @@ class MainActivity : Activity() {
                     PULSO_MS, PULSO_MS,
                 )
             }
+        }
+    }
+
+    /**
+     * Pergunta ao Google qual e o endereco deste aparelho no FCM.
+     *
+     * O `onNewToken` do PushService cobre a TROCA de endereco, mas nao o caso mais
+     * comum: o endereco ja existia antes desta versao ser instalada, entao aquele
+     * callback nunca vai disparar e o aparelho ficaria para sempre sem atalho —
+     * saudavel no painel, so mais lento, que e o tipo de defeito que ninguem
+     * reporta. Pedir na subida resolve, e custa nada: a resposta e local.
+     */
+    private fun pegarEnderecoDePush() {
+        try {
+            FirebaseMessaging.getInstance().token.addOnSuccessListener { t ->
+                if (!t.isNullOrEmpty() && t != Prefs.pushToken(this)) {
+                    Prefs.setPushToken(this, t)
+                    Telemetry.beatAsync(this)  // sobe junto na proxima batida
+                }
+            }
+        } catch (_: Exception) {
+            // Aparelho sem Google Play Services: segue so com o heartbeat. Nao e
+            // motivo para a vitrine deixar de funcionar.
         }
     }
 

@@ -240,6 +240,15 @@ object Prefs {
 
     private const val KEY_SYNCED = "synced"
     private const val KEY_REVISAO = "revisao_aplicada"
+    private const val KEY_PUSH = "push_token"
+
+    /** Endereco deste aparelho no FCM. Nulo = so o heartbeat acorda ele. */
+    fun pushToken(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_PUSH, null)
+
+    fun setPushToken(ctx: Context, valor: String?) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_PUSH, valor).apply()
     private const val KEY_NOVIDADE = "novidade_pendente"
 
     /**

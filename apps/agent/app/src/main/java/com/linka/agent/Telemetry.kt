@@ -119,6 +119,10 @@ object Telemetry {
             // A revisao do conteudo aplicado: e com ela que o servidor responde
             // se este aparelho ainda esta em dia.
             .put("revisao", Prefs.revisao(ctx) ?: JSONObject.NULL)
+            // Endereco no FCM: vai em toda batida, e nao uma vez so. Se o
+            // servidor perder (repareamento, restauracao do banco), a proxima
+            // batida devolve — atalho que so se registra uma vez some em silencio.
+            .put("push_token", Prefs.pushToken(ctx) ?: JSONObject.NULL)
             // Saúde: explica queda de loja sem visita técnica.
             .put("temperature_c", Health.temperatureC(ctx) ?: JSONObject.NULL)
             .put("uptime_seconds", Health.uptimeSeconds())
