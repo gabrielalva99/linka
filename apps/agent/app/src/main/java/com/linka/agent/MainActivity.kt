@@ -466,6 +466,25 @@ const val PASSADAS_DA_NUVEM = 3
                     // o aparelho esta bem porque o heartbeat funciona.
                     timerTask {
                         val atual = Prefs.token(this@MainActivity) ?: return@timerTask
+                        // O RODIZIO SE CORRIGE AQUI, a cada volta e sem rede.
+                        //
+                        // Ele e agendado num Handler preso a tela. Tela recriada —
+                        // reinicio, atualizacao, o Android reciclando a activity —
+                        // e o agendamento morre junto, e o aparelho fica travado no
+                        // video que estava exibindo. Nada o rearmava a nao ser uma
+                        // busca de conteudo, que virou de 30 em 30 minutos.
+                        //
+                        // Foi assim que dois aparelhos lado a lado apareceram
+                        // exibindo videos diferentes: o que tinha reiniciado por
+                        // ultimo parou de virar. Numa loja com 15 aparelhos na
+                        // mesma bancada, isso e o defeito mais visivel que existe.
+                        //
+                        // A conta e local e nao custa nada: rodar toda volta e mais
+                        // barato que confiar num agendamento que pode sumir.
+                        runOnUiThread {
+                            aplicarDoRodizio()
+                            agendarProximaVirada()
+                        }
                         if (horaDePerguntar()) {
                             ultimaBusca = SystemClock.elapsedRealtime()
                             checkContent(atual)
