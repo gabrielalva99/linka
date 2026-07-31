@@ -320,9 +320,15 @@ export default async function FrotaPage({
         </div>
       )}
 
-      {locked < total && (
+      {/* Compara com quem está NO AR, e não com a frota inteira.
+          Antes `locked` contava entre os que respondem e era comparado com o
+          total: um aparelho desligado virava "sem bloqueio" e a tela pedia um
+          procedimento por cabo para um aparelho que não está lá. Pior, os
+          indicadores logo acima já dizem "dos que estão no ar" — duas contas
+          diferentes na mesma tela ensinam a não confiar em nenhuma. */}
+      {locked < noAr.length && (
         <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
-          {t.fleet.unlockedWarning.replace("{n}", String(total - locked))}
+          {t.fleet.unlockedWarning.replace("{n}", String(noAr.length - locked))}
         </p>
       )}
 
