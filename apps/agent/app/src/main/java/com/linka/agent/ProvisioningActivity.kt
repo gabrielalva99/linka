@@ -25,6 +25,13 @@ import android.os.PersistableBundle
  * justamente o que faz parecer que o problema esta no arquivo.
  *
  * Nenhuma das duas telas aparece para o promotor: respondem e fecham na hora.
+ *
+ * SEM `android:permission` NO MANIFESTO, e isso custou uma tentativa. Eu tinha
+ * copiado `BIND_DEVICE_ADMIN` do padrao do receiver, onde ela e obrigatoria. Numa
+ * TELA ela significa o oposto do que eu queria: exige que QUEM CHAMA tenha a
+ * permissao. Quem chama e o assistente de configuracao, que nao a tem — entao ele
+ * era recusado ao abrir esta tela e cancelava tudo, com a mesma mensagem generica.
+ * Medido: o aparelho baixou a 0.56.0 (GET 200 no Storage) e mesmo assim falhou.
  */
 class ProvisioningActivity : Activity() {
 
@@ -54,13 +61,13 @@ class ProvisioningActivity : Activity() {
             // codigo da loja — antes disso nao haveria permissao, e depois disso o
             // promotor ja estaria olhando a tela.
             else -> {
+                // So o essencial. Quem abre a vitrine e o receiver, ja depois
+                // de o assistente terminar: abrir outra tela DE DENTRO desta,
+                // no meio do fluxo do sistema, e pedir para o assistente se
+                // perder — e ele nao explica quando se perde.
                 guardarCodigoDaLoja(intent)
                 Kiosk.applyPolicies(this)
                 setResult(RESULT_OK)
-                startActivity(
-                    Intent(this, MainActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
             }
         }
         finish()

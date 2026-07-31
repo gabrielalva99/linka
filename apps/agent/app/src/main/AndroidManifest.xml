@@ -137,8 +137,7 @@
         <activity
             android:name=".ProvisioningActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.NoDisplay"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.app.action.GET_PROVISIONING_MODE" />
                 <category android:name="android.intent.category.DEFAULT" />
