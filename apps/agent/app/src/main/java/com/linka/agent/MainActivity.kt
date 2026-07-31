@@ -343,6 +343,40 @@ const val PASSADAS_DA_NUVEM = 3
         setContentView(root)
 
         // Código entregue pelo provisionamento: pareia sozinho, sem toque humano.
+        // SAIDA PARA OS AJUSTES, so nesta tela.
+        //
+        // O aparelho e candidato a tela inicial do sistema — tem que ser, senao o
+        // Android nao acha tela inicial no boot e o aparelho fica preso na
+        // animacao (dois aparelhos ja se perderam assim). O efeito colateral e que
+        // ele volta para a frente sempre, e quem precisa alcancar os Ajustes de um
+        // aparelho ainda nao pareado nao consegue.
+        //
+        // Foi exatamente o que aconteceu num aparelho que ficou sem rede: cinco
+        // caminhos pelo cabo falharam (force-stop, desativar, suspender, tirar
+        // sobreposicao, desinstalar) porque o Android protege o dono do aparelho
+        // de todos eles. Sobrou restauracao de fabrica — e na loja nao vai ter
+        // cabo nem notebook.
+        //
+        // So aparece aqui: aparelho pareado nao mostra este botao, e a vitrine em
+        // operacao continua sem saida, que e o ponto dela.
+        root.addView(
+            Button(this).apply {
+                text = "Abrir Ajustes do aparelho"
+                setBackgroundColor(0x00000000)
+                setTextColor(0xFF888888.toInt())
+                textSize = 13f
+                setOnClickListener {
+                    try {
+                        startActivity(
+                            Intent(android.provider.Settings.ACTION_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    } catch (_: Exception) {
+                    }
+                }
+            },
+        )
+
         if (autoCode != null) {
             input.setText(autoCode)
             status.text = "Entrando na frota…"

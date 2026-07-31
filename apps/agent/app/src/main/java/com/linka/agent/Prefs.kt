@@ -242,6 +242,24 @@ object Prefs {
     private const val KEY_REVISAO = "revisao_aplicada"
     private const val KEY_PUSH = "push_token"
     private const val KEY_QR = "codigo_do_qr"
+    private const val KEY_JA_FALOU = "ja_falou_com_servidor"
+
+    /**
+     * O aparelho ja conversou com o servidor pelo menos uma vez?
+     *
+     * Existe por causa de um aparelho que ficou trancado FORA da rede: as travas
+     * de wi-fi entram no instante em que o app vira dono, e num aparelho ainda sem
+     * rede elas impedem de configurar wi-fi para sempre. So se recupera com cabo —
+     * e na loja nao vai ter cabo nem notebook.
+     *
+     * Nao se tranca a porta antes de entrar.
+     */
+    fun jaFalouComServidor(ctx: Context): Boolean =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_JA_FALOU, false)
+
+    fun marcarQueFalouComServidor(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_JA_FALOU, true).apply()
 
     /**
      * Quantas passadas da NUVEM ja foram gastas com um video.

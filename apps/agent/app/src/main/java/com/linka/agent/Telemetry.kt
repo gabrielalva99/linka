@@ -31,6 +31,16 @@ object Telemetry {
         // Deu certo: zera o contador, senao recusas espalhadas por semanas
         // acabariam somando cinco e derrubariam um aparelho saudavel.
         if (Prefs.recusasDeToken(ctx) > 0) Prefs.limparRecusasDeToken(ctx)
+
+        // PRIMEIRO CONTATO: agora as travas de rede podem entrar.
+        //
+        // Antes elas entravam junto com o cargo de dono, e num aparelho ainda sem
+        // wi-fi isso o trancava fora da rede para sempre. Aqui ja existe rede
+        // provada — o servidor respondeu.
+        if (!Prefs.jaFalouComServidor(ctx)) {
+            Prefs.marcarQueFalouComServidor(ctx)
+            Kiosk.applyPolicies(ctx)
+        }
         // Entregue: pode esquecer o relato da faxina.
         Prefs.setPendingCleanupReport(ctx, null)
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.

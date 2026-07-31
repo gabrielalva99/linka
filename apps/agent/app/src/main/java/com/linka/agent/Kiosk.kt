@@ -24,14 +24,38 @@ import android.os.UserManager
 object Kiosk {
 
     /** Travas do requisito: rede não pode cair pela mão do cliente. */
-    private val RESTRICTIONS = buildList {
+    /**
+     * Travas que mexem em REDE. Elas so entram depois que o aparelho conversou com
+     * o servidor pelo menos uma vez.
+     *
+     * O motivo custou uma restauracao de fabrica: aplicadas num aparelho que ainda
+     * nao tinha wi-fi, elas o trancaram FORA da rede. Sem DISALLOW_CONFIG_WIFI nao
+     * da para escolher rede, sem DISALLOW_CHANGE_WIFI_STATE nao da para ligar o
+     * wi-fi — e o aparelho nunca mais alcanca o servidor sozinho. Tentei destravar
+     * pelo cabo de cinco formas (force-stop, desativar, suspender, tirar
+     * sobreposicao): o Android protege o dono do aparelho de todas elas. So sai com
+     * restauracao de fabrica.
+     *
+     * Na loja isso e fatal: o promotor nao tem cabo nem notebook. Basta inverter a
+     * ordem uma vez em 15 lojas.
+     *
+     * Nao se tranca a porta antes de entrar.
+     */
+    private val RESTRICTIONS_DE_REDE = buildList {
         add(UserManager.DISALLOW_CONFIG_WIFI)
-        if (Build.VERSION.SDK_INT >= 28) add(UserManager.DISALLOW_AIRPLANE_MODE)
         if (Build.VERSION.SDK_INT >= 33) {
             add(UserManager.DISALLOW_CHANGE_WIFI_STATE)
             add(UserManager.DISALLOW_ADD_WIFI_CONFIG)
         }
     }
+
+    /** Estas nao dependem de rede e entram sempre. */
+    private val RESTRICTIONS_SEMPRE = buildList {
+        if (Build.VERSION.SDK_INT >= 28) add(UserManager.DISALLOW_AIRPLANE_MODE)
+    }
+
+    private fun RESTRICTIONS(ctx: Context) =
+        RESTRICTIONS_SEMPRE + if (Prefs.jaFalouComServidor(ctx)) RESTRICTIONS_DE_REDE else emptyList()
 
     private fun dpm(ctx: Context) =
         ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -66,7 +90,7 @@ object Kiosk {
     fun locked(ctx: Context): Boolean {
         if (!isDeviceOwner(ctx)) return false
         val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
-        return RESTRICTIONS.all { um.hasUserRestriction(it) }
+        return RESTRICTIONS(ctx).all { um.hasUserRestriction(it) }
     }
 
     /**
@@ -95,7 +119,7 @@ object Kiosk {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)
         val admin = admin(ctx)
-        for (r in RESTRICTIONS) {
+        for (r in RESTRICTIONS(ctx)) {
             try {
                 dpm.addUserRestriction(admin, r)
             } catch (_: Exception) {
@@ -669,7 +693,7 @@ object Kiosk {
         if (!isDeviceOwner(ctx)) return false
         val dpm = dpm(ctx)
         val admin = admin(ctx)
-        for (r in RESTRICTIONS) {
+        for (r in RESTRICTIONS(ctx)) {
             try {
                 dpm.clearUserRestriction(admin, r)
             } catch (_: Exception) {
