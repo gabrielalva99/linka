@@ -45,6 +45,16 @@ object Telemetry {
      * O RITMO VEM DO PAINEL. Sem isso, descobrir que 5 minutos e demais custaria
      * uma versao nova e uma volta na frota inteira. A cadencia real e multipla de
      * 60s, que e o passo do relogio do servico — 300s da exatamente 5 minutos.
+     *
+     * QUEM MANDA NO GASTO E O MENOR ENTRE ESTE RITMO E O RODIZIO DA CAMPANHA.
+     * Trocar de video reporta o que entrou na tela (e disso vive o "o que esta
+     * tocando" do painel, e o aviso de tela vazia), entao uma campanha que gira
+     * de 3 em 3 minutos fala de 3 em 3, por mais lento que este numero esteja.
+     * Medido: com rodizio de 180s, um aparelho no ritmo de 5 min batia a cada
+     * ~3 min. Nao e defeito — e o preco de saber o que esta na tela. So importa
+     * na hora de estimar a conta: quem decide e min(rodizio, ritmo), e o padrao
+     * de rodizio do painel e 20 minutos, entao na operacao real quem manda e
+     * este numero aqui.
      */
     fun batidaPeriodica(ctx: Context) {
         val ultima = ultimaConversa
