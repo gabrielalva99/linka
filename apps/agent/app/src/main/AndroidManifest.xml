@@ -143,6 +143,14 @@
                 <action android:name="android.app.action.GET_PROVISIONING_MODE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- A SEGUNDA pergunta, e ela e obrigatoria desde o Android 11. Sem
+                 ela o assistente cancela DEPOIS de baixar e instalar o app, com a
+                 mensagem generica de "algo deu errado" — que faz todo mundo
+                 procurar defeito no arquivo, e nao aqui. -->
+            <intent-filter>
+                <action android:name="android.app.action.ADMIN_POLICY_COMPLIANCE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Recebe o "fale comigo agora". Nao exportado para outros apps: quem
