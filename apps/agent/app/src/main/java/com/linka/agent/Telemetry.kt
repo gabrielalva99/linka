@@ -211,6 +211,10 @@ object Telemetry {
             // tem que saber antes de o aparelho ir para a prateleira.
             .put("screen_lock_set", Kiosk.screenLockSet(ctx))
             .put("blocked_apps", Kiosk.blockedApps(ctx))
+            // O estado REAL de cada trava, perguntado ao Android nesta batida.
+            // O painel deixa de deduzir proteção a partir do interruptor que o
+            // operador ligou — que diz o que se pediu, nunca o que se conseguiu.
+            .put("protecoes", Kiosk.protecoes(ctx))
         // Identidade que sobrevive a restauracao de fabrica, e DE ONDE ela veio.
         //
         // Vai no heartbeat, e nao so no provisionamento, porque os aparelhos que ja

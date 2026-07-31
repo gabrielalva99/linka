@@ -24,6 +24,13 @@
 -- Nao muda nada no aparelho, nao exige APK, e o evento continua sendo registrado:
 -- saber que alguem entrou em Ajustes numa loja continua valendo. O que muda e
 -- quando o aviso se considera resolvido.
+--
+-- ATUALIZACAO (mesmo dia, migration 20260731110000): esta correcao trocou uma
+-- prova indireta por outra. `block_settings` e o INTERRUPTOR QUE O OPERADOR
+-- LIGOU — diz o que foi pedido, nao o que o aparelho conseguiu aplicar; e o
+-- agente marcava "senha de tela" como efetiva sem conferir se a trava entrou.
+-- O aparelho passou a reportar o estado real de cada trava, e o `corrigido`
+-- daqui foi reescrito la para ler a prova em vez de deduzi-la.
 
 create or replace function public.fleet_report(
   p_days int default 7, p_rede text default null,

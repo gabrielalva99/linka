@@ -149,6 +149,30 @@ Deno.serve(async (req) => {
   if (typeof payload.blocked_apps === "string") {
     update.blocked_apps = payload.blocked_apps.slice(0, 200);
   }
+  // A PROVA de que cada trava está de pé, perguntada ao Android pelo aparelho.
+  //
+  // Substitui a dedução que o painel fazia a partir do interruptor ligado no
+  // painel mais um texto lido com `like`. Nenhum dos dois é a proteção: o
+  // primeiro diz o que foi PEDIDO, e o agente chegava a relatar "senha de tela"
+  // sem conferir se a trava tinha entrado.
+  //
+  // Guardado como veio, sem interpretar. Quais travas existem é conhecimento do
+  // agente — ele é o único capaz de aplicá-las. Se o servidor filtrasse por uma
+  // lista própria, trava nova sumiria em silêncio, que é exatamente o defeito de
+  // "a mesma decisão em dois lugares" que já acendeu um alarme falso por dois
+  // dias. Só o tamanho é limitado, e chave demais é sinal de defeito, não de uso.
+  if (
+    payload.protecoes && typeof payload.protecoes === "object" &&
+    !Array.isArray(payload.protecoes)
+  ) {
+    const bruto = payload.protecoes as Record<string, unknown>;
+    const limpo: Record<string, boolean> = {};
+    for (const [chave, valor] of Object.entries(bruto).slice(0, 40)) {
+      if (typeof valor === "boolean") limpo[chave.slice(0, 60)] = valor;
+    }
+    update.protecoes = limpo;
+    update.protecoes_at = new Date().toISOString();
+  }
   if (typeof payload.reset_token_ready === "boolean") {
     update.reset_token_ready = payload.reset_token_ready;
   }

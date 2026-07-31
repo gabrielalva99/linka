@@ -512,11 +512,24 @@ object Kiosk {
         // As travas que substituíram o esconde-Ajustes. Aplicadas uma a uma e
         // sem parar na primeira que o fabricante recusar: fechar cinco portas de
         // seis é melhor do que desistir das seis.
+        val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        var senhaDeTelaTrancada = true
         for (r in RESTRICOES_DE_VITRINE) {
             try {
                 if (blocked) dpm.addUserRestriction(admin, r)
                 else dpm.clearUserRestriction(admin, r)
             } catch (_: Exception) {
+            }
+            // CONFERE em vez de supor. O catch acima é mudo de propósito (um
+            // fabricante que recuse uma trava não pode derrubar as outras), e era
+            // exatamente por isso que o relato mentia: ele afirmava "senha de
+            // tela" pelo simples fato de termos TENTADO.
+            if (blocked && r == UserManager.DISALLOW_CONFIG_CREDENTIALS) {
+                senhaDeTelaTrancada = try {
+                    um.hasUserRestriction(r)
+                } catch (_: Exception) {
+                    false
+                }
             }
         }
 
@@ -533,7 +546,7 @@ object Kiosk {
             } catch (_: Exception) {
             }
         }
-        if (blocked) efetivos.add("senha de tela")
+        if (blocked && senhaDeTelaTrancada) efetivos.add("senha de tela")
 
         // NUNCA esconder o pacote de Ajustes: é onde mora a tela inicial de
         // emergência do Android. Se uma versão antiga deixou ele escondido, este
@@ -547,6 +560,67 @@ object Kiosk {
         }
 
         return if (!blocked) "" else efetivos.joinToString(", ")
+    }
+
+    /**
+     * O ESTADO REAL DE CADA PROTEÇÃO, perguntado ao Android, para o painel parar
+     * de deduzir.
+     *
+     * O QUE ESTAVA ERRADO. O painel julgava um aparelho protegido por prova
+     * indireta: o interruptor que o operador ligou (`block_settings`) mais um
+     * texto solto lido com `like '%vending%'`. Nenhum dos dois é a proteção. A
+     * que realmente segura o aparelho é DISALLOW_CONFIG_CREDENTIALS — sem ela o
+     * cliente põe um PIN e a vitrine morre no próximo reinício, sem cura neste
+     * hardware. E ela nunca subia numa batida: só aparecia em texto livre quando
+     * alguém disparava a sondagem à mão.
+     *
+     * Pior: logo acima, `applyAppBlocks` acrescenta "senha de tela" à lista de
+     * efetivos SEM conferir se a trava entrou — o `catch` do laço é mudo. Um
+     * fabricante que recusasse a restrição produziria um aparelho desprotegido
+     * relatando proteção. Prova indireta que não só é fraca: ela mente.
+     *
+     * A LISTA MORA SÓ AQUI, e isso é o principal. Este é o único lugar do sistema
+     * capaz de aplicar as travas, então é o único que sabe quais existem. O painel
+     * recebe pares "trava → está de pé?" e só pergunta "tem algum falso?" — sem
+     * conhecer nome nenhum. Foi exatamente a lista duplicada entre agente e
+     * relatório que deixou um aviso gritando por dois dias com os aparelhos
+     * protegidos: o agente mudou de proteção e o relatório continuou exigindo a
+     * antiga. Com a lista num lugar só, isso não tem como voltar.
+     *
+     * SÓ O QUE É ESPERADO AGORA. As travas de rede só entram depois do primeiro
+     * contato com o servidor (senão trancam o aparelho fora da rede), e as de
+     * vitrine só quando o operador pediu. Reportar uma trava que não deveria
+     * estar aplicada faria o painel acusar problema onde houve escolha.
+     *
+     * Vazio = não dá para afirmar nada (não somos donos do aparelho). O painel
+     * trata vazio como desconhecido, e não como "está tudo bem".
+     */
+    fun protecoes(ctx: Context): org.json.JSONObject {
+        val o = org.json.JSONObject()
+        if (!isDeviceOwner(ctx)) return o
+        val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        val daVitrine = Prefs.blockSettings(ctx)
+        val esperadas =
+            RESTRICTIONS(ctx) + if (daVitrine) RESTRICOES_DE_VITRINE else emptyList()
+        for (r in esperadas) {
+            o.put(
+                r,
+                try { um.hasUserRestriction(r) } catch (_: Exception) { false },
+            )
+        }
+        if (daVitrine) {
+            for (pkg in BLOCKABLE) {
+                o.put(
+                    "escondido:$pkg",
+                    try {
+                        dpm(ctx).isApplicationHidden(admin(ctx), pkg)
+                    } catch (_: Exception) {
+                        false
+                    },
+                )
+            }
+        }
+        return o
     }
 
     /** O que está bloqueado neste momento (para o heartbeat). */
