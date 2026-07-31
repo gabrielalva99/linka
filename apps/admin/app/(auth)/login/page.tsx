@@ -1,5 +1,7 @@
 "use client";
 
+import { CampoSenha } from "@/components/campo-senha";
+
 import { useActionState } from "react";
 import Link from "next/link";
 import { getMessages } from "@/lib/i18n";
@@ -44,16 +46,12 @@ export default function LoginPage() {
             />
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted">{t.login.password}</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-          </label>
+          <CampoSenha
+            rotulo={t.login.password}
+            name="password"
+            autoComplete="current-password"
+            required
+          />
 
           {errorText && (
             <p className="text-sm text-danger" role="alert">

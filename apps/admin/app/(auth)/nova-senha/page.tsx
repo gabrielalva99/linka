@@ -1,5 +1,7 @@
 "use client";
 
+import { CampoSenha } from "@/components/campo-senha";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages } from "@/lib/i18n";
@@ -108,26 +110,18 @@ export default function NovaSenhaPage() {
           <p className="mt-6 text-sm text-muted">{t.login.signingIn}</p>
         ) : (
           <form onSubmit={salvar} className="mt-6 flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-muted">{t.newPassword.password}</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={senha}
-                onChange={(ev) => setSenha(ev.target.value)}
-                className="rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-muted">{t.newPassword.confirm}</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={repetir}
-                onChange={(ev) => setRepetir(ev.target.value)}
-                className="rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-            </label>
+            <CampoSenha
+              rotulo={t.newPassword.password}
+              autoComplete="new-password"
+              value={senha}
+              onChange={(ev) => setSenha(ev.target.value)}
+            />
+            <CampoSenha
+              rotulo={t.newPassword.confirm}
+              autoComplete="new-password"
+              value={repetir}
+              onChange={(ev) => setRepetir(ev.target.value)}
+            />
 
             {erro && (
               <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
