@@ -8,7 +8,9 @@
 // e esquecer da outra para o heartbeat parar de enxergar aquele tipo de mudança —
 // e o sintoma seria o pior possível: a vitrine simplesmente não atualiza, sem
 // erro, sem log, sem nada no painel. Com um builder só, isso é impossível por
-// construção: a revisão é o hash EXATO do que vai ser entregue.
+// construção: a revisão é o hash do que este arquivo monta, e campo novo entra
+// nela sozinho. A única coisa deixada de fora é a parte que gira com o relógio
+// (content_url e fit), e o porquê está escrito em revisaoDe.
 //
 // É a mesma lição da lista de COMMANDS do heartbeat, que já custou um botão que
 // nunca funcionou: informação duplicada em dois lugares vira buraco silencioso
@@ -19,11 +21,12 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // função chamadora (ela já faz esse SELECT por outros motivos), então a lista
 // mora aqui para as duas pedirem a mesma coisa.
 export const CAMPOS_DO_APARELHO =
-  "id, tenant_id, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)";
+  "id, tenant_id, content_fit, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, stores(opens_at, closes_at)";
 
 export type AparelhoParaConteudo = {
   id: string;
   tenant_id: string;
+  content_fit: string | null;
   idle_return_seconds: number | null;
   volume_percent: number | null;
   cleanup_enabled: boolean | null;
@@ -44,22 +47,58 @@ export async function montarConteudo(
   const resolved = Array.isArray(rows) ? rows[0] : null;
   const contentUrl: string | null = resolved?.out_url ?? null;
 
-  // Lista para baixar: a campanha inteira (o rodízio não pode esperar download).
-  let prefetch: string[] = contentUrl ? [contentUrl] : [];
+  // A CAMPANHA INTEIRA, NA ORDEM, com o enquadramento de cada vídeo.
+  //
+  // O aparelho baixa tudo (o rodízio não pode esperar download) E decide sozinho
+  // qual é o da vez. Antes ele baixava tudo e mesmo assim PERGUNTAVA ao servidor
+  // qual exibir, porque o índice saía de resolve_device_content:
+  //
+  //     idx := floor(epoch(now()) / rotation_seconds) % total
+  //
+  // Um rodízio no relógio do servidor só vira no aparelho quando ele pergunta —
+  // era essa a razão real da pergunta de 20 em 20 segundos, e foi o que eu quebrei
+  // ao subir o intervalo para 120s na 0.51.0: a troca de vídeo passou a atrasar
+  // até dois minutos numa campanha de 3. Com a lista e o período na mão, o
+  // aparelho vira na hora exata, sem rede, e os aparelhos da mesma loja seguem
+  // sincronizados porque a conta é a mesma e parte do mesmo relógio (epoch).
+  const playlist: { url: string; fit: string }[] = [];
+  let rotationSeconds = 0;
   if (resolved?.out_campaign_id) {
     const { data: items } = await supabase
       .from("campaign_items")
-      .select("position, media_assets(url)")
+      .select("position, fit_mode, media_assets(url, fit_mode)")
       .eq("campaign_id", resolved.out_campaign_id)
       .order("position");
-    const urls = (items ?? [])
-      .map((i: { media_assets: { url: string } | { url: string }[] | null }) => {
-        const rel = i.media_assets;
-        return Array.isArray(rel) ? rel[0]?.url : rel?.url;
-      })
-      .filter((u): u is string => typeof u === "string" && u.length > 0);
-    if (urls.length > 0) prefetch = urls;
+    for (const i of items ?? []) {
+      const linha = i as { fit_mode: string | null; media_assets: unknown };
+      const rel = linha.media_assets as
+        | { url: string; fit_mode: string | null }
+        | { url: string; fit_mode: string | null }[]
+        | null;
+      const media = Array.isArray(rel) ? rel[0] : rel;
+      if (!media || !media.url) continue;
+      // Mesma precedência do resolve_device_content, para o aparelho chegar ao
+      // mesmo enquadramento que o servidor escolheria.
+      playlist.push({
+        url: media.url,
+        fit: device.content_fit ?? linha.fit_mode ?? media.fit_mode ?? "zoom",
+      });
+    }
+    const { data: campanha } = await supabase
+      .from("campaigns")
+      .select("rotation_seconds")
+      .eq("id", resolved.out_campaign_id)
+      .maybeSingle();
+    rotationSeconds = Number(campanha?.rotation_seconds ?? 0);
   }
+  // Vídeo fixo do aparelho (ou campanha vazia): lista de um, sem rodízio.
+  if (playlist.length === 0 && contentUrl) {
+    playlist.push({ url: contentUrl, fit: String(resolved?.out_fit ?? "zoom") });
+  }
+  // prefetch continua sendo só a lista de URLs: é o que os agentes que já estão
+  // na rua sabem ler, e aparelho com bootloader travado não pode parar de
+  // funcionar esperando atualização.
+  const prefetch: string[] = playlist.map((p) => p.url);
 
   // Versão atual do app: o aparelho decide se precisa se atualizar.
   const { data: release } = await supabase
@@ -101,11 +140,16 @@ export async function montarConteudo(
   }
 
   return {
+    // content_url e fit: o vídeo da vez, escolhido pelo relógio do SERVIDOR.
+    // Continuam saindo para os agentes antigos, que dependem deles. O agente novo
+    // ignora os dois e usa playlist + rotation_seconds.
     content_url: contentUrl,
+    fit: resolved?.out_fit ?? "zoom",
     store_opens_at: String(loja?.opens_at ?? "09:00").slice(0, 5),
     store_closes_at: String(loja?.closes_at ?? "22:00").slice(0, 5),
-    fit: resolved?.out_fit ?? "zoom",
     prefetch,
+    playlist,
+    rotation_seconds: rotationSeconds,
     // Comportamento do aparelho vem do servidor: ajustar não exige novo APK.
     idle_return_seconds: device.idle_return_seconds ?? 30,
     volume_percent: device.volume_percent ?? 0,
@@ -132,14 +176,28 @@ export async function montarConteudo(
 // que não existe.
 //
 // Repare no que ela cobre de graça: campanha por horário. Quando dá a hora de
-// virar, resolve_device_content passa a devolver outro vídeo, o hash muda
-// sozinho, e a virada chega ao aparelho sem ninguém programar nada.
-export async function revisaoDe(conteudo: unknown): Promise<string> {
-  // Chaves em ordem fixa: JSON.stringify preserva a ordem de inserção do objeto,
-  // e como o objeto sempre nasce do mesmo literal acima, a ordem é estável entre
-  // as duas funções. O que não pode é alguém montar o objeto campo a campo em
-  // ordem diferente — por isso montarConteudo é o único lugar que o constrói.
-  return (await sha256(JSON.stringify(conteudo))).slice(0, 16);
+// virar, resolve_device_content passa a devolver outra campanha, a playlist muda,
+// o hash muda sozinho, e a virada chega ao aparelho sem ninguém programar nada.
+export async function revisaoDe(conteudo: Record<string, unknown>): Promise<string> {
+  // FORA DO HASH: content_url e fit.
+  //
+  // Não é exceção de conveniência, e a diferença importa. Os dois são função pura
+  // de (playlist, rotation_seconds, relógio) — e playlist e rotation_seconds ESTÃO
+  // no hash. Nenhuma informação some: qualquer mudança real de conteúdo mexe na
+  // playlist. O que sai é só a parte que gira com o relógio.
+  //
+  // Medido antes de tirar: o aparelho ia buscar conteúdo de 3 em 3 minutos,
+  // certinho no rodízio da campanha "Geral" (rotation_seconds = 180). O hash
+  // mudava a cada virada porque content_url mudava, e a "novidade" era o servidor
+  // avisando de uma troca que o próprio aparelho já sabe fazer.
+  //
+  // Chaves em ordem fixa: JSON.stringify preserva a ordem de inserção, e o objeto
+  // sempre nasce do mesmo literal em montarConteudo — que é o único lugar
+  // autorizado a construí-lo, justamente para as duas funções hasharem igual.
+  const estavel: Record<string, unknown> = { ...conteudo };
+  delete estavel.content_url;
+  delete estavel.fit;
+  return (await sha256(JSON.stringify(estavel))).slice(0, 16);
 }
 
 async function sha256(texto: string): Promise<string> {

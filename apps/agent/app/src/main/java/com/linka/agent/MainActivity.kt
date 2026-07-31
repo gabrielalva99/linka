@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.os.Bundle
 import android.provider.Settings
@@ -419,6 +421,45 @@ class MainActivity : Activity() {
 
     private var ultimaBusca = 0L
 
+    // O RODIZIO DA CAMPANHA, feito pelo aparelho.
+    //
+    // Ele ja baixa a campanha inteira; nao ha motivo para PERGUNTAR qual vídeo é
+    // o da vez. A conta e a mesma do servidor — floor(epoch / periodo) % total —
+    // entao a virada cai no mesmo instante, e os aparelhos de uma loja continuam
+    // sincronizados entre si sem trocar uma unica mensagem.
+    private var playlist: List<Pair<String, String>> = emptyList()
+    private var rotacaoSegundos = 0
+    private val rodizio = Handler(Looper.getMainLooper())
+    private val virarVideo = object : Runnable {
+        override fun run() {
+            aplicarDoRodizio()
+            agendarProximaVirada()
+        }
+    }
+
+    private fun aplicarDoRodizio() {
+        if (playlist.isEmpty()) return
+        val i = if (rotacaoSegundos > 0 && playlist.size > 1) {
+            (((System.currentTimeMillis() / 1000) / rotacaoSegundos) % playlist.size).toInt()
+        } else {
+            0
+        }
+        val (url, fit) = playlist[i]
+        applyContent(url, fit)
+    }
+
+    /**
+     * Acorda na virada, e nao de segundo em segundo: dorme exatamente o que falta
+     * para o proximo multiplo do periodo. Vitrine que fica meses no ar nao pode
+     * ter um relogio de 1 Hz so para conferir se ja e hora.
+     */
+    private fun agendarProximaVirada() {
+        rodizio.removeCallbacks(virarVideo)
+        if (playlist.size < 2 || rotacaoSegundos <= 0) return
+        val periodo = rotacaoSegundos * 1000L
+        rodizio.postDelayed(virarVideo, periodo - (System.currentTimeMillis() % periodo))
+    }
+
     /**
      * Quando vale a pena perguntar por conteudo.
      *
@@ -480,12 +521,24 @@ class MainActivity : Activity() {
             var url: String? = null
             var fit = FIT_ZOOM
             var revisao: String? = null
+            var novaPlaylist: List<Pair<String, String>>? = null
+            var rotacaoRecebida = 0
             val prefetch = mutableListOf<String>()
             run {
                 val body = JSONObject(result.body)
                 if (!body.isNull("revisao")) {
                     revisao = body.optString("revisao").takeIf { it.isNotEmpty() }
                 }
+                body.optJSONArray("playlist")?.let { arr ->
+                    val lista = mutableListOf<Pair<String, String>>()
+                    for (i in 0 until arr.length()) {
+                        val item = arr.optJSONObject(i) ?: continue
+                        val u = item.optString("url").takeIf { it.isNotEmpty() } ?: continue
+                        lista.add(u to if (item.optString("fit") == FIT_FIT) FIT_FIT else FIT_ZOOM)
+                    }
+                    novaPlaylist = lista
+                }
+                rotacaoRecebida = body.optInt("rotation_seconds", 0)
                 // optString devolve a string "null" para um JSON null — sem isNull o app
                 // tentava tocar um arquivo chamado "null" ao remover o conteúdo.
                 if (!body.isNull("content_url")) {
@@ -552,7 +605,21 @@ class MainActivity : Activity() {
                 }
             }
             runOnUiThread {
-                applyContent(url, fit)
+                val lista = novaPlaylist
+                if (lista != null) {
+                    playlist = lista
+                    rotacaoSegundos = rotacaoRecebida
+                }
+                if (playlist.isNotEmpty()) {
+                    // Quem decide o vídeo da vez e este aparelho, pelo proprio
+                    // relogio. content_url so continua vindo para os agentes que
+                    // ja estao na rua.
+                    aplicarDoRodizio()
+                    agendarProximaVirada()
+                } else {
+                    rodizio.removeCallbacks(virarVideo)
+                    applyContent(url, fit)
+                }
                 handlePrefetch(prefetch)
                 // Volume vem do painel: mudar não pode exigir novo APK.
                 player?.volume = Prefs.volumePercent(this@MainActivity) / 100f
