@@ -43,9 +43,9 @@ const DESTINOS = [
   // Hostinger; aqui só entra o que é painel, e é por isso que a raiz NÃO está
   // nesta lista — link de convite não pode levar para uma página institucional.
   "https://painel.linkaretail.com.br",
-  // Fica durante a migração e sai quando o domínio novo estiver respondendo.
-  // Tirar antes seria cortar o caminho de quem já tem convite na caixa de entrada.
-  "https://linka-admin.vercel.app",
+  // linka-admin.vercel.app saiu daqui em 31/07, depois de o Gabriel entrar pelo
+  // endereço novo e confirmar. Ele continua respondendo (é o endereço interno da
+  // Vercel, e não dá para desligar), mas convite nenhum aponta mais para lá.
   "http://localhost:3000",
 ];
 
