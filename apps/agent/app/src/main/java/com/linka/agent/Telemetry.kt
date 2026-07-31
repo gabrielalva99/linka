@@ -36,8 +36,19 @@ object Telemetry {
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.
         Prefs.setSaidaPendente(ctx, null)
 
+        val resposta = try { JSONObject(result.body) } catch (_: Exception) { null }
+
+        // O SERVIDOR AVISOU QUE MUDOU. Este e o canal que substituiu a pergunta
+        // sem parar por conteudo: a batida ja acontece de qualquer jeito, entao a
+        // novidade pega carona nela e custa ZERO chamada a mais. A vitrine busca
+        // na proxima volta do relogio dela — quem aplica conteudo continua sendo
+        // um lugar so, a tela.
+        if (resposta?.optBoolean("conteudo_mudou") == true) {
+            Prefs.setNovidadePendente(ctx, true)
+        }
+
         val command = try {
-            JSONObject(result.body).let { if (it.isNull("command")) null else it.optString("command") }
+            resposta?.let { if (it.isNull("command")) null else it.optString("command") }
         } catch (_: Exception) {
             null
         }
@@ -105,6 +116,9 @@ object Telemetry {
             .put("playing_fit", Prefs.playingFit(ctx) ?: JSONObject.NULL)
             // Campanha inteira já no aparelho: exibição não depende mais da rede.
             .put("synced", Prefs.synced(ctx))
+            // A revisao do conteudo aplicado: e com ela que o servidor responde
+            // se este aparelho ainda esta em dia.
+            .put("revisao", Prefs.revisao(ctx) ?: JSONObject.NULL)
             // Saúde: explica queda de loja sem visita técnica.
             .put("temperature_c", Health.temperatureC(ctx) ?: JSONObject.NULL)
             .put("uptime_seconds", Health.uptimeSeconds())

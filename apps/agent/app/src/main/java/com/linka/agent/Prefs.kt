@@ -239,6 +239,30 @@ object Prefs {
             .edit().putInt(KEY_IDLE_RETURN, value).apply()
 
     private const val KEY_SYNCED = "synced"
+    private const val KEY_REVISAO = "revisao_aplicada"
+    private const val KEY_NOVIDADE = "novidade_pendente"
+
+    /**
+     * Impressao digital do conteudo que este aparelho JA APLICOU.
+     *
+     * Vai em toda batida; o servidor recalcula a de agora e responde so
+     * "mudou: sim/nao". So e gravada DEPOIS de aplicar — resposta recebida e nao
+     * aplicada nao pode fazer o aparelho se declarar em dia.
+     */
+    fun revisao(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_REVISAO, null)
+
+    fun setRevisao(ctx: Context, valor: String?) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_REVISAO, valor).apply()
+
+    /** O servidor avisou que mudou; a vitrine busca na proxima volta do relogio. */
+    fun novidadePendente(ctx: Context): Boolean =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_NOVIDADE, false)
+
+    fun setNovidadePendente(ctx: Context, valor: Boolean) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_NOVIDADE, valor).apply()
 
     /** Toda a campanha já está baixada no aparelho (alimenta o KPI "Sincronizados"). */
     fun synced(ctx: Context): Boolean =

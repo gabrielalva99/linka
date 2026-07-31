@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -91,7 +92,7 @@ class MainActivity : Activity() {
         const val PULSO_MS = 20_000L
 
         /** Assentado, pergunta a cada 6 voltas de 20s = 2 minutos. */
-        const val VOLTAS_ASSENTADO = 6
+        const val REDE_DE_SEGURANCA_MS = 30 * 60_000L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -380,6 +381,7 @@ class MainActivity : Activity() {
      * Idempotente de proposito: chamar duas vezes nao cria dois relogios.
      */
     private fun ligarRelogioDeConteudo(token: String) {
+        ultimaBusca = SystemClock.elapsedRealtime()
         checkContent(token)
         // O servico pode ter esquecido o token no meio do caminho (401 repetido).
         // Sem isto a tela continuaria pedindo conteudo com credencial morta, e o
@@ -404,7 +406,10 @@ class MainActivity : Activity() {
                     // o aparelho esta bem porque o heartbeat funciona.
                     timerTask {
                         val atual = Prefs.token(this@MainActivity) ?: return@timerTask
-                        if (horaDePerguntar()) checkContent(atual)
+                        if (horaDePerguntar()) {
+                            ultimaBusca = SystemClock.elapsedRealtime()
+                            checkContent(atual)
+                        }
                     },
                     PULSO_MS, PULSO_MS,
                 )
@@ -412,46 +417,37 @@ class MainActivity : Activity() {
         }
     }
 
-    private var voltasDeConteudo = 0
+    private var ultimaBusca = 0L
 
     /**
-     * Decide se ESTA volta do relogio vira uma pergunta ao servidor.
+     * Quando vale a pena perguntar por conteudo.
      *
-     * POR QUE ISTO EXISTE. O agente perguntava a cada 20 segundos, sempre. Sao 3
-     * chamadas por minuto por aparelho, mais 1 do heartbeat: com 250 aparelhos, 43
-     * milhoes de chamadas por mes. E o pior: **o custo crescia com a frota mesmo
-     * quando nada mudava**. Vitrine parada custava igual a vitrine trocando
-     * campanha, porque quem falava era o relogio, nao o fato.
+     * O relogio bate a cada 20 segundos, mas quase toda batida decide NAO chamar
+     * o servidor — a decisao e local e de graca. Chama em tres casos:
      *
-     * O RITMO E ADAPTATIVO, e nao um numero fixo maior, porque os dois momentos
-     * sao diferentes:
+     *  1. ESPERANDO. Sem video ainda, ou campanha baixando. Pode ter um tecnico
+     *     na loja olhando o aparelho neste momento; deixa-lo dois minutos em
+     *     "Carregando conteudo" faz ele concluir que falhou e mexer no que estava
+     *     dando certo. Aqui pressa vale mais que economia.
      *
-     *   ESPERANDO (sem video na tela, ou campanha ainda baixando) — o aparelho
-     *   esta no meio de alguma coisa e alguem pode estar olhando para ele numa
-     *   loja. Continua perguntando a cada 20s. Deixar um aparelho recem-instalado
-     *   dois minutos em "Carregando conteudo" e o tecnico concluindo que falhou.
+     *  2. O SERVIDOR AVISOU. O heartbeat de 60s devolve "conteudo_mudou" — ele
+     *     compara a revisao que este aparelho aplicou com a de agora. Como a
+     *     batida acontece de qualquer jeito, o aviso custa zero chamada, e a
+     *     campanha nova entra em ate 80 segundos.
      *
-     *   ASSENTADO (video tocando, campanha inteira no aparelho) — que e 99% do
-     *   tempo. Pergunta a cada 2 minutos. A campanha nova demora no maximo dois
-     *   minutos para entrar na vitrine, e numa loja isso e imperceptivel.
-     *
-     * Contar voltas em vez de reagendar o relogio e proposital: reagendar mexe no
-     * ciclo de vida do Timer, e foi exatamente ai que eu ja errei hoje — o relogio
-     * que nao ligava deixou um aparelho surdo por uma hora.
-     *
-     * ISTO NAO E A SOLUCAO FINAL. A solucao e o servidor AVISAR quando muda (FCM),
-     * com uma coleta lenta como rede de seguranca — ver
-     * docs/COMO-O-APARELHO-FALA-COM-O-SERVIDOR.md. Isto aqui e o corte de 62% que
-     * custa uma constante e nao precisa esperar o push existir.
+     *  3. REDE DE SEGURANCA (30 min). Se o aviso falhar — bug meu, revisao
+     *     corrompida, resposta truncada —, sem isto o aparelho ficaria com a
+     *     campanha velha PARA SEMPRE e ninguem perceberia: o painel continuaria
+     *     verde, porque o heartbeat funciona. Foi exatamente assim que o token
+     *     morto passou despercebido. E a parte que nao se corta.
      */
     private fun horaDePerguntar(): Boolean {
-        voltasDeConteudo++
         val esperando = currentUrl == null || !Prefs.synced(this)
-        if (esperando) {
-            voltasDeConteudo = 0
-            return true
-        }
-        return voltasDeConteudo % VOLTAS_ASSENTADO == 0
+        if (esperando) return true
+        if (Prefs.novidadePendente(this)) return true
+        val agora = SystemClock.elapsedRealtime()
+        if (agora - ultimaBusca >= REDE_DE_SEGURANCA_MS) return true
+        return false
     }
 
     // Busca o conteúdo periodicamente; troca o vídeo ou o enquadramento se mudou no painel.
@@ -483,9 +479,13 @@ class MainActivity : Activity() {
 
             var url: String? = null
             var fit = FIT_ZOOM
+            var revisao: String? = null
             val prefetch = mutableListOf<String>()
             run {
                 val body = JSONObject(result.body)
+                if (!body.isNull("revisao")) {
+                    revisao = body.optString("revisao").takeIf { it.isNotEmpty() }
+                }
                 // optString devolve a string "null" para um JSON null — sem isNull o app
                 // tentava tocar um arquivo chamado "null" ao remover o conteúdo.
                 if (!body.isNull("content_url")) {
@@ -556,6 +556,11 @@ class MainActivity : Activity() {
                 handlePrefetch(prefetch)
                 // Volume vem do painel: mudar não pode exigir novo APK.
                 player?.volume = Prefs.volumePercent(this@MainActivity) / 100f
+                // APLICADO — só agora o aparelho pode se declarar em dia. Gravar a
+                // revisão lá em cima, ao receber, faria uma resposta que chegou mas
+                // não foi aplicada calar o aviso do servidor para sempre.
+                Prefs.setRevisao(this@MainActivity, revisao)
+                Prefs.setNovidadePendente(this@MainActivity, false)
             }
         }.start()
     }
