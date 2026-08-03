@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 
@@ -9,6 +10,16 @@ import { getMessages } from "@/lib/i18n";
  * Frota inteira é a visão de abertura; a pergunta seguinte é sempre "e nesta
  * loja?". O recorte vive na URL para o link filtrado poder ser mandado por
  * mensagem, que é como o resultado circula de verdade numa reunião.
+ *
+ * TROCAR FILTRO PRECISA RESPONDER NA HORA. Mudar o recorte só altera o parâmetro
+ * da URL dentro da mesma rota, e nesse caso o Next NÃO mostra o `loading.tsx`:
+ * ele segura a tela antiga, inteira e clicável, até o servidor responder. Sem
+ * `useTransition` o campo volta ao valor anterior por um instante e nada mais
+ * acontece — parece que o clique não pegou, e a pessoa mexe de novo.
+ *
+ * O mesmo cuidado dos botões de período, e pelo mesmo motivo: o banco responde
+ * rápido (56 ms em 7 dias, 118 ms em 90). O que faltava era o aviso, não a
+ * velocidade.
  */
 export function ReportFilters({
   redes,
@@ -28,6 +39,7 @@ export function ReportFilters({
   const t = getMessages();
   const router = useRouter();
   const params = useSearchParams();
+  const [pendente, iniciar] = useTransition();
 
   function trocar(chave: string, valor: string) {
     const p = new URLSearchParams(params.toString());
@@ -40,14 +52,19 @@ export function ReportFilters({
       p.delete("aparelho");
     }
     if (chave === "loja") p.delete("aparelho");
-    router.replace(`/relatorios?${p.toString()}`);
+    iniciar(() => router.replace(`/relatorios?${p.toString()}`));
   }
 
   const field =
     "rounded-md border border-line bg-surface px-3 py-1.5 text-xs outline-none focus:border-primary";
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
+    <div
+      className={`mt-4 flex flex-wrap items-center gap-2 transition-opacity ${
+        pendente ? "pointer-events-none opacity-60" : ""
+      }`}
+      aria-busy={pendente}
+    >
       <select value={rede} onChange={(e) => trocar("rede", e.target.value)} className={field}>
         <option value="">{t.reports.allChains}</option>
         {redes.map((r) => (

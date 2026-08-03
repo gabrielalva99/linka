@@ -1,0 +1,24 @@
+-- LINKA - indice para o "medicoes recebidas ate HH:MM" do relatorio.
+--
+-- A tela pergunta, a cada carregamento, qual foi o ultimo evento que chegou:
+--   select created_at from device_events order by created_at desc limit 1
+--
+-- Nao havia indice por created_at. Os cinco que existem sao por started_at (a
+-- hora em que o evento ACONTECEU no aparelho) - coisa diferente de created_at (a
+-- hora em que ele CHEGOU aqui), e e a segunda que responde "ate quando o dado
+-- chegou". Medido: Seq Scan em device_events, 2,2 ms com 5.670 linhas.
+--
+-- 2 ms nao incomoda ninguem hoje, e por isso mesmo isto e uma bomba de efeito
+-- retardado: a conta da expansao e ~750 mil eventos por mes, e a varredura e da
+-- tabela INTEIRA, a cada abertura do relatorio. O trabalho cresce para sempre
+-- para devolver UMA linha.
+--
+-- Depois: Index Only Scan, 0,15 ms - e agora constante, nao proporcional.
+--
+-- Sem tenant_id na frente de proposito: hoje a consulta so ganha filtro de
+-- cliente quando existe mais de um cadastrado (ver porCliente), e no caso de um
+-- so ela vai sem filtro nenhum - que e justamente o que este indice atende. No
+-- dia do segundo cliente, um indice composto (tenant_id, created_at desc) passa
+-- a valer mais; fica registrado para nao ser redescoberto na marra.
+create index if not exists device_events_chegada
+  on public.device_events (created_at desc);

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
 import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 import { ReportFilters } from "./report-filters";
+import { PeriodoTabs } from "./periodo-tabs";
 import { criarAtalhos } from "./atalhos";
 import { diaMes, hora } from "@/lib/datas";
 import { decimal } from "@/lib/numeros";
@@ -181,32 +181,17 @@ export default async function RelatoriosPage({
   // todos os clientes, e um relatório somando duas marcas parece apenas um
   // relatório com números maiores.
   const filtro = await tenantFilter();
-  const { data, error } = await supabase.rpc("fleet_report", {
-    p_days: periodo,
-    p_rede: rede || null,
-    p_loja: loja || null,
-    p_aparelho: aparelho || null,
-    p_tenant: filtro,
-  });
 
-  // As opções dos filtros vêm do cadastro, não do resultado: uma loja que ficou
-  // sem movimento no período tem que continuar selecionável, senão a pessoa não
-  // consegue perguntar justamente sobre a loja que parou.
-  // Até quando o dado chegou.
+  // TUDO NUMA LEVA SÓ, e não uma consulta esperando a outra.
   //
-  // Sem isto o relatório mente por omissão: o aparelho manda o que mediu a cada
-  // minuto, e uma sessão de uso só fecha quando a pessoa sai do app — então uma
-  // visita aparece de um a três minutos depois de acontecer. Quem pega o
-  // aparelho e recarrega a tela vê o número antigo e conclui que está quebrado.
-  // Foi exatamente o que aconteceu no primeiro teste de campo.
-  const { data: ultimo } = await porCliente(
-    supabase.from("device_events").select("created_at"),
-    filtro,
-  )
-    .order("created_at", { ascending: false })
-    .limit(1);
-
+  // Eram três idas ao banco EM FILA antes das cinco de baixo: o relatório, o
+  // "recebido até" e só então as listas dos filtros. Cada ida é um vai-e-volta
+  // entre a Vercel e o banco, e nenhuma delas depende do resultado da anterior —
+  // esperar em fila era tempo somado à toa, e é o tipo de custo que ninguém vê no
+  // banco (cada consulta parece rápida) mas que se acumula na tela de quem clica.
   const [
+    { data, error },
+    { data: ultimo },
     { data: redesData },
     { data: lojasData },
     { data: aparelhosData },
@@ -214,6 +199,26 @@ export default async function RelatoriosPage({
     { data: idsDeLoja },
   ] =
     await Promise.all([
+      supabase.rpc("fleet_report", {
+        p_days: periodo,
+        p_rede: rede || null,
+        p_loja: loja || null,
+        p_aparelho: aparelho || null,
+        p_tenant: filtro,
+      }),
+      // Até quando o dado chegou.
+      //
+      // Sem isto o relatório mente por omissão: o aparelho manda o que mediu a
+      // cada minuto, e uma sessão de uso só fecha quando a pessoa sai do app —
+      // então uma visita aparece de um a três minutos depois de acontecer. Quem
+      // pega o aparelho e recarrega a tela vê o número antigo e conclui que está
+      // quebrado. Foi exatamente o que aconteceu no primeiro teste de campo.
+      porCliente(supabase.from("device_events").select("created_at"), filtro)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      // As opções dos filtros vêm do cadastro, não do resultado: uma loja que
+      // ficou sem movimento no período tem que continuar selecionável, senão a
+      // pessoa não consegue perguntar justamente sobre a loja que parou.
       porCliente(supabase.from("retail_chains").select("name"), filtro).order("name"),
       // A regra dos filtros: oferecem o que está EM OPERAÇÃO.
       //
@@ -357,19 +362,7 @@ export default async function RelatoriosPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {PERIODOS.map((d) => (
-            <Link
-              key={d}
-              href={`/relatorios?dias=${d}`}
-              className={`rounded-md border px-3 py-1.5 text-xs ${
-                d === periodo
-                  ? "border-primary text-primary"
-                  : "border-line text-muted hover:bg-surface-2"
-              }`}
-            >
-              {t.reports.days.replace("{n}", String(d))}
-            </Link>
-          ))}
+          <PeriodoTabs periodos={[...PERIODOS]} atual={periodo} />
           {/* Um botão só aqui em cima. O download de vídeos vive dentro da
               seção de vídeos: dois botões iguais lado a lado eram eu empurrando
               para quem lê uma decisão que é minha — as duas planilhas têm grãos
