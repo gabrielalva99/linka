@@ -138,13 +138,20 @@ object PainelDeRecursos {
     /**
      * Monta a tela do painel.
      *
-     * `aoFechar` devolve a vitrine. Quem chama decide o que isso significa — aqui
-     * dentro não se sabe (nem se deve saber) como o vídeo é remontado.
+     * `aoInteragir` avisa "o cliente está mexendo aqui" e `aoFechar` devolve a
+     * vitrine. Os dois são de quem chama de propósito: o painel não sabe — nem
+     * deve saber — como o vídeo é remontado nem por qual relógio a vitrine volta.
      */
-    fun montar(act: Activity, vitrine: VitrineParaTeste, aoFechar: () -> Unit): View {
+    fun montar(
+        act: Activity,
+        vitrine: VitrineParaTeste,
+        aoInteragir: () -> Unit,
+        aoSairDaTela: () -> Unit,
+        aoFechar: () -> Unit,
+    ): View {
         val root = object : LinearLayout(act) {
             /**
-             * SAIU DO PAINEL: a vitrine volta ao silêncio, sempre.
+             * SAIU DO PAINEL: a vitrine volta ao silêncio e quem chamou fica sabendo.
              *
              * O teste de som liga o áudio do vídeo, e desligar no botão "Voltar"
              * não bastaria — o painel também morre pelo retorno automático, pela
@@ -152,11 +159,16 @@ object PainelDeRecursos {
              * Qualquer um desses caminhos deixaria a vitrine gritando na loja
              * depois que o cliente foi embora, e ninguém no painel saberia.
              *
-             * `onDetachedFromWindow` é o único ponto por onde TODOS eles passam.
+             * `onDetachedFromWindow` é o único ponto por onde TODOS eles passam —
+             * inclusive os que ninguém listou aqui. Por isso o aviso de saída vai
+             * junto: quem chamou usa esse aviso para saber que o painel não está
+             * mais na frente, e caminhos novos (a tela de manutenção, uma tela que
+             * ainda nem existe) passam a ser cobertos sem alterar nada.
              */
             override fun onDetachedFromWindow() {
                 super.onDetachedFromWindow()
                 vitrine.devolverSilencio()
+                aoSairDaTela()
             }
 
             /**
@@ -171,9 +183,14 @@ object PainelDeRecursos {
              * Interceptado aqui, na raiz, e não botão por botão: recurso novo
              * entra depois sem ninguém lembrar de repetir isto, e é justamente
              * o que se esquece.
+             *
+             * O aviso vai para quem chamou, e não direto para o disco: arrastar o
+             * controle de brilho dispara dezenas de eventos por segundo, e gravar
+             * cada um deles é jank garantido no aparelho mais fraco da frota —
+             * bem na tela em que o cliente está julgando a tela.
              */
             override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-                Prefs.setLeftAt(act, System.currentTimeMillis())
+                aoInteragir()
                 return super.dispatchTouchEvent(ev)
             }
         }.apply {

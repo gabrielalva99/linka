@@ -66,6 +66,24 @@ class MainActivity : Activity() {
      */
     private var painelAberto = false
 
+    /**
+     * Instante do último toque DENTRO do painel — e por que não vai para o disco.
+     *
+     * O retorno automático da vitrine mora no serviço e se apoia em `leftAt`, que
+     * é gravado. Só que `leftAt` significa "SAIU do app", e enquanto o painel está
+     * na frente ninguém saiu: o serviço zera esse valor ao agir e a tela zera de
+     * novo ao voltar. Foi exatamente assim que o aparelho de teste ficou minutos
+     * parado no menu — o relógio que deveria devolver a vitrine tinha sido zerado
+     * pelos dois lados.
+     *
+     * Aqui o relógio do painel é só desta tela e só na memória. Não há o que
+     * zerar de fora, e o toque do cliente adia sem nenhuma gravação em disco (uma
+     * gravação por evento de toque seria dezenas por segundo ao arrastar o
+     * controle de brilho, no aparelho mais fraco da frota).
+     */
+    private var painelUltimoToque = 0L
+    private var relogioDoPainel: Timer? = null
+
     companion object {
         /** Preenche a tela cortando as bordas (padrão). */
         const val FIT_ZOOM = "zoom"
@@ -938,21 +956,86 @@ const val PASSADAS_DA_NUVEM = 3
      * vídeo na tela" toda vez que alguém tocasse num aparelho: um alerta por
      * cliente atendido, que é o jeito mais rápido de ensinar a ignorar alertas.
      *
-     * O retorno automático que já existe cobre a volta: sem toque por N segundos,
-     * a vitrine reaparece sozinha. Nada de relógio novo.
+     * ── Por que o relógio é daqui, e não o do serviço (defeito de 03/08) ───────
+     * A primeira versão marcava `leftAt` e confiava no retorno automático que já
+     * existia. Não funcionou, e não podia: `leftAt` quer dizer "saiu do app", e
+     * quem está no painel não saiu de lugar nenhum. O serviço zerava o valor ao
+     * agir, a tela zerava ao voltar, e o menu ficava na frente para sempre — sem
+     * vídeo de campanha, na loja, até alguém encostar no aparelho.
      */
     private fun abrirPainelDeRecursos() {
         if (telaDeManutencaoAberta) return
-        painelAberto = true
         Prefs.setMode(this, MODE_MENU)
-        Prefs.setLeftAt(this, System.currentTimeMillis())
         Telemetry.beatAsync(this)
-        setContentView(
-            comSaidaEscondida(
-                PainelDeRecursos.montar(this, vitrineParaTeste) { voltarParaVitrine() },
+        val painel = comSaidaEscondida(
+            PainelDeRecursos.montar(
+                act = this,
+                vitrine = vitrineParaTeste,
+                aoInteragir = { painelUltimoToque = System.currentTimeMillis() },
+                aoSairDaTela = { fecharRelogioDoPainel() },
+                aoFechar = { voltarParaVitrine() },
             ),
         )
+        // A BANDEIRA SOBE DEPOIS DE TROCAR A TELA, e a ordem é o conserto.
+        //
+        // Trocar a tela desmonta o que estava antes, e o painel avisa quando é
+        // desmontado — o aviso que baixa a bandeira. Levantando antes, um painel
+        // aberto sobre outro se auto-derrubaria: a bandeira iria a `false` no
+        // desmonte do primeiro e o menu novo ficaria na tela dizendo que não está.
+        setContentView(painel)
+        painelAberto = true
+        // Depois de setContentView: antes disso a janela ainda não existe.
         enterImmersive()
+        iniciarRelogioDoPainel()
+    }
+
+    /**
+     * O painel saiu da frente: a bandeira cai e o relógio para.
+     *
+     * Chamado pelo próprio painel ao ser desmontado, o que cobre TODA saída — o
+     * botão "Voltar", o tempo sem toque, a troca de vídeo da campanha e, o que
+     * motivou isto, os sete toques que abrem a manutenção por cima do painel.
+     *
+     * Sem esta parte, o relógio do painel continuaria correndo por baixo da tela
+     * de PIN e devolveria a vitrine no meio da digitação — pior ainda depois do
+     * PIN certo, trancando o aparelho na mão de quem acabou de destravá-lo para
+     * trabalhar. Uma proteção nossa anulando a outra, que é o defeito que este
+     * arquivo já carrega escrito em outro lugar.
+     */
+    private fun fecharRelogioDoPainel() {
+        painelAberto = false
+        relogioDoPainel?.cancel()
+        relogioDoPainel = null
+    }
+
+    /**
+     * Devolve a vitrine quando o painel fica sem toque.
+     *
+     * Usa o MESMO tempo que o cliente configurou para o retorno automático: para
+     * quem opera a loja existe um número só — "sem toque por N segundos, volta a
+     * exibir" — e ter dois seria explicar duas coisas para resolver uma.
+     *
+     * Confere de segundo em segundo em vez de agendar uma vez para daqui a N: com
+     * agendamento único, cada toque do cliente teria que remarcar o relógio, e um
+     * toque perdido no meio do arrasto do controle deixaria a tela sumindo na mão
+     * dele. Conferir é mais barato do que acertar o reagendamento.
+     */
+    private fun iniciarRelogioDoPainel() {
+        relogioDoPainel?.cancel()
+        painelUltimoToque = System.currentTimeMillis()
+        val limite = Prefs.idleReturnSeconds(this) * 1000L
+        if (limite <= 0L) return
+        relogioDoPainel = Timer().also {
+            it.schedule(
+                timerTask {
+                    if (!painelAberto) return@timerTask
+                    if (System.currentTimeMillis() - painelUltimoToque < limite) return@timerTask
+                    runOnUiThread { if (painelAberto) voltarParaVitrine() }
+                },
+                1_000L,
+                1_000L,
+            )
+        }
     }
 
     /**
@@ -1225,7 +1308,7 @@ const val PASSADAS_DA_NUVEM = 3
      */
     private fun voltarParaVitrine() {
         telaDeManutencaoAberta = false
-        painelAberto = false
+        fecharRelogioDoPainel()
         relogioDoPin?.cancel()
         relogioDoPin = null
         relogioDaManutencao?.cancel()
@@ -1261,7 +1344,7 @@ const val PASSADAS_DA_NUVEM = 3
         // isso de onde vier (conteúdo novo, volta da manutenção, retorno
         // automático). Marcar aqui, no único lugar que troca a tela pelo vídeo,
         // evita a bandeira ficar presa em "aberto" e travar o rodízio para sempre.
-        painelAberto = false
+        fecharRelogioDoPainel()
         player?.release()
         val view = PlayerView(this).apply {
             useController = false
@@ -1293,7 +1376,15 @@ const val PASSADAS_DA_NUVEM = 3
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     // "Demonstração" só quando há frame na tela de verdade; avisa o painel
                     // na hora (a condição evita repetir a cada rebuffer).
-                    if (isPlaying && Prefs.mode(this@MainActivity) != MODE_SHOW) {
+                    //
+                    // COM O PAINEL ABERTO, NÃO. O vídeo continua correndo por baixo
+                    // (é o material dos testes de brilho e som), então o reprodutor
+                    // avisa "estou tocando" e isso viraria "Demonstração" — com o
+                    // menu ocupando a tela inteira. Foi o que apareceu no aparelho
+                    // de teste em 03/08: parado no menu havia minutos e reportando
+                    // exibição normal, idêntico a um aparelho saudável. Numa frota
+                    // de 250, a operação nunca descobre.
+                    if (isPlaying && !painelAberto && Prefs.mode(this@MainActivity) != MODE_SHOW) {
                         Prefs.setMode(this@MainActivity, MODE_SHOW)
                         Telemetry.beatAsync(this@MainActivity)
                     }
@@ -1425,6 +1516,21 @@ const val PASSADAS_DA_NUVEM = 3
             voltarParaVitrine()
             return
         }
+        // VOLTOU DE FORA COM O PAINEL ABERTO: quem tem que reaparecer é a VITRINE.
+        //
+        // Achado pelo Gabriel em 03/08: painel aberto, ele foi para a tela do
+        // celular, e o retorno automático trouxe de volta o MENU, não o vídeo. Faz
+        // sentido do lado do Android — o retorno traz a TELA para a frente, e a
+        // tela ainda era o painel — e não faz sentido nenhum do lado da loja: o
+        // cliente foi embora e o próximo que passa encontra um menu de testes onde
+        // deveria estar o anúncio que a marca pagou.
+        //
+        // Pior: chegando aqui o relógio de "saiu do app" é zerado logo acima, e o
+        // painel não tinha relógio próprio. O menu ficava para sempre.
+        if (painelAberto) {
+            voltarParaVitrine()
+            return
+        }
         player?.let {
             it.volume = Prefs.volumePercent(this) / 100f
             it.play()
@@ -1444,6 +1550,8 @@ const val PASSADAS_DA_NUVEM = 3
         relogioDaManutencao = null
         relogioDoPin?.cancel()
         relogioDoPin = null
+        relogioDoPainel?.cancel()
+        relogioDoPainel = null
         player?.release()
         player = null
         playerView = null
