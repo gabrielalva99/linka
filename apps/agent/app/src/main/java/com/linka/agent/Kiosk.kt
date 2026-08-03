@@ -373,6 +373,18 @@ object Kiosk {
         // PRIMEIRA abertura. Não é sobre notificar ninguém: é sobre o cliente
         // da loja não receber um diálogo ao tocar no ícone.
         "android.permission.POST_NOTIFICATIONS",
+        // Bluetooth entra CONCEDIDO, e não negado, e o motivo é comercial.
+        //
+        // Desde que o resto passou a ser negado por varredura, estas duas cairiam
+        // junto — e o projeto já pagou por isso uma vez: bloquear Bluetooth
+        // derrubou o pareamento de fone e a loja ficou sem conseguir demonstrar
+        // fone em aparelho sem entrada P2. Perda de venda causada por nós.
+        //
+        // Fone é justamente uma das coisas que se demonstra num celular. E o
+        // risco de privacidade não se compara ao da localização: parear um fone
+        // não conta para onde a pessoa foi.
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
     )
 
     /**
@@ -399,6 +411,37 @@ object Kiosk {
         }
     }
 
+    /**
+     * O cliente da loja nunca ve caixa de permissao. NENHUMA.
+     *
+     * O DEFEITO, achado em campo em 31/07: o Gabriel abriu a camera num aparelho
+     * de teste e levou "permitir que a Camera acesse a localizacao?" na cara.
+     * Medido no proprio aparelho logo depois:
+     *
+     *   CAMERA               granted=true, POLICY_FIXED   <- nos
+     *   RECORD_AUDIO         granted=true, POLICY_FIXED   <- nos
+     *   ACCESS_FINE_LOCATION granted=true, USER_SET       <- o dedo dele
+     *
+     * Ou seja: conceder funcionava. O buraco era o RESTO. Eu concedia o que queria
+     * e nao fazia nada com o que nao queria — e "nao fazer nada" no Android
+     * significa DEIXAR PERGUNTAR. A caixa que a gente existe para evitar aparecia
+     * pela porta que ficou aberta.
+     *
+     * NEGAR E TAO IMPORTANTE QUANTO CONCEDER, e por dois motivos ao mesmo tempo:
+     * some a caixa E a permissao continua fechada. Nao e escolher entre a
+     * experiencia da loja e a privacidade de quem passa por ela; e conseguir as
+     * duas. Uma camera sem localizacao tira foto igual, so nao carimba o lugar.
+     *
+     * POR VARREDURA, E NAO POR LISTA DE NEGADAS. A regra e "o que nao esta na
+     * lista de concedidas, nega" — em vez de uma segunda lista com os nomes do
+     * que negar. Lista de negadas envelhece: basta um app pedir algo que ninguem
+     * previu (contatos, agenda, sensores) para a caixa voltar a aparecer numa
+     * loja, e a gente so descobre pelo cliente que desistiu. Aqui, permissao nova
+     * ja nasce negada.
+     *
+     * So mexe nas PERIGOSAS (as que o Android pergunta). As comuns nem geram
+     * caixa e nao aceitam este comando; tentar mexer nelas seria ruido.
+     */
     fun liberarPermissoesDeDemonstracao(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)
@@ -409,21 +452,45 @@ object Kiosk {
                 ctx.packageManager
                     .getPackageInfo(app.pacote, android.content.pm.PackageManager.GET_PERMISSIONS)
                     .requestedPermissions
-                    ?.toSet() ?: emptySet()
+                    ?.toList() ?: emptyList()
             } catch (_: Exception) {
                 continue
             }
-            for (p in PERMISSOES_DE_DEMONSTRACAO) {
-                if (p !in pedidas) continue
+            for (p in pedidas) {
+                val estado = when {
+                    p in PERMISSOES_DE_DEMONSTRACAO ->
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
+                    ehPerigosa(ctx, p) ->
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_DENIED
+                    else -> continue
+                }
                 try {
-                    dpm.setPermissionGrantState(
-                        admin, app.pacote, p,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
-                    )
+                    dpm.setPermissionGrantState(admin, app.pacote, p, estado)
                 } catch (_: Exception) {
                 }
             }
         }
+    }
+
+    /**
+     * O Android pergunta por esta permissao?
+     *
+     * So as "perigosas" geram caixa de dialogo. Perguntamos ao proprio sistema em
+     * vez de manter uma lista nossa: a lista do Android muda a cada versao, e uma
+     * copia desatualizada aqui deixaria justamente a permissao nova escapando —
+     * que e a forma como este defeito nasceu.
+     */
+    private fun ehPerigosa(ctx: Context, permissao: String): Boolean = try {
+        val info = ctx.packageManager.getPermissionInfo(permissao, 0)
+        if (Build.VERSION.SDK_INT >= 28) {
+            info.protection == android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+        } else {
+            @Suppress("DEPRECATION")
+            (info.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE) ==
+                android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+        }
+    } catch (_: Exception) {
+        false
     }
 
     fun autorizarNoQuiosque(ctx: Context) {
