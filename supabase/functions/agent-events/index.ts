@@ -14,7 +14,21 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const KINDS = new Set(["app_usage", "screen_session", "showcase", "media_play"]);
+// Esta lista É o que decide o que entra. Evento de tipo desconhecido é descartado
+// em silêncio — o aparelho mede, manda, recebe 200 e o dado some. Já custou um
+// botão que nunca funcionou (ver a lista de COMMANDS do heartbeat); aqui custaria
+// a medição que diferencia o produto. Recurso novo no painel do aparelho não
+// precisa de nada aqui, mas TIPO novo de evento precisa, sempre.
+const KINDS = new Set([
+  "app_usage",
+  "screen_session",
+  "showcase",
+  "media_play",
+  // Toque num recurso do painel: mede a INTENÇÃO ("quantos quiseram testar a
+  // câmera"), que é pergunta diferente do tempo de uso. Para brilho e volume,
+  // que não abrem app nenhum, é o único sinal que existe.
+  "feature_tap",
+]);
 const MAX_LOTE = 500;
 
 /** Último pedaço da URL, sem query string — usado só quando o vídeo já não está na biblioteca. */

@@ -115,6 +115,28 @@ object Kiosk {
         false
     }
 
+    /**
+     * Escreve um ajuste do sistema (brilho, tempo de tela).
+     *
+     * Só o dono do aparelho consegue, e a partir do Android 9. É o que torna o
+     * painel de recursos possível: na loja, a barra de notificações está fechada
+     * pelo quiosque e os Ajustes não abrem, então o brilho é HOJE inalcançável
+     * para quem está com o aparelho na mão.
+     *
+     * Devolve se pegou, em vez de engolir: quem chama é uma tela que o cliente
+     * está usando, e um controle que não faz nada é pior que um controle ausente.
+     */
+    fun escreverAjusteDoSistema(ctx: Context, chave: String, valor: String): Boolean {
+        if (!isDeviceOwner(ctx)) return false
+        if (Build.VERSION.SDK_INT < 28) return false
+        return try {
+            dpm(ctx).setSystemSetting(admin(ctx), chave, valor)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)

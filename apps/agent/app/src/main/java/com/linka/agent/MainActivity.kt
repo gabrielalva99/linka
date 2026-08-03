@@ -863,7 +863,7 @@ const val PASSADAS_DA_NUVEM = 3
     private var relogioDoPin: Timer? = null
 
     /** Envolve a vitrine com o alvo invisível do gesto. */
-    private fun comSaidaEscondida(conteudo: View): View {
+    private fun comSaidaEscondida(conteudo: View, abrePainel: Boolean = false): View {
         val root = FrameLayout(this)
         root.addView(
             conteudo,
@@ -872,6 +872,27 @@ const val PASSADAS_DA_NUVEM = 3
                 ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
+        // O PRIMEIRO TOQUE abre o painel de recursos.
+        //
+        // Só sobre o VÍDEO (abrePainel), nunca sobre "Aguardando conteúdo" nem
+        // sobre as telas de manutenção: abrir um menu de demonstração em cima de
+        // uma tela de erro é oferecer câmera a quem está tentando entender por que
+        // a vitrine parou.
+        //
+        // Entra ANTES do alvo do gesto, para o canto de manutenção continuar por
+        // cima. Trocar a ordem faria os sete toques abrirem o painel, e a saída
+        // presencial sumiria sem nada acusar.
+        if (abrePainel) {
+            root.addView(
+                View(this).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                    setOnClickListener { abrirPainelDeRecursos() }
+                },
+            )
+        }
         val lado = (72 * resources.displayMetrics.density).toInt()
         root.addView(
             View(this).apply {
@@ -882,6 +903,35 @@ const val PASSADAS_DA_NUVEM = 3
             },
         )
         return root
+    }
+
+    /**
+     * Abre o painel de recursos.
+     *
+     * O MODO VIRA `main_menu`, que é o que o painel da operação mostra como
+     * "menu inicial". Não é invenção: é o mesmo estado que o incumbente reporta
+     * ("Device mode: Not running · Main menu · Show mode ..."), e por isso já
+     * existia na nossa lista desde o começo.
+     *
+     * O QUE ESTÁ TOCANDO NÃO É APAGADO, de propósito. `playing_url` continua
+     * apontando para o vídeo da campanha, porque a campanha continua sendo o
+     * conteúdo deste aparelho — o cliente só está olhando outra coisa por um
+     * minuto. Limpar aqui faria a lista de pendências acusar "no ar, mas sem
+     * vídeo na tela" toda vez que alguém tocasse num aparelho: um alerta por
+     * cliente atendido, que é o jeito mais rápido de ensinar a ignorar alertas.
+     *
+     * O retorno automático que já existe cobre a volta: sem toque por N segundos,
+     * a vitrine reaparece sozinha. Nada de relógio novo.
+     */
+    private fun abrirPainelDeRecursos() {
+        if (telaDeManutencaoAberta) return
+        Prefs.setMode(this, MODE_MENU)
+        Prefs.setLeftAt(this, System.currentTimeMillis())
+        Telemetry.beatAsync(this)
+        setContentView(
+            comSaidaEscondida(PainelDeRecursos.montar(this) { voltarParaVitrine() }),
+        )
+        enterImmersive()
     }
 
     private fun contarToqueDeManutencao() {
@@ -1217,7 +1267,12 @@ const val PASSADAS_DA_NUVEM = 3
         // Envolvido: é o que põe o alvo do gesto de manutenção sobre o vídeo. O
         // alvo é um quadrado invisível de 72dp no canto — não cobre o vídeo nem
         // atrapalha quem só quer assistir.
-        setContentView(comSaidaEscondida(view))
+        //
+        // `abrePainel` só aqui: este é o ÚNICO lugar em que há vídeo de campanha
+        // na tela, e portanto o único em que "tocar" significa "quero
+        // experimentar o aparelho". Nas telas de espera e de manutenção o mesmo
+        // toque significa outra coisa.
+        setContentView(comSaidaEscondida(view, abrePainel = true))
         enterImmersive()
     }
 
