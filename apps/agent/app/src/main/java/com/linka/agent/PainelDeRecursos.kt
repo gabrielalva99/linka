@@ -56,12 +56,52 @@ import java.util.TimeZone
  */
 object PainelDeRecursos {
 
+    /**
+     * De onde vem a IMAGEM E O SOM do teste.
+     *
+     * ── O defeito que isto conserta (apontado pelo Gabriel, 03/08) ────────────
+     * A primeira versão abria "Brilho" numa tela preta com um controle no meio, e
+     * "Som" num controle de volume sem áudio nenhum. Os dois funcionavam e não
+     * demonstravam coisa alguma: brilho se julga OLHANDO conteúdo, e volume sem
+     * som é volume de coisa nenhuma. Na palavra dele: "nada disso acaba virando
+     * um teste real".
+     *
+     * ── E o material de teste já estava no aparelho ───────────────────────────
+     * O vídeo da campanha. Já baixado, já tocando, e é o conteúdo da marca — o
+     * cliente julga a tela e o alto-falante vendo e ouvindo o produto que o
+     * anunciante pagou para exibir. Zero arquivo novo, zero download.
+     *
+     * Quem monta a vista é a tela principal, porque só ela sabe do reprodutor. O
+     * painel só pede: "me dá o vídeo, com ou sem som".
+     */
+    interface VitrineParaTeste {
+        /**
+         * Devolve a vista do vídeo, ou nulo se não houver vídeo carregado.
+         *
+         * ATENÇÃO: isto MOVE o reprodutor para a vista devolvida. Chamar só para
+         * mexer no som deixa o reprodutor preso numa vista que ninguém coloca na
+         * tela, e a vitrine fica em "Aguardando conteúdo" para sempre — foi
+         * exatamente o defeito de 03/08, e é por isso que `devolverSilencio`
+         * existe separado.
+         */
+        fun vista(comSom: Boolean): View?
+
+        /**
+         * Devolve a vitrine ao silêncio, SEM tocar na vista.
+         *
+         * Existe porque a mesma função não pode servir para as duas coisas: quem
+         * sai do painel quer só desligar o som, e pedir "a vista muda" para
+         * conseguir isso rouba o reprodutor da tela.
+         */
+        fun devolverSilencio()
+    }
+
     /** Um recurso do painel: a chave que vai para a medição e o rótulo da tela. */
     private data class Recurso(
         val chave: String,
         val rotulo: String,
         val descricao: String,
-        val abrir: (Activity, (View) -> Unit) -> Unit,
+        val abrir: (Activity, VitrineParaTeste, (View) -> Unit) -> Unit,
     )
 
     private val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
@@ -81,17 +121,17 @@ object PainelDeRecursos {
      * depois, e cada um sozinho — recurso novo aqui é uma linha nesta lista.
      */
     private val RECURSOS = listOf(
-        Recurso("camera", "Câmera", "Tire uma foto") { act, _ ->
+        Recurso("camera", "Câmera", "Tire uma foto") { act, _, _ ->
             abrirPorIntent(act, Intent("android.media.action.STILL_IMAGE_CAMERA"))
         },
-        Recurso("youtube", "YouTube", "Veja em alta resolução") { act, _ ->
+        Recurso("youtube", "YouTube", "Veja em alta resolução") { act, _, _ ->
             abrirPorPacote(act, "com.google.android.youtube")
         },
-        Recurso("brilho", "Brilho da tela", "Veja como fica no sol") { act, mostrar ->
-            mostrar(controleDeBrilho(act))
+        Recurso("brilho", "Brilho da tela", "Veja o vídeo mudar") { act, vitrine, mostrar ->
+            mostrar(controleDeBrilho(act, vitrine))
         },
-        Recurso("volume", "Som", "Ouça o alto-falante") { act, mostrar ->
-            mostrar(controleDeVolume(act))
+        Recurso("volume", "Som", "Ouça o alto-falante") { act, vitrine, mostrar ->
+            mostrar(controleDeVolume(act, vitrine))
         },
     )
 
@@ -101,8 +141,24 @@ object PainelDeRecursos {
      * `aoFechar` devolve a vitrine. Quem chama decide o que isso significa — aqui
      * dentro não se sabe (nem se deve saber) como o vídeo é remontado.
      */
-    fun montar(act: Activity, aoFechar: () -> Unit): View {
+    fun montar(act: Activity, vitrine: VitrineParaTeste, aoFechar: () -> Unit): View {
         val root = object : LinearLayout(act) {
+            /**
+             * SAIU DO PAINEL: a vitrine volta ao silêncio, sempre.
+             *
+             * O teste de som liga o áudio do vídeo, e desligar no botão "Voltar"
+             * não bastaria — o painel também morre pelo retorno automático, pela
+             * troca de vídeo da campanha e pela tela sendo recriada pelo Android.
+             * Qualquer um desses caminhos deixaria a vitrine gritando na loja
+             * depois que o cliente foi embora, e ninguém no painel saberia.
+             *
+             * `onDetachedFromWindow` é o único ponto por onde TODOS eles passam.
+             */
+            override fun onDetachedFromWindow() {
+                super.onDetachedFromWindow()
+                vitrine.devolverSilencio()
+            }
+
             /**
              * QUALQUER toque aqui dentro adia o retorno automático.
              *
@@ -158,7 +214,7 @@ object PainelDeRecursos {
                 // processo já poderia estar em segundo plano e o toque se perderia
                 // — justo os dois recursos mais procurados da vitrine.
                 medir(act, r.chave)
-                r.abrir(act) { controle ->
+                r.abrir(act, vitrine) { controle ->
                     palco.removeAllViews()
                     palco.addView(controle)
                 }
@@ -224,7 +280,7 @@ object PainelDeRecursos {
      * O modo automático precisa sair junto, senão o sensor de luz desfaz o que a
      * pessoa acabou de escolher e o controle parece quebrado.
      */
-    private fun controleDeBrilho(act: Activity): View {
+    private fun controleDeBrilho(act: Activity, vitrine: VitrineParaTeste): View {
         try {
             Kiosk.escreverAjusteDoSistema(
                 act, Settings.System.SCREEN_BRIGHTNESS_MODE,
@@ -237,10 +293,14 @@ object PainelDeRecursos {
         } catch (_: Exception) {
             128
         }
-        return controleDeslizante(act, "Brilho da tela", atual, 255) { valor ->
-            Kiosk.escreverAjusteDoSistema(
-                act, Settings.System.SCREEN_BRIGHTNESS, valor.toString(),
-            )
+        // O vídeo entra MUDO: aqui o cliente está julgando a tela, e som que ele
+        // não pediu numa loja é constrangimento, não demonstração.
+        return comVideoAtras(act, vitrine.vista(comSom = false)) {
+            controleDeslizante(act, "Brilho da tela", atual, 255) { valor ->
+                Kiosk.escreverAjusteDoSistema(
+                    act, Settings.System.SCREEN_BRIGHTNESS, valor.toString(),
+                )
+            }
         }
     }
 
@@ -252,15 +312,51 @@ object PainelDeRecursos {
      * painel da operação — aqui é o cliente ouvindo o aparelho, não a campanha
      * ganhando som sozinha.
      */
-    private fun controleDeVolume(act: Activity): View {
+    private fun controleDeVolume(act: Activity, vitrine: VitrineParaTeste): View {
         val am = act.getSystemService(Activity.AUDIO_SERVICE) as AudioManager
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val atual = am.getStreamVolume(AudioManager.STREAM_MUSIC)
-        return controleDeslizante(act, "Som", atual, max) { valor ->
-            try {
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, valor, 0)
-            } catch (_: Exception) {
+        // Aqui o vídeo entra COM SOM: é o único jeito de ouvir o alto-falante.
+        // Quem devolve a vitrine ao silêncio é o próprio painel, ao sair — ver
+        // `montar`, onDetachedFromWindow.
+        return comVideoAtras(act, vitrine.vista(comSom = true)) {
+            controleDeslizante(act, "Som", atual, max) { valor ->
+                try {
+                    am.setStreamVolume(AudioManager.STREAM_MUSIC, valor, 0)
+                } catch (_: Exception) {
+                }
             }
+        }
+    }
+
+    /**
+     * Põe o vídeo da campanha atrás do controle.
+     *
+     * O controle fica embaixo, numa faixa escura, para o dedo não cobrir
+     * justamente a tela que se está avaliando. Sem vídeo carregado (aparelho
+     * recém-instalado, campanha ainda baixando), mostra só o controle — que é
+     * pior do que com vídeo, mas melhor do que uma tela de erro na loja.
+     */
+    private fun comVideoAtras(act: Activity, video: View?, controle: () -> View): View {
+        if (video == null) return controle()
+        return FrameLayout(act).apply {
+            addView(
+                video,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            addView(
+                controle().apply {
+                    setBackgroundColor(Color.parseColor("#CC000000"))
+                    setPadding(40, 32, 40, 32)
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply { gravity = Gravity.BOTTOM },
+            )
         }
     }
 

@@ -51,6 +51,21 @@ class MainActivity : Activity() {
      */
     private var telaDeManutencaoAberta = false
 
+    /**
+     * O painel de recursos está na frente?
+     *
+     * Existe para o RODÍZIO DA CAMPANHA não roubar a tela de quem está usando o
+     * painel. Achado conferindo o primeiro teste: a virada de vídeo chama
+     * playVideo, que troca a tela inteira — então o cliente ajustando o brilho
+     * era jogado de volta para a vitrine no meio do teste, a cada troca de vídeo.
+     * Numa campanha de 3 minutos isso acontece o tempo todo.
+     *
+     * O rodízio continua correndo por baixo: quem volta para a vitrine (pelo
+     * botão, pelo tempo ou pela troca de app) já cai no vídeo da vez, porque o
+     * índice sai do relógio e não de onde paramos.
+     */
+    private var painelAberto = false
+
     companion object {
         /** Preenche a tela cortando as bordas (padrão). */
         const val FIT_ZOOM = "zoom"
@@ -539,6 +554,9 @@ const val PASSADAS_DA_NUVEM = 3
 
     private fun aplicarDoRodizio() {
         if (playlist.isEmpty()) return
+        // Cliente com o aparelho na mão tem prioridade sobre a virada de vídeo.
+        // Ver `painelAberto`.
+        if (painelAberto) return
         val i = if (rotacaoSegundos > 0 && playlist.size > 1) {
             (((System.currentTimeMillis() / 1000) / rotacaoSegundos) % playlist.size).toInt()
         } else {
@@ -925,13 +943,60 @@ const val PASSADAS_DA_NUVEM = 3
      */
     private fun abrirPainelDeRecursos() {
         if (telaDeManutencaoAberta) return
+        painelAberto = true
         Prefs.setMode(this, MODE_MENU)
         Prefs.setLeftAt(this, System.currentTimeMillis())
         Telemetry.beatAsync(this)
         setContentView(
-            comSaidaEscondida(PainelDeRecursos.montar(this) { voltarParaVitrine() }),
+            comSaidaEscondida(
+                PainelDeRecursos.montar(this, vitrineParaTeste) { voltarParaVitrine() },
+            ),
         )
         enterImmersive()
+    }
+
+    /**
+     * O vídeo da campanha, emprestado ao painel como material de teste.
+     *
+     * REAPROVEITA O REPRODUTOR que já está tocando, em vez de abrir outro: um
+     * segundo reprodutor decodificaria o mesmo arquivo duas vezes e, num aparelho
+     * de entrada como o G06 da frota, isso aparece como engasgo na tela — no
+     * exato momento em que o cliente está avaliando a tela.
+     *
+     * `comSom` é o que separa os dois testes. Brilho pede vídeo mudo; som pede o
+     * áudio ligado, porque é o único jeito de ouvir o alto-falante. Chamar com
+     * `false` também é como o painel devolve a vitrine ao silêncio ao sair.
+     */
+    private val vitrineParaTeste = object : PainelDeRecursos.VitrineParaTeste {
+        override fun vista(comSom: Boolean): View? {
+            val exo = player ?: return null
+            exo.volume = if (comSom) 1f else Prefs.volumePercent(this@MainActivity) / 100f
+            return PlayerView(this@MainActivity).apply {
+                useController = false
+                resizeMode = resizeMode(currentFit)
+                setBackgroundColor(0xFF000000.toInt())
+                // Passar o reprodutor para esta vista o solta da anterior sozinho;
+                // é o próprio ExoPlayer que garante uma vista só por vez. É também
+                // por isso que isto NÃO serve para só mexer no som.
+                player = exo
+            }
+        }
+
+        /**
+         * Só o som. Nenhuma vista é criada, e o reprodutor continua onde está.
+         *
+         * A versão anterior chamava `vista(false)` aqui, para reaproveitar o
+         * ajuste de volume que já morava lá. O efeito colateral foi caro: cada
+         * saída do painel criava uma vista de vídeo que ninguém colocava na tela e
+         * levava o reprodutor junto — a vitrine ficava presa em "Aguardando
+         * conteúdo", e nem reiniciar o app trazia de volta.
+         *
+         * A lição, que vale além daqui: função que faz duas coisas vira armadilha
+         * no dia em que alguém precisa de uma só.
+         */
+        override fun devolverSilencio() {
+            player?.volume = Prefs.volumePercent(this@MainActivity) / 100f
+        }
     }
 
     private fun contarToqueDeManutencao() {
@@ -1160,6 +1225,7 @@ const val PASSADAS_DA_NUVEM = 3
      */
     private fun voltarParaVitrine() {
         telaDeManutencaoAberta = false
+        painelAberto = false
         relogioDoPin?.cancel()
         relogioDoPin = null
         relogioDaManutencao?.cancel()
@@ -1191,6 +1257,11 @@ const val PASSADAS_DA_NUVEM = 3
     }
 
     private fun playVideo(url: String, fit: String) {
+        // O vídeo está tomando a tela: o painel não está mais na frente, venha
+        // isso de onde vier (conteúdo novo, volta da manutenção, retorno
+        // automático). Marcar aqui, no único lugar que troca a tela pelo vídeo,
+        // evita a bandeira ficar presa em "aberto" e travar o rodízio para sempre.
+        painelAberto = false
         player?.release()
         val view = PlayerView(this).apply {
             useController = false
