@@ -54,6 +54,27 @@ class BootReceiver : BroadcastReceiver() {
             ) {
                 return
             }
+
+            // REINICIOU: o trecho de vitrine que estava correndo morreu junto.
+            //
+            // O aparelho agora LEMBRA qual app está na frente e desde quando, para
+            // conseguir gravar a vitrine de hora em hora sem esperar alguém
+            // interromper. Só que essa memória sobrevive ao desligamento — e o
+            // tempo com o aparelho DESLIGADO não é vitrine. Sem esta linha, uma
+            // loja que tira o aparelho da tomada às 22h e liga às 9h ganharia onze
+            // horas de vitrine que ninguém viu, e o número que a marca compra
+            // passaria a mentir para cima.
+            //
+            // Só no boot de verdade. Atualização do app (MY_PACKAGE_REPLACED) não
+            // entra: ali o aparelho continuou ligado e exibindo, e quem fecha o
+            // trecho é o próprio Android ao trazer outra tela para a frente.
+            if (acao != Intent.ACTION_MY_PACKAGE_REPLACED) {
+                try {
+                    Prefs.setSessaoAberta(context, null, 0L)
+                } catch (_: Exception) {
+                }
+            }
+
             // Aparelho que nunca entrou na frota não tem o que exibir: subir a
             // tela de pareamento sozinha na prateleira só assusta quem passa.
             val token = try {

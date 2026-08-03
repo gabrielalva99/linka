@@ -76,8 +76,12 @@ object Interaction {
         // Um app tem várias telas internas (o Chrome abre ChromeLauncherActivity e
         // depois ChromeTabbedActivity): contando par a par, uma visita de 9s virava
         // dois pedaços — o que infla a contagem de sessões e derruba a média no BI.
-        var atual: String? = null
-        var atualDesde = 0L
+        //
+        // O trecho já em andamento vem da memória, e não de reler o histórico: ver
+        // Prefs.sessaoAberta. É isso que permite a leitura andar sempre para a
+        // frente, em vez de voltar ao começo do trecho a cada passada.
+        var atual: String? = Prefs.sessaoAbertaPkg(ctx)
+        var atualDesde = if (atual != null) Prefs.sessaoAbertaDesde(ctx) else 0L
         var telaLigadaEm = 0L
         var gravados = 0
 
@@ -132,12 +136,58 @@ object Interaction {
             return 0
         }
 
-        // Sessão ainda aberta no fim da leitura: não fecha à força — o marcador
-        // volta para onde ela começou e ela é fechada na próxima passada, inteira.
-        val ateOnde = if (atual != null) atualDesde else agora
+        // ── Trecho ainda aberto: grava o que já virou hora cheia ────────────
+        //
+        // O DEFEITO QUE ISTO CONSERTA. Antes, um trecho aberto não virava dado: o
+        // marcador voltava para o começo dele e a gravação esperava alguém
+        // INTERROMPER a vitrine. Numa loja movimentada quase não se nota — cada
+        // cliente que pega o aparelho fecha um trecho. Mas o erro cai sempre para o
+        // mesmo lado: quanto menos gente encosta, mais atrasado fica o número.
+        // Os pontos mais parados, que são os que precisam ser vistos, eram os que
+        // apareciam mais vazios.
+        //
+        // Medido em 03/08 nos dois aparelhos de teste: o 663E tinha um trecho de
+        // 26 HORAS gravado de uma vez só, no instante em que alguém finalmente
+        // encostou nele, e outros dois dias ainda sem gravar. O 2CD3, que ninguém
+        // tocou desde sexta, tinha zero hora de vitrine exibindo o tempo todo — e o
+        // painel o acusava de "pode ser aparelho com problema".
+        //
+        // POR HORA CHEIA, e não a cada passada. O relógio do serviço bate de 60 em
+        // 60 segundos; gravar um pedaço por batida daria 60 eventos por hora por
+        // aparelho, e a conta de eventos foi justamente o que passamos o dia
+        // enxugando. Fechando na virada da hora é no máximo UM evento por hora, e
+        // ainda casa com o grão do relatório, que é por hora local.
+        //
+        // A hora corrente fica aberta de propósito: ela ainda não terminou, e
+        // fechá-la agora seria inventar um fim que não aconteceu.
+        var ateOnde = agora
+        if (atual != null) {
+            val fronteira = inicioDaHora(agora)
+            if (atualDesde < fronteira) {
+                gravados += enfileirar(queue, tipoDe(atual), atual, atualDesde, fronteira)
+                atualDesde = fronteira
+            }
+            Prefs.setSessaoAberta(ctx, atual, atualDesde)
+        } else {
+            Prefs.setSessaoAberta(ctx, null, 0L)
+            ateOnde = agora
+        }
         Prefs.setLastEventScan(ctx, ateOnde)
         return gravados
     }
+
+    /**
+     * O começo da hora em que este instante cai.
+     *
+     * Conta direta sobre o relógio universal, sem calendário: a época começa numa
+     * hora cheia, então o resto da divisão por uma hora dá exatamente quanto já
+     * passou dela. Fusos da América Latina são horas inteiras, então a fronteira
+     * coincide com a hora local. Num fuso quebrado (30 ou 45 minutos) o corte
+     * cairia no meio da hora local — e ainda assim o total fecha, porque quem
+     * distribui o tempo pelas horas da loja é o servidor, a partir do início e do
+     * fim reais de cada trecho.
+     */
+    private fun inicioDaHora(t: Long): Long = t - (t % 3_600_000L)
 
     /**
      * A vitrine tocando é dado, não ruído.

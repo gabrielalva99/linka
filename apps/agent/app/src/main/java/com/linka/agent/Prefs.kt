@@ -167,6 +167,35 @@ object Prefs {
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putLong(KEY_LAST_SCAN, value).apply()
 
+    private const val KEY_SESSAO_PKG = "sessao_aberta_pkg"
+    private const val KEY_SESSAO_DESDE = "sessao_aberta_desde"
+
+    /**
+     * O trecho que ainda esta correndo: qual app esta na frente e desde quando.
+     *
+     * POR QUE ISTO PRECISA SER LEMBRADO. O aparelho descobre quem esta na frente
+     * lendo os avisos do Android ("o app X entrou as 14h"). Enquanto ninguem
+     * encosta no aparelho, nao chega aviso nenhum — entao, sem memoria, cada
+     * leitura teria de voltar ate o comeco do trecho para reencontrar aquele
+     * aviso. Era o que acontecia, e cobrava caro duas vezes: reler dias inteiros
+     * de historico a cada minuto, e — pior — o historico do Android tem prazo de
+     * validade. Trecho mais longo que o prazo perdia o proprio comeco, e o tempo
+     * de vitrine sumia de vez em vez de so atrasar.
+     *
+     * Com o trecho lembrado aqui, a leitura anda sempre para a frente.
+     */
+    fun sessaoAbertaPkg(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_SESSAO_PKG, null)
+
+    fun sessaoAbertaDesde(ctx: Context): Long =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong(KEY_SESSAO_DESDE, 0L)
+
+    fun setSessaoAberta(ctx: Context, pacote: String?, desde: Long) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_SESSAO_PKG, pacote)
+            .putLong(KEY_SESSAO_DESDE, desde)
+            .apply()
+
     private const val KEY_BLOCK_SETTINGS = "block_settings"
 
     /** Bloquear Ajustes e Play Store (decidido no painel, por aparelho). */
