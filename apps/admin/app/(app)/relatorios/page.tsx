@@ -74,6 +74,13 @@ type Report = {
     sessoes: number;
     segundos: number;
   }[];
+  /**
+   * Escolhas no menu do aparelho. Sem segundos DE PROPÓSITO: brilho e som não
+   * abrem app nenhum, então aqui só existe a escolha. Não somar com
+   * `por_recurso`, que mede tempo — são perguntas diferentes.
+   */
+  por_toque: { recurso: string; toques: number }[];
+  por_toque_modelo: { modelo: string; recurso: string; toques: number }[];
   por_regiao: {
     uf: string;
     cidade: string;
@@ -282,6 +289,14 @@ export default async function RelatoriosPage({
   const maiorRecurso = Math.max(1, ...r.por_recurso.map((x) => x.segundos));
   const modelosComUso = new Set(
     (r.por_recurso_modelo ?? []).map((x) => x.modelo),
+  ).size;
+  // `?? []` em toda leitura de toque: a frota atualiza aos poucos, e um cliente
+  // cujo painel ainda não chegou aos aparelhos abre esta tela com o campo
+  // ausente. Sem isso, a página inteira quebraria por causa de um quadro.
+  const toques = r.por_toque ?? [];
+  const maiorToque = Math.max(1, ...toques.map((x) => x.toques));
+  const modelosComToque = new Set(
+    (r.por_toque_modelo ?? []).map((x) => x.modelo),
   ).size;
   const filtroUrl =
     (rede ? `&rede=${encodeURIComponent(rede)}` : "") +
@@ -804,6 +819,69 @@ export default async function RelatoriosPage({
                         <td className="px-4 py-3 text-muted">{a.loja}</td>
                         <td className="px-4 py-3">{a.visitas}</td>
                         <td className="px-4 py-3 text-muted">{tempo(a.segundos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Só aparece quando há escolha registrada.
+              Quadro vazio numa rede cujos aparelhos ainda não têm o menu não
+              informa nada — sugere que ninguém quis testar, quando na verdade
+              não havia o que tocar. */}
+          {toques.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byTap}</h2>
+              <p className="mt-1 text-xs text-muted">{t.reports.tapHint}</p>
+              <div className="mt-3 rounded-xl border border-line bg-surface p-5">
+                <ul className="space-y-2">
+                  {toques.map((x) => (
+                    <li key={x.recurso} className="flex items-center gap-3">
+                      <span className="w-44 shrink-0 truncate text-sm" title={x.recurso}>
+                        {x.recurso}
+                      </span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                        <span
+                          className="block h-full rounded-full bg-brand-500"
+                          style={{
+                            width: `${Math.round((x.toques / maiorToque) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="w-28 shrink-0 text-right text-xs text-muted">
+                        {decimal(x.toques)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          {/* Como no cruzamento de uso: com um modelo só, a tabela repete a
+              lista de cima com uma coluna a mais. */}
+          {modelosComToque > 1 && (
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-muted">{t.reports.byTapModel}</h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead className="bg-surface-2 text-left text-muted">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">{t.reports.model}</th>
+                      <th className="px-4 py-2 font-medium">{t.reports.byFeature}</th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium">
+                        {t.reports.taps}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {(r.por_toque_modelo ?? []).map((x) => (
+                      <tr key={`toque-${x.modelo}-${x.recurso}`} className="bg-surface">
+                        <td className="px-4 py-3 font-medium">{x.modelo}</td>
+                        <td className="px-4 py-3 text-muted">{x.recurso}</td>
+                        <td className="px-4 py-3 text-muted">{decimal(x.toques)}</td>
                       </tr>
                     ))}
                   </tbody>
