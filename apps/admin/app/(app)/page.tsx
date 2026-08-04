@@ -246,6 +246,10 @@ export default async function DashboardPage() {
     fora_do_ar: t.home.offline,
     tela_vazia: t.home.blankScreen,
     sem_travas: t.home.unlocked,
+    // Não é problema: é alguém trabalhando no aparelho agora. Aparece na lista
+    // para a operação não estranhar as proteções abertas — e para o "sem travas"
+    // poder calar a boca sem esconder nada.
+    em_manutencao: t.home.inMaintenance,
     senha_de_tela: t.home.screenLock,
     atualizacao_travada: t.home.updateStuck,
     bateria_baixa: t.home.lowBattery,
