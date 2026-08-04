@@ -16,6 +16,7 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "supabase": "^2.111.0"
   }
 }

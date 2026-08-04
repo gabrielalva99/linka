@@ -1,0 +1,27 @@
+# LINKA — configuração do projeto Supabase.
+#
+# ESTE ARQUIVO EXISTE POR CAUSA DE UM APAGÃO. As funções `agent-*` são chamadas
+# pelo aparelho na loja, que não tem sessão de usuário: ele se autentica com o
+# próprio token de dispositivo, conferido dentro da função. Por isso elas rodam
+# com `verify_jwt = false`.
+#
+# Sem este arquivo, esse ajuste vivia SÓ no painel do Supabase. Qualquer
+# republicação assumia o padrão (`verify_jwt = true`) e a frota inteira passava a
+# levar 401 na batida seguinte — aparelho no ar, servidor recusando, e ninguém
+# olhando o log para descobrir por quê. Aconteceu, e a lição virou este arquivo:
+# a configuração acompanha o código, em vez de depender de alguém lembrar.
+#
+# Regra prática: função nova que o APARELHO chama entra aqui com
+# `verify_jwt = false`. Função que o PAINEL chama não entra — ali existe sessão
+# de usuário e a verificação é justamente o que a protege.
+
+project_id = "xkzktmsqtvpkxmzftars"
+
+[functions.agent-heartbeat]
+verify_jwt = false
+
+[functions.agent-provision]
+verify_jwt = false
+
+[functions.agent-content]
+verify_jwt = false
