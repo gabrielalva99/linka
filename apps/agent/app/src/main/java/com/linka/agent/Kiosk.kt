@@ -55,7 +55,54 @@ object Kiosk {
     }
 
     private fun RESTRICTIONS(ctx: Context) =
-        RESTRICTIONS_SEMPRE + if (Prefs.jaFalouComServidor(ctx)) RESTRICTIONS_DE_REDE else emptyList()
+        RESTRICTIONS_SEMPRE +
+            if (Prefs.jaFalouComServidor(ctx) && !Prefs.redeLiberada(ctx)) {
+                RESTRICTIONS_DE_REDE
+            } else {
+                emptyList()
+            }
+
+    /**
+     * Devolve o wi-fi ao tecnico durante a manutencao.
+     *
+     * Isto existe porque a manutencao com PIN destrancava o quiosque mas NAO a
+     * rede: em campo, trocar a senha do wi-fi da loja ou remanejar o aparelho
+     * para outra loja era impossivel sem desprovisionar. Custou dois aparelhos
+     * numa apresentacao em 04/08 antes de virar defeito conhecido.
+     *
+     * A marca em Prefs e o que segura: sem ela, a proxima batida chamaria
+     * applyPolicies e trancaria de novo em ate um minuto.
+     */
+    fun liberarRede(ctx: Context): Boolean {
+        if (!isDeviceOwner(ctx)) return false
+        Prefs.setRedeLiberada(ctx, true)
+        val dpm = dpm(ctx)
+        val admin = admin(ctx)
+        var soltou = false
+        for (r in RESTRICTIONS_DE_REDE) {
+            try {
+                dpm.clearUserRestriction(admin, r)
+                soltou = true
+            } catch (_: Exception) {
+                // Fabricante que recuse uma: as outras continuam saindo.
+            }
+        }
+        return soltou
+    }
+
+    /**
+     * Tranca a rede de novo — e SO deve ser chamado com rede provada.
+     *
+     * Quem chama e a batida bem-sucedida (Telemetry), nunca o fim do relogio da
+     * manutencao. A diferenca e a que separa "tranquei depois de confirmar que a
+     * rede nova funciona" de "tranquei o aparelho fora da rede e agora so sai com
+     * restauracao de fabrica".
+     */
+    fun retrancarRede(ctx: Context) {
+        if (!Prefs.redeLiberada(ctx)) return
+        Prefs.setRedeLiberada(ctx, false)
+        applyPolicies(ctx)
+    }
 
     private fun dpm(ctx: Context) =
         ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -689,8 +736,19 @@ object Kiosk {
         if (!isDeviceOwner(ctx)) return o
         val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
         val daVitrine = Prefs.blockSettings(ctx)
+        // Rede solta na manutenção CONTINUA sendo reportada — e vai como falsa.
+        //
+        // Tirá-la da lista seria coerente com a regra de cima ("só o que é
+        // esperado agora"), e seria uma mentira: o painel mostraria o aparelho
+        // totalmente protegido enquanto o wi-fi está aberto para qualquer um
+        // desligar. Trava ausente por escolha do operador é silêncio legítimo;
+        // trava ausente por uma janela temporária que alguém pode ter esquecido
+        // aberta é exatamente o que a operação precisa enxergar.
+        val redeSolta = Prefs.jaFalouComServidor(ctx) && Prefs.redeLiberada(ctx)
         val esperadas =
-            RESTRICTIONS(ctx) + if (daVitrine) RESTRICOES_DE_VITRINE else emptyList()
+            RESTRICTIONS(ctx) +
+                (if (redeSolta) RESTRICTIONS_DE_REDE else emptyList()) +
+                (if (daVitrine) RESTRICOES_DE_VITRINE else emptyList())
         for (r in esperadas) {
             o.put(
                 r,

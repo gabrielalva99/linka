@@ -92,6 +92,21 @@ object Telemetry {
             Prefs.marcarQueFalouComServidor(ctx)
             Kiosk.applyPolicies(ctx)
         }
+
+        // REDE NOVA PROVADA: agora — e so agora — o wi-fi pode trancar de novo.
+        //
+        // O tecnico trocou a rede na manutencao e as travas ficaram soltas. Este e
+        // o unico ponto do app que sabe que a rede nova FUNCIONA, porque acabou de
+        // receber resposta do servidor por ela.
+        //
+        // Trancar pelo fim do relogio da manutencao seria o caminho obvio e estaria
+        // errado: se o tecnico digitou a senha errada, o relogio vence do mesmo
+        // jeito e o aparelho se tranca fora da rede — o defeito que ja custou uma
+        // restauracao de fabrica. Aqui, rede ruim simplesmente nao chega neste
+        // ponto, e o aparelho fica destravado esperando alguem tentar de novo.
+        if (Prefs.redeLiberada(ctx) && !Prefs.emManutencao(ctx)) {
+            Kiosk.retrancarRede(ctx)
+        }
         // Entregue: pode esquecer o relato da faxina.
         Prefs.setPendingCleanupReport(ctx, null)
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.

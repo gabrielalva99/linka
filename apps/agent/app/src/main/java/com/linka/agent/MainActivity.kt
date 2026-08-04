@@ -1276,6 +1276,13 @@ const val PASSADAS_DA_NUVEM = 3
         Prefs.setManutencaoAte(this, System.currentTimeMillis() + MANUTENCAO_MS)
         Telemetry.beatAsync(this)
         Kiosk.destrancar(this)
+        // A rede sai junto com o quiosque.
+        //
+        // Destrancar só o quiosque era meia saída: o técnico ganhava os Ajustes e
+        // continuava sem poder trocar de wi-fi, que é o motivo número um de ele
+        // estar ali. A rede só tranca de novo quando a batida provar que a rede
+        // nova alcança o servidor (ver Telemetry).
+        Kiosk.liberarRede(this)
         mostrarManutencao()
     }
 
@@ -1297,12 +1304,48 @@ const val PASSADAS_DA_NUVEM = 3
             setTextColor(getColor(R.color.marca_claro))
         }
         val aviso = TextView(this).apply {
-            text = "O botão de início e os Ajustes estão liberados. " +
-                "A vitrine volta e tranca sozinha quando o tempo acabar.\n\n" +
+            text = "O botão de início, os Ajustes e a troca de rede Wi-Fi estão " +
+                "liberados. A vitrine volta e tranca sozinha quando o tempo acabar.\n\n" +
                 "Esta saída foi registrada no painel."
             textSize = 14f
             setPadding(0, 24, 0, 24)
             setTextColor(getColor(R.color.marca_cinza))
+        }
+        // Atalho para o wi-fi em vez de mandar procurar nos Ajustes.
+        //
+        // Trocar de rede é o que traz o técnico até aqui na maioria das vezes
+        // (senha nova do roteador da loja, aparelho remanejado). Deixar isso a
+        // três telas de distância, dentro de Ajustes, é convidar o erro no campo.
+        val wifi = Button(this).apply {
+            text = "Trocar rede Wi-Fi"
+            setOnClickListener {
+                val acao = if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    android.provider.Settings.Panel.ACTION_WIFI
+                } else {
+                    android.provider.Settings.ACTION_WIFI_SETTINGS
+                }
+                val abriu = try {
+                    startActivity(android.content.Intent(acao))
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+                // O painel de wi-fi não existe em todo fabricante: cai na tela
+                // cheia de Ajustes de rede antes de desistir.
+                if (!abriu) {
+                    try {
+                        startActivity(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_WIFI_SETTINGS,
+                            ),
+                        )
+                    } catch (_: Exception) {
+                        aviso.text = "Não consegui abrir os Ajustes de Wi-Fi neste " +
+                            "aparelho. Abra pelos Ajustes do sistema — a rede está " +
+                            "destravada enquanto esta manutenção durar."
+                    }
+                }
+            }
         }
         val agora = Button(this).apply {
             text = "Trancar agora"
@@ -1310,7 +1353,8 @@ const val PASSADAS_DA_NUVEM = 3
             setTextColor(getColor(R.color.marca_preto))
             setOnClickListener { voltarParaVitrine() }
         }
-        root.addView(titulo); root.addView(conta); root.addView(aviso); root.addView(agora)
+        root.addView(titulo); root.addView(conta); root.addView(aviso)
+        root.addView(wifi); root.addView(agora)
         setContentView(root)
 
         relogioDaManutencao?.cancel()

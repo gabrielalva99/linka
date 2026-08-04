@@ -292,6 +292,7 @@ object Prefs {
     private const val KEY_PUSH = "push_token"
     private const val KEY_QR = "codigo_do_qr"
     private const val KEY_JA_FALOU = "ja_falou_com_servidor"
+    private const val KEY_REDE_LIBERADA = "rede_liberada_para_manutencao"
 
     /**
      * O aparelho ja conversou com o servidor pelo menos uma vez?
@@ -309,6 +310,26 @@ object Prefs {
     fun marcarQueFalouComServidor(ctx: Context) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_JA_FALOU, true).apply()
+
+    /**
+     * A rede esta destravada de proposito, para o tecnico trocar de wi-fi.
+     *
+     * Enquanto isto for verdade as travas de rede NAO voltam — nem pela batida,
+     * nem pelo fim da manutencao. Elas so voltam quando o aparelho provar que
+     * alcanca o servidor pela rede nova (ver Telemetry).
+     *
+     * Sem esta marca a manutencao seria inutil: bastava a proxima batida rodar
+     * applyPolicies para o wi-fi trancar de novo na cara do tecnico. E pior — se
+     * a rede nova estiver errada, trancar sem prova devolve exatamente o defeito
+     * que custou uma restauracao de fabrica (ver Kiosk.RESTRICTIONS_DE_REDE).
+     */
+    fun redeLiberada(ctx: Context): Boolean =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_REDE_LIBERADA, false)
+
+    fun setRedeLiberada(ctx: Context, value: Boolean) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_REDE_LIBERADA, value).apply()
 
     /**
      * Quantas passadas da NUVEM ja foram gastas com um video.
