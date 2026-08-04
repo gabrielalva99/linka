@@ -159,6 +159,9 @@ const val PASSADAS_DA_NUVEM = 3
             setTurnScreenOn(true)
         }
         drawBehindCutout()
+        // A vitrine nasce no brilho máximo, sem esperar ninguém abrir e fechar o
+        // painel de recursos.
+        Kiosk.brilhoDaVitrine(this)
         // Reaplica as travas a cada início: atualização do app ou do Android não
         // pode destravar a vitrine sem ninguém perceber. É inócuo se não somos dono.
         Kiosk.applyPolicies(this)
@@ -1421,6 +1424,9 @@ const val PASSADAS_DA_NUVEM = 3
         // aparelho no controle de brilho deixaria a tela escura para o resto do
         // dia, que é justamente o caso que ninguém está olhando.
         Kiosk.brilhoNoMaximo(this)
+        // E a janela da vitrine trava no máximo, que é o que realmente decide o
+        // que a loja enxerga — o ajuste do sistema acima é para os apps de fora.
+        Kiosk.brilhoDaVitrine(this)
         // Cai no que está gravado quando a memória da tela está vazia.
         //
         // A tela recriada DENTRO da manutenção vai direto para mostrarManutencao()

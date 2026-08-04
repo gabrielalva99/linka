@@ -217,48 +217,72 @@ object Kiosk {
         )
         if (jaEraManual) return
 
-        // SAIR DO AUTOMÁTICO APAGA O QUE A GENTE ACABOU DE ESCREVER.
-        //
-        // Medido no razr 60 ultra, 04/08: escrever modo=manual e brilho=255 na
-        // sequência deixa 255 na leitura imediata e 184 três segundos depois. Ao
-        // desligar o brilho automático o Android PERSISTE o valor que o sensor
-        // tinha calculado, e essa escrita dele chega atrasada, por cima da nossa.
-        //
-        // Sem esta segunda escrita o conserto passaria por pronto: a leitura logo
-        // após dá 255, e só quem espera é que vê a tela escurecer sozinha.
-        //
-        // Só acontece na TRANSIÇÃO. Com o modo já manual — que é o caso em toda
-        // volta de vitrine depois da primeira — a escrita de cima basta e nada
-        // aqui roda.
         escreverAjusteDoSistema(
             ctx,
             android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
             manual.toString(),
-        )
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
-            {
-                escreverAjusteDoSistema(
-                    ctx,
-                    android.provider.Settings.System.SCREEN_BRIGHTNESS,
-                    BRILHO_MAXIMO.toString(),
-                )
-            },
-            ESPERA_DO_SISTEMA_MS,
         )
     }
 
     /**
      * Máximo da escala inteira de brilho do Android.
      *
-     * Conferido neste hardware: a tabela de ajustes não tem teto (escrever 9999
-     * lê 9999 de volta), então quem limita é o próprio sistema ao converter para
-     * a escala interna de 0 a 1. 255 é o topo da escala documentada e é o mesmo
-     * valor que o controle deslizante do painel de recursos usa.
+     * 255 é o topo da escala documentada e é o mesmo valor que o controle
+     * deslizante do painel de recursos usa.
      */
     private const val BRILHO_MAXIMO = 255
 
-    /** Folga para a escrita atrasada do sistema chegar antes da nossa. */
-    private const val ESPERA_DO_SISTEMA_MS = 4_000L
+    /**
+     * Trava o brilho da JANELA da vitrine no máximo.
+     *
+     * ── Por que não basta escrever o ajuste do sistema ────────────────────────
+     * Neste Android o ajuste inteiro (0..255) é ESPELHO, não fonte. Quem manda é
+     * um float de 0 a 1 dentro do serviço de tela, e um `BrightnessSynchronizer`
+     * reescreve o inteiro sempre que o float muda. Capturado no log em 04/08, um
+     * segundo depois da nossa escrita:
+     *
+     *     Completed Update: {[37] 255(i)}          <- a nossa
+     *     New Update: {[39] 0.7209497(f)}          <- o float do sistema
+     *     [39] ... set brightness values: 184(i)   <- e ele desfaz
+     *
+     * Resultado na loja: a vitrine voltava com 184 de 255, uns 72% da barra.
+     * Escrever `screen_brightness_float` também não resolve — medido, o inteiro
+     * não acompanha.
+     *
+     * ── O que funciona ────────────────────────────────────────────────────────
+     * O brilho POR JANELA é outro mecanismo: o controlador de tela aplica esse
+     * valor enquanto a janela está na frente, sem passar pelo sincronizador. Não
+     * há corrida para perder porque não há disputa.
+     *
+     * Vale só enquanto a nossa tela está na frente — por isso o ajuste do sistema
+     * continua sendo escrito em `brilhoNoMaximo`, para o cliente que sai para a
+     * câmera não encontrar uma tela escura.
+     */
+    fun brilhoDaVitrine(activity: android.app.Activity) {
+        try {
+            activity.window.attributes = activity.window.attributes.apply {
+                screenBrightness = 1.0f
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Devolve o brilho da janela ao sistema.
+     *
+     * Chamado pela tela de teste de brilho: com a janela travada em 1.0 o
+     * controle deslizante não mudaria nada visível, e um controle que não faz
+     * nada é pior do que controle nenhum — era o defeito original do painel.
+     */
+    fun brilhoSolto(activity: android.app.Activity) {
+        try {
+            activity.window.attributes = activity.window.attributes.apply {
+                screenBrightness =
+                    android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            }
+        } catch (_: Exception) {
+        }
+    }
 
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return

@@ -298,6 +298,13 @@ object PainelDeRecursos {
      * pessoa acabou de escolher e o controle parece quebrado.
      */
     private fun controleDeBrilho(act: Activity, vitrine: VitrineParaTeste): View {
+        // Solta a trava de brilho da janela ENQUANTO este teste está aberto.
+        //
+        // A vitrine mantém a janela em 1.0 para a loja não escurecer; com ela
+        // travada, arrastar o controle não mudaria nada na tela e o cliente
+        // concluiria que o aparelho está com defeito. Quem devolve a trava é o
+        // retorno à vitrine, que passa por voltarParaVitrine.
+        Kiosk.brilhoSolto(act)
         try {
             Kiosk.escreverAjusteDoSistema(
                 act, Settings.System.SCREEN_BRIGHTNESS_MODE,
