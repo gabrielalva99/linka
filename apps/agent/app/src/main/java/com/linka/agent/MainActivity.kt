@@ -28,6 +28,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Timer
 import kotlin.concurrent.timerTask
@@ -449,6 +450,15 @@ const val PASSADAS_DA_NUVEM = 3
         }
         Kiosk.trancar(this)
 
+        // A CAMPANHA GRAVADA VOLTA ANTES DE QUALQUER COISA.
+        //
+        // A lista é o que faz o rodízio. Ela nascia vazia a cada subida do
+        // processo e só uma chamada de rede a preenchia — falhando essa chamada,
+        // o aparelho ficava travado num vídeo só até a rede de segurança de 30
+        // minutos, com o painel verde e a batida em dia. Ver `Prefs.playlistSalva`.
+        playlist = playlistDoTexto(Prefs.playlistSalva(this))
+        rotacaoSegundos = Prefs.rotacaoSalva(this)
+
         // Retoma o último conteúdo conhecido, se estiver no aparelho: reiniciar
         // sem internet (queda de luz na loja de manhã) não pode virar tela preta.
         val last = Prefs.playingUrl(this)
@@ -459,6 +469,9 @@ const val PASSADAS_DA_NUVEM = 3
         } else {
             setContentView(comSaidaEscondida(waitingView("Carregando conteúdo…")))
         }
+        // Com a lista de volta, a próxima virada já tem hora marcada — sem
+        // depender de o servidor responder primeiro.
+        agendarProximaVirada()
         ligarRelogioDeConteudo(token)
     }
 
@@ -570,6 +583,31 @@ const val PASSADAS_DA_NUVEM = 3
         }
     }
 
+    /** A lista para o disco e de volta. Formato curto porque é gravado a cada campanha. */
+    private fun playlistParaTexto(lista: List<Pair<String, String>>): String {
+        val arr = JSONArray()
+        for ((u, f) in lista) arr.put(JSONObject().put("u", u).put("f", f))
+        return arr.toString()
+    }
+
+    private fun playlistDoTexto(texto: String?): List<Pair<String, String>> {
+        if (texto.isNullOrEmpty()) return emptyList()
+        // Lista gravada ilegível não pode derrubar a vitrine: volta vazia, e a
+        // primeira resposta do servidor a reconstrói.
+        return try {
+            val arr = JSONArray(texto)
+            val lista = mutableListOf<Pair<String, String>>()
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val u = o.optString("u").takeIf { it.isNotEmpty() } ?: continue
+                lista.add(u to if (o.optString("f") == FIT_FIT) FIT_FIT else FIT_ZOOM)
+            }
+            lista
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     private fun aplicarDoRodizio() {
         if (playlist.isEmpty()) return
         // Cliente com o aparelho na mão tem prioridade sobre a virada de vídeo.
@@ -621,6 +659,17 @@ const val PASSADAS_DA_NUVEM = 3
     private fun horaDePerguntar(): Boolean {
         val esperando = currentUrl == null || !Prefs.synced(this)
         if (esperando) return true
+        // SEM LISTA NA MEMÓRIA também é estar esperando, e este caso não se via.
+        //
+        // O aparelho pode estar exibindo um vídeo (retomado do cache) e mesmo
+        // assim não ter campanha nenhuma na mão: é o que sobra quando a busca da
+        // subida falha. Como havia vídeo na tela, nada aqui acusava, e a próxima
+        // pergunta só sairia dali a 30 minutos — meia hora de aparelho parado num
+        // vídeo enquanto o do lado gira a campanha inteira.
+        //
+        // Não custa chamada a mais no caso normal: aparelho sem conteúdo de
+        // verdade já cai no `esperando` acima, porque `currentUrl` é nulo.
+        if (playlist.isEmpty()) return true
         if (Prefs.novidadePendente(this)) return true
         val agora = SystemClock.elapsedRealtime()
         if (agora - ultimaBusca >= REDE_DE_SEGURANCA_MS) return true
@@ -751,6 +800,11 @@ const val PASSADAS_DA_NUVEM = 3
                 if (lista != null) {
                     playlist = lista
                     rotacaoSegundos = rotacaoRecebida
+                    // Grava junto: é o que devolve o rodízio depois de uma subida
+                    // sem rede (ver Prefs.playlistSalva).
+                    Prefs.setPlaylistSalva(
+                        this@MainActivity, playlistParaTexto(lista), rotacaoRecebida,
+                    )
                 }
                 if (playlist.isNotEmpty()) {
                     // Quem decide o vídeo da vez e este aparelho, pelo proprio

@@ -390,6 +390,38 @@ object Prefs {
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_SYNCED, value).apply()
 
+    private const val KEY_PLAYLIST = "playlist_aplicada"
+    private const val KEY_ROTACAO = "rotacao_segundos"
+
+    /**
+     * A CAMPANHA INTEIRA, GRAVADA — e por que ela não podia viver só na memória.
+     *
+     * O aparelho faz o rodízio sozinho a partir desta lista. Só que ela nascia
+     * vazia a cada subida do processo (reinstalação, o Android recolhendo memória,
+     * uma queda), e quem a preenchia era UMA chamada de rede na subida. Falhando
+     * essa única chamada — o wi-fi da loja piscando no minuto em que o app se
+     * atualiza sozinho —, o aparelho ficava preso no último vídeo até a rede de
+     * segurança de 30 minutos.
+     *
+     * E ninguém veria: a batida continua, o vídeo continua tocando, o painel
+     * continua verde. O sintoma é só o aparelho ao lado exibindo outra coisa —
+     * que este arquivo já chama, com razão, do defeito mais visível que existe
+     * numa bancada de loja.
+     *
+     * Gravada, a lista sobrevive à subida e o rodízio recomeça sem rede nenhuma,
+     * pelo mesmo motivo que o último vídeo já era retomado do cache: reiniciar
+     * sem internet não pode custar a vitrine.
+     */
+    fun playlistSalva(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_PLAYLIST, null)
+
+    fun rotacaoSalva(ctx: Context): Int =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_ROTACAO, 0)
+
+    fun setPlaylistSalva(ctx: Context, json: String?, rotacao: Int) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_PLAYLIST, json).putInt(KEY_ROTACAO, rotacao).apply()
+
     private const val KEY_MODE = "mode"
 
     /** Estado operacional real: not_running | main_menu | show (o painel não deve adivinhar). */
