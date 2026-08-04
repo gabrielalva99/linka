@@ -171,6 +171,16 @@ object Telemetry {
                 val pacote = command.removePrefix("uninstall:")
                 Prefs.setLastInventoryAt(ctx, 0L)
                 Inventory.desinstalar(ctx, pacote)
+            } else if (command.startsWith("wifi:")) {
+                // Carga em JSON, e não separada por dois-pontos: nome de rede e
+                // senha de loja têm dois-pontos, espaço e acento à vontade, e um
+                // separador ingênuo quebraria justamente na rede de nome difícil.
+                try {
+                    val o = JSONObject(command.removePrefix("wifi:"))
+                    Kiosk.adicionarRede(ctx, o.optString("ssid"), o.optString("pass"))
+                } catch (_: Exception) {
+                    "falhou: não entendi os dados da rede"
+                }
             } else null
     }
 

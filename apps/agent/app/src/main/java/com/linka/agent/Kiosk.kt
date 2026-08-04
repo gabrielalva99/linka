@@ -285,6 +285,78 @@ object Kiosk {
     /** Escuro o bastante para demonstrar, claro o bastante para achar o botão. */
     private const val PISO_DE_BRILHO = 0.05f
 
+    /**
+     * Cadastra a rede da loja, mandada pelo painel.
+     *
+     * ── Para que serve ────────────────────────────────────────────────────────
+     * O caso real não é a primeira instalação (aí o técnico ainda tem os Ajustes
+     * abertos, antes de travar), nem o aparelho remanejado (esse sai pelo PIN de
+     * manutenção). É a LOJA TROCAR A SENHA DO ROTEADOR: vinte aparelhos caem
+     * juntos e viram vinte atendimentos. Com a rede nova cadastrada ANTES da
+     * troca, eles atravessam sozinhos.
+     *
+     * ── A trava é nossa, então nós a abrimos ──────────────────────────────────
+     * `DISALLOW_ADD_WIFI_CONFIG` existe justamente para o cliente da loja não
+     * cadastrar rede. Ela não distingue quem chama, então o dono do aparelho
+     * tropeça na própria trava. Aqui a gente solta, cadastra e tranca de novo —
+     * e o `finally` garante que a trava volta mesmo se o cadastro explodir no
+     * meio. Deixar a trava aberta por causa de um erro seria trocar uma
+     * comodidade por um buraco permanente.
+     *
+     * NÃO conecta na hora, de propósito: a rede pode ser a de amanhã. Quem
+     * escolhe é o Android, quando a atual sumir.
+     */
+    fun adicionarRede(ctx: Context, ssid: String, senha: String): String {
+        if (!isDeviceOwner(ctx)) return "falhou: não sou dono do aparelho"
+        if (ssid.isBlank()) return "falhou: rede sem nome"
+        val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE)
+            as? android.net.wifi.WifiManager
+            ?: return "falhou: sem acesso ao Wi-Fi"
+
+        val dpm = dpm(ctx)
+        val admin = admin(ctx)
+        val um = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        val abertas = RESTRICTIONS_DE_REDE.filter {
+            try { um.hasUserRestriction(it) } catch (_: Exception) { false }
+        }
+        return try {
+            for (r in abertas) {
+                try { dpm.clearUserRestriction(admin, r) } catch (_: Exception) {}
+            }
+            @Suppress("DEPRECATION")
+            val cfg = android.net.wifi.WifiConfiguration().apply {
+                SSID = "\"" + ssid + "\""
+                if (senha.isBlank()) {
+                    allowedKeyManagement.set(
+                        android.net.wifi.WifiConfiguration.KeyMgmt.NONE,
+                    )
+                } else {
+                    preSharedKey = "\"" + senha + "\""
+                }
+            }
+            if (Build.VERSION.SDK_INT >= 31) {
+                val r = wm.addNetworkPrivileged(cfg)
+                if (r.statusCode == android.net.wifi.WifiManager.AddNetworkResult.STATUS_SUCCESS) {
+                    "rede $ssid cadastrada"
+                } else {
+                    "falhou: o Android recusou (código ${r.statusCode})"
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val id = wm.addNetwork(cfg)
+                if (id >= 0) "rede $ssid cadastrada" else "falhou: o Android recusou"
+            }
+        } catch (e: Exception) {
+            "falhou: ${e.javaClass.simpleName}"
+        } finally {
+            // A trava volta SEMPRE. Rede cadastrada com a porta aberta atrás não
+            // é conveniência, é uma vitrine que o cliente desliga.
+            for (r in abertas) {
+                try { dpm.addUserRestriction(admin, r) } catch (_: Exception) {}
+            }
+        }
+    }
+
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)

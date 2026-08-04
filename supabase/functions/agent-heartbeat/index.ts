@@ -290,8 +290,22 @@ Deno.serve(async (req) => {
   // Sem conexão persistente: o comando pendente volta na resposta do heartbeat.
   const pending = device.pending_command ? String(device.pending_command) : null;
   // Comando com alvo ("uninstall:com.exemplo.jogo") não cabe numa lista fixa.
+  // "wifi:{...}" leva JSON com nome e senha da rede da loja. A validação é de
+  // FORMA, não de conteúdo: nome de rede e senha de loja têm acento, espaço e
+  // símbolo à vontade, e uma regex apertada barraria justamente a rede difícil.
+  // O que interessa é que o corpo seja um objeto com um ssid não vazio.
+  const redeValida = (s: string) => {
+    try {
+      const o = JSON.parse(s.slice("wifi:".length));
+      return typeof o?.ssid === "string" && o.ssid.length > 0;
+    } catch {
+      return false;
+    }
+  };
   const valido = pending != null &&
-    (COMMANDS.has(pending) || /^uninstall:[a-zA-Z0-9._]+$/.test(pending));
+    (COMMANDS.has(pending) ||
+      /^uninstall:[a-zA-Z0-9._]+$/.test(pending) ||
+      (pending.startsWith("wifi:") && redeValida(pending)));
   const command = done || !pending || !valido ? null : pending;
   // TEM NOVIDADE? O heartbeat responde, e é isto que tirou o aparelho de ficar
   // perguntando por conteúdo sem parar.
