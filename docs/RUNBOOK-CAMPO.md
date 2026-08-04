@@ -55,6 +55,10 @@ adb install -r linka-agente.apk
 
 # 4. Devolva o cargo de dono
 adb shell dpm set-device-owner com.linka.agent/.LinkaDeviceAdminReceiver
+
+# 5. NÃO PULE ESTE. Acesso a arquivos, sem o qual a faxina diária
+#    não apaga foto nenhuma do cliente
+adb shell appops set com.linka.agent MANAGE_EXTERNAL_STORAGE allow
 ```
 
 Resposta esperada no passo 4:
@@ -63,8 +67,16 @@ Resposta esperada no passo 4:
 Success: Device owner set to package com.linka.agent/.LinkaDeviceAdminReceiver
 ```
 
+**O passo 5 é o que eu esqueci na primeira vez, e o defeito é silencioso.** O cargo de
+dono não traz junto o acesso a arquivos: é uma permissão especial, fora do que o aparelho
+consegue conceder a si mesmo. Sem ela o aparelho volta bonito no painel — protegido, no
+ar, tocando campanha — e a faxina noturna deixa de apagar as fotos que o cliente tirou.
+Ninguém percebe olhando a lista de aparelhos.
+
 **Como saber que deu certo:** em até 1 minuto o painel mostra o aparelho como protegido,
-com todas as proteções confirmadas.
+com todas as proteções confirmadas. E na ficha do aparelho, a última faxina tem que dizer
+`N arquivo(s)` — se disser `SEM PERMISSÃO de arquivos`, o passo 5 não pegou. Para conferir
+na hora, sem esperar a noite, use **Limpar agora** na ficha do aparelho.
 
 **Se o passo 2 responder diferente de 0:** existe conta no aparelho. Remova a conta pelos
 Ajustes e repita. Se não for possível, aí sim é restauração de fábrica.

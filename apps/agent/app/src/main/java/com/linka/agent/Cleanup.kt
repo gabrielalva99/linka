@@ -54,6 +54,14 @@ object Cleanup {
             }
             partes.add("$files arquivo(s)")
         } else {
+            // ESTE TEXTO É LIDO PELO PAINEL. O aviso "faxina sem permissão" em
+            // v_device_issues casa com o começo "SEM PERMISSÃO" — mudar a frase
+            // aqui apaga o aviso lá, em silêncio. Se precisar mudar, mude a
+            // migration junto (20260804210000).
+            //
+            // O acoplamento é feio e é de propósito: a alternativa era um campo
+            // novo, uma versão nova do app e a frota inteira atualizando para
+            // ganhar um booleano que este texto já carrega.
             partes.add("SEM PERMISSÃO de arquivos (reprovisionar por cabo)")
         }
 

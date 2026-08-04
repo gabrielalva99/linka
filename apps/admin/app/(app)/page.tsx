@@ -254,6 +254,9 @@ export default async function DashboardPage() {
     // menu de testes. Para a loja significam a mesma coisa — a campanha não está
     // na tela — e o aparelho segue verde em tudo o mais.
     menu_parado: t.home.stuckInMenu,
+    // Aparelho impecável em tudo, e guardando foto de cliente. O defeito não
+    // aparece em nenhum indicador: só no texto da última faxina, na ficha.
+    faxina_sem_permissao: t.home.cleanupBlocked,
     senha_de_tela: t.home.screenLock,
     atualizacao_travada: t.home.updateStuck,
     bateria_baixa: t.home.lowBattery,

@@ -366,6 +366,7 @@
     "unlocked": "sem travas",
     "inMaintenance": "em manutenção",
     "stuckInMenu": "parado no menu",
+    "cleanupBlocked": "faxina bloqueada",
     "screenLock": "senha de tela",
     "updateStuck": "atualização travada",
     "lowBattery": "bateria baixa",
