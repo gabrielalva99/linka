@@ -1413,6 +1413,14 @@ const val PASSADAS_DA_NUVEM = 3
         relogioDaManutencao = null
         Prefs.setManutencaoAte(this, 0L)
         Kiosk.trancar(this)
+        // O brilho volta ao padrão junto com a vitrine.
+        //
+        // Aqui, e não no botão "Voltar" do painel: esta é a porta única por onde
+        // TODA saída passa — botão, retorno automático, fim da manutenção, tela
+        // recriada pelo Android. Amarrado só ao botão, o cliente que largasse o
+        // aparelho no controle de brilho deixaria a tela escura para o resto do
+        // dia, que é justamente o caso que ninguém está olhando.
+        Kiosk.brilhoNoMaximo(this)
         // Cai no que está gravado quando a memória da tela está vazia.
         //
         // A tela recriada DENTRO da manutenção vai direto para mostrarManutencao()

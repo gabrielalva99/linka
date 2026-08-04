@@ -184,6 +184,82 @@ object Kiosk {
         }
     }
 
+    /**
+     * Brilho no máximo — o padrão da vitrine.
+     *
+     * O painel de recursos deixa o cliente arrastar o brilho de propósito (é um
+     * teste de tela), e ninguém devolvia. Um cliente que baixou o brilho às 10h
+     * deixava o aparelho escuro até alguém ir na loja: vitrine apagada não vende,
+     * e é o tipo de defeito que ninguém abre chamado para reclamar.
+     *
+     * MANUAL, e não automático. O sensor de luz baixa o brilho em bancada de
+     * canto e em loja de shopping com pouca luz — exatamente onde a vitrine mais
+     * precisa aparecer. Aqui o valor é decidido por nós, não pelo ambiente.
+     */
+    fun brilhoNoMaximo(ctx: Context) {
+        if (!isDeviceOwner(ctx)) return
+        val manual = android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+
+        val jaEraManual = try {
+            android.provider.Settings.System.getInt(
+                ctx.contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                manual,
+            ) == manual
+        } catch (_: Exception) {
+            true
+        }
+
+        escreverAjusteDoSistema(
+            ctx,
+            android.provider.Settings.System.SCREEN_BRIGHTNESS,
+            BRILHO_MAXIMO.toString(),
+        )
+        if (jaEraManual) return
+
+        // SAIR DO AUTOMÁTICO APAGA O QUE A GENTE ACABOU DE ESCREVER.
+        //
+        // Medido no razr 60 ultra, 04/08: escrever modo=manual e brilho=255 na
+        // sequência deixa 255 na leitura imediata e 184 três segundos depois. Ao
+        // desligar o brilho automático o Android PERSISTE o valor que o sensor
+        // tinha calculado, e essa escrita dele chega atrasada, por cima da nossa.
+        //
+        // Sem esta segunda escrita o conserto passaria por pronto: a leitura logo
+        // após dá 255, e só quem espera é que vê a tela escurecer sozinha.
+        //
+        // Só acontece na TRANSIÇÃO. Com o modo já manual — que é o caso em toda
+        // volta de vitrine depois da primeira — a escrita de cima basta e nada
+        // aqui roda.
+        escreverAjusteDoSistema(
+            ctx,
+            android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+            manual.toString(),
+        )
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            {
+                escreverAjusteDoSistema(
+                    ctx,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                    BRILHO_MAXIMO.toString(),
+                )
+            },
+            ESPERA_DO_SISTEMA_MS,
+        )
+    }
+
+    /**
+     * Máximo da escala inteira de brilho do Android.
+     *
+     * Conferido neste hardware: a tabela de ajustes não tem teto (escrever 9999
+     * lê 9999 de volta), então quem limita é o próprio sistema ao converter para
+     * a escala interna de 0 a 1. 255 é o topo da escala documentada e é o mesmo
+     * valor que o controle deslizante do painel de recursos usa.
+     */
+    private const val BRILHO_MAXIMO = 255
+
+    /** Folga para a escrita atrasada do sistema chegar antes da nossa. */
+    private const val ESPERA_DO_SISTEMA_MS = 4_000L
+
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)
@@ -198,6 +274,9 @@ object Kiosk {
         // Vitrine não precisa de tela de bloqueio, e sem senha o token de reset
         // já nasce ativo — é o que garante a volta se alguém puser um PIN depois.
         try { dpm.setKeyguardDisabled(admin, true) } catch (_: Exception) {}
+        // Aparelho recém-provisionado, ou reiniciado, já nasce no brilho da
+        // vitrine — sem depender de alguém abrir e fechar o painel de recursos.
+        brilhoNoMaximo(ctx)
         // Tempo até a tela apagar: 30 minutos.
         //
         // Enquanto a vitrine está na frente ela segura a tela acesa sozinha, então
