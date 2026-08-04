@@ -246,7 +246,12 @@ export default async function FrotaPage({
     : 0;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
-  const locked = noAr.filter((d) => d.kiosk_locked).length;
+  //
+  // A LISTA é a fonte, e a conta sai dela. Guardar só o número obrigava quem lê
+  // o aviso a caçar o aparelho na tabela: "1 aparelho sem bloqueio" sem dizer
+  // qual é uma tarefa, não um aviso.
+  const semBloqueio = noAr.filter((d) => !d.kiosk_locked);
+  const locked = noAr.length - semBloqueio.length;
   // Aparelho que se cadastrou sozinho chega sem loja. É o único dado que ele
   // não tem como descobrir, e sem ele nenhuma campanha alcança o aparelho.
   const semLoja = daAba.filter((d) => !d.store_id);
@@ -338,10 +343,23 @@ export default async function FrotaPage({
           procedimento por cabo para um aparelho que não está lá. Pior, os
           indicadores logo acima já dizem "dos que estão no ar" — duas contas
           diferentes na mesma tela ensinam a não confiar em nenhuma. */}
-      {locked < noAr.length && (
-        <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
-          {t.fleet.unlockedWarning.replace("{n}", String(noAr.length - locked))}
-        </p>
+      {semBloqueio.length > 0 && (
+        <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+          <p className="text-xs text-warning">
+            {t.fleet.unlockedWarning.replace("{n}", String(semBloqueio.length))}
+          </p>
+          <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
+            {semBloqueio.map((d) => (
+              <Link
+                key={d.id}
+                href={`/dispositivos/${d.id}`}
+                className="hover:text-warning hover:underline"
+              >
+                {d.name}
+              </Link>
+            ))}
+          </p>
+        </div>
       )}
 
       {devices.length > 0 ? (

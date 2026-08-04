@@ -202,15 +202,44 @@ export default async function DashboardPage() {
   // Por loja, com os críticos primeiro: é a ordem em que alguém vai agir.
   // Agrupa por id da loja, não pelo nome: duas lojas homônimas de redes
   // diferentes colapsariam no mesmo bloco e a pessoa iria ao endereço errado.
-  const porLoja = new Map<string, { nome: string; lojaId: string | null; itens: Issue[] }>();
+  //
+  // E dentro da loja, POR APARELHO. A view devolve um aviso por sintoma, então um
+  // aparelho desligado e sem loja rendia três linhas repetindo o mesmo nome — a
+  // tela dava a impressão de três problemas onde havia um aparelho. Quem lê conta
+  // aparelhos para saber o tamanho do estrago, não sintomas.
+  //
+  // O Map preserva a ordem de inserção e a lista já chega com os críticos na
+  // frente: o aparelho aparece na posição do seu pior aviso, de graça.
+  type AparelhoComProblema = {
+    deviceId: string;
+    code: string | null;
+    name: string;
+    ehTeste: boolean;
+    itens: Issue[];
+  };
+  const porLoja = new Map<
+    string,
+    { nome: string; lojaId: string | null; aparelhos: Map<string, AparelhoComProblema> }
+  >();
   for (const i of [...criticos, ...atencao]) {
     const chave = i.store_id ?? "sem-loja";
-    const atual = porLoja.get(chave);
-    porLoja.set(chave, {
-      nome: i.loja ?? t.home.noStore,
-      lojaId: i.store_id,
-      itens: [...(atual?.itens ?? []), i],
-    });
+    let grupo = porLoja.get(chave);
+    if (!grupo) {
+      grupo = { nome: i.loja ?? t.home.noStore, lojaId: i.store_id, aparelhos: new Map() };
+      porLoja.set(chave, grupo);
+    }
+    const aparelho = grupo.aparelhos.get(i.device_id);
+    if (aparelho) {
+      aparelho.itens.push(i);
+    } else {
+      grupo.aparelhos.set(i.device_id, {
+        deviceId: i.device_id,
+        code: i.code,
+        name: i.name,
+        ehTeste: i.exclude_from_reports,
+        itens: [i],
+      });
+    }
   }
 
   const rotulo: Record<string, string> = {
@@ -282,32 +311,43 @@ export default async function DashboardPage() {
                     grupo.nome
                   )}
                 </h2>
-                <ul className="mt-3 flex flex-col gap-2">
-                  {grupo.itens.map((i) => (
+                <ul className="mt-3 flex flex-col gap-3">
+                  {[...grupo.aparelhos.values()].map((ap) => (
                     <li
-                      key={`${i.device_id}-${i.tipo}`}
-                      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-line pb-2 last:border-0 last:pb-0"
+                      key={ap.deviceId}
+                      className="border-b border-line pb-3 last:border-0 last:pb-0"
                     >
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          i.gravidade === "critico"
-                            ? "bg-warning/15 text-warning"
-                            : "bg-surface-2 text-muted"
-                        }`}
-                      >
-                        {rotulo[i.tipo] ?? i.tipo}
-                      </span>
-                      <Link
-                        href={`/dispositivos/${i.device_id}`}
-                        className="text-sm font-medium hover:text-primary hover:underline"
-                      >
-                        {i.code ? `${i.code} · ` : ""}
-                        {i.name}
-                      </Link>
-                      <span className="text-xs text-muted">{i.detalhe}</span>
-                      {i.exclude_from_reports && (
-                        <span className="text-xs text-muted">({t.home.testDevice})</span>
-                      )}
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <Link
+                          href={`/dispositivos/${ap.deviceId}`}
+                          className="text-sm font-medium hover:text-primary hover:underline"
+                        >
+                          {ap.code ? `${ap.code} · ` : ""}
+                          {ap.name}
+                        </Link>
+                        {ap.ehTeste && (
+                          <span className="text-xs text-muted">({t.home.testDevice})</span>
+                        )}
+                      </div>
+                      <ul className="mt-1 flex flex-col gap-1">
+                        {ap.itens.map((i) => (
+                          <li
+                            key={i.tipo}
+                            className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
+                          >
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                i.gravidade === "critico"
+                                  ? "bg-warning/15 text-warning"
+                                  : "bg-surface-2 text-muted"
+                              }`}
+                            >
+                              {rotulo[i.tipo] ?? i.tipo}
+                            </span>
+                            <span className="text-xs text-muted">{i.detalhe}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </li>
                   ))}
                 </ul>
