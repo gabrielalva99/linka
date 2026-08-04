@@ -258,31 +258,32 @@ object Kiosk {
      * continua sendo escrito em `brilhoNoMaximo`, para o cliente que sai para a
      * câmera não encontrar uma tela escura.
      */
-    fun brilhoDaVitrine(activity: android.app.Activity) {
+    fun brilhoDaVitrine(activity: android.app.Activity) = brilhoDaJanela(activity, 1.0f)
+
+    /**
+     * Brilho da janela, de 0 a 1 — e é isto que o teste de brilho controla.
+     *
+     * O controle do painel mexia no ajuste do sistema, e por isso a barra abria
+     * em 72% mesmo com a tela no máximo: ela lia o espelho (184) em vez do que a
+     * tela estava mostrando. Pior que feio — o cliente arrastava até o topo e
+     * quase nada mudava, porque a janela já estava em 1.0. Controle que não
+     * responde é o defeito que este painel existe para não ter.
+     *
+     * PISO DE SEGURANÇA. Sem ele o cliente arrasta até o fim, a tela apaga por
+     * completo, e o botão de voltar fica invisível — a vitrine vira um aparelho
+     * preto que ninguém na loja sabe recuperar.
+     */
+    fun brilhoDaJanela(activity: android.app.Activity, fracao: Float) {
         try {
             activity.window.attributes = activity.window.attributes.apply {
-                screenBrightness = 1.0f
+                screenBrightness = fracao.coerceIn(PISO_DE_BRILHO, 1.0f)
             }
         } catch (_: Exception) {
         }
     }
 
-    /**
-     * Devolve o brilho da janela ao sistema.
-     *
-     * Chamado pela tela de teste de brilho: com a janela travada em 1.0 o
-     * controle deslizante não mudaria nada visível, e um controle que não faz
-     * nada é pior do que controle nenhum — era o defeito original do painel.
-     */
-    fun brilhoSolto(activity: android.app.Activity) {
-        try {
-            activity.window.attributes = activity.window.attributes.apply {
-                screenBrightness =
-                    android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-            }
-        } catch (_: Exception) {
-        }
-    }
+    /** Escuro o bastante para demonstrar, claro o bastante para achar o botão. */
+    private const val PISO_DE_BRILHO = 0.05f
 
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return

@@ -298,35 +298,30 @@ object PainelDeRecursos {
      * pessoa acabou de escolher e o controle parece quebrado.
      */
     private fun controleDeBrilho(act: Activity, vitrine: VitrineParaTeste): View {
-        // Solta a trava de brilho da janela ENQUANTO este teste está aberto.
+        // A BARRA ABRE CHEIA PORQUE A TELA ESTÁ CHEIA.
         //
-        // A vitrine mantém a janela em 1.0 para a loja não escurecer; com ela
-        // travada, arrastar o controle não mudaria nada na tela e o cliente
-        // concluiria que o aparelho está com defeito. Quem devolve a trava é o
-        // retorno à vitrine, que passa por voltarParaVitrine.
-        Kiosk.brilhoSolto(act)
-        try {
-            Kiosk.escreverAjusteDoSistema(
-                act, Settings.System.SCREEN_BRIGHTNESS_MODE,
-                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL.toString(),
-            )
-        } catch (_: Exception) {
-        }
-        val atual = try {
-            Settings.System.getInt(act.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
-        } catch (_: Exception) {
-            128
-        }
+        // Antes ela lia o ajuste do sistema e abria em 72% com a tela no máximo:
+        // neste Android o ajuste de 0 a 255 é espelho de um float interno, e o
+        // sistema o reescreve por conta própria (ver Kiosk.brilhoDaJanela). A
+        // barra mostrava o espelho, não a tela — e quem arrastasse até o topo não
+        // veria mudança nenhuma, porque a janela já estava em 1.0.
+        //
+        // Agora o controle mexe na JANELA, o mesmo lugar onde a vitrine trava o
+        // brilho. O que a barra diz e o que o olho vê passam a ser a mesma coisa.
+        //
+        // Não persiste nada, de propósito: é um teste. O brilho volta ao máximo
+        // sozinho quando a vitrine reaparece, por voltarParaVitrine.
         // O vídeo entra MUDO: aqui o cliente está julgando a tela, e som que ele
         // não pediu numa loja é constrangimento, não demonstração.
         return comVideoAtras(act, vitrine.vista(comSom = false)) {
-            controleDeslizante(act, "Brilho da tela", atual, 255) { valor ->
-                Kiosk.escreverAjusteDoSistema(
-                    act, Settings.System.SCREEN_BRIGHTNESS, valor.toString(),
-                )
+            controleDeslizante(act, "Brilho da tela", BRILHO_CHEIO, BRILHO_CHEIO) { valor ->
+                Kiosk.brilhoDaJanela(act, valor / BRILHO_CHEIO.toFloat())
             }
         }
     }
+
+    /** Topo da barra de brilho. O número não importa: é uma escala visual. */
+    private const val BRILHO_CHEIO = 255
 
     /**
      * Volume do alto-falante.
