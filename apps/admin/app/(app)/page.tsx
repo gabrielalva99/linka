@@ -250,6 +250,10 @@ export default async function DashboardPage() {
     // para a operação não estranhar as proteções abertas — e para o "sem travas"
     // poder calar a boca sem esconder nada.
     em_manutencao: t.home.inMaintenance,
+    // Irmão de "tela sem vídeo": lá a vitrine está vazia, aqui está coberta pelo
+    // menu de testes. Para a loja significam a mesma coisa — a campanha não está
+    // na tela — e o aparelho segue verde em tudo o mais.
+    menu_parado: t.home.stuckInMenu,
     senha_de_tela: t.home.screenLock,
     atualizacao_travada: t.home.updateStuck,
     bateria_baixa: t.home.lowBattery,
