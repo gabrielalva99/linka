@@ -146,9 +146,13 @@ export default function PoliticaDePrivacidade() {
       <Secao titulo="Contato">
         <p>
           Encarregado pelo tratamento de dados pessoais:{" "}
-          <a href="mailto:privacidade@linkaretail.com.br" className="text-primary underline">
-            privacidade@linkaretail.com.br
+          <a href="mailto:suporte@linkaretail.com.br" className="text-primary underline">
+            suporte@linkaretail.com.br
           </a>
+        </p>
+        <p>
+          Se a sua mensagem for sobre dados pessoais — acesso, correção ou exclusão —, escreva
+          isso no assunto. Ela é encaminhada ao encarregado e respondida nos prazos da LGPD.
         </p>
       </Secao>
 
