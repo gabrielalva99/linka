@@ -23,6 +23,21 @@ import { COR } from "../marca";
  * Remotion é enxuto e não traz os filtros de cor. Melhor assim — dá para
  * ajustar vendo o resultado no editor.
  */
+/**
+ * Quanto cada clipe tem, em quadros (30 fps).
+ *
+ * Isto existe porque o erro já aconteceu: os clipes tinham 5 s e a cena mais
+ * longa pedia 7,2 s. O vídeo acabava e o navegador segurava o último quadro —
+ * lia como travada, sem nenhum aviso em lugar nenhum. Recortados com 9 s.
+ *
+ * Trocou um clipe? Atualize aqui, senão a checagem abaixo perde o sentido.
+ */
+const DURACAO_DO_CLIPE: Record<string, number> = {
+  "loja/tablet.mp4": 270,
+  "loja/bancada.mp4": 270,
+  "loja/vitrine.mp4": 270,
+};
+
 export function Loja({
   arquivo,
   inicio,
@@ -35,9 +50,20 @@ export function Loja({
   inicio: number;
   zoomDe?: number;
   zoomPara?: number;
+  /** Por quantos quadros a cena vai usar este clipe. */
   duracao: number;
 }) {
   const frame = useCurrentFrame();
+
+  const tem = DURACAO_DO_CLIPE[arquivo];
+  if (tem !== undefined && duracao > tem) {
+    // Falhar alto na renderização é muito melhor do que entregar um vídeo com
+    // um trecho congelado que só alguém assistindo vai notar.
+    throw new Error(
+      `A cena pede ${duracao} quadros de ${arquivo}, que só tem ${tem}. ` +
+        `O clipe acabaria e o quadro congelaria. Recorte um trecho mais longo.`,
+    );
+  }
 
   return (
     <AbsoluteFill style={{ background: COR.fundo }}>
