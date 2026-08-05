@@ -2,5 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  # Dependência do CLI da Vercel: o script de instalação baixa o binário da
+  # plataforma. Sem isto o pnpm bloqueia a instalação inteira e o CLI não roda.
+  esbuild: true
   sharp: true
   unrs-resolver: true
