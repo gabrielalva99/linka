@@ -14,14 +14,21 @@ const marca = localFont({
   display: "swap",
 });
 
+/**
+ * O título da aba é só "LINKA", por pedido do Gabriel.
+ *
+ * Perde-se palavra-chave na busca, e a `description` abaixo é quem carrega esse
+ * peso agora. Numa aba aberta, porém, o que se lê são os primeiros caracteres:
+ * "LINKA" inteiro vale mais do que "LINKA — o aparelho de dem…" cortado.
+ */
 export const metadata: Metadata = {
-  title: "LINKA — o aparelho de demonstração da sua marca, sob controle e medido",
+  title: "LINKA",
   description:
     "Plataforma que controla, atualiza e mede os aparelhos de demonstração de uma marca no varejo físico. Sem câmera, sem reconhecimento facial, sem dado biométrico.",
   openGraph: {
     title: "LINKA",
     description:
-      "O aparelho de demonstração da sua marca, sob controle e medido — em todas as lojas.",
+      "O aparelho de demonstração da sua marca, sob controle e medido, em todas as lojas.",
     locale: "pt_BR",
     type: "website",
   },

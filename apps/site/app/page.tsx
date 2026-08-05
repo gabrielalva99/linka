@@ -40,7 +40,7 @@ function Cabecalho() {
     <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
       <LinkaLogo className="h-7 w-auto" />
       <a
-        href="mailto:suporte@linkaretail.com.br?subject=LINKA%20—%20quero%20conhecer"
+        href="mailto:suporte@linkaretail.com.br?subject=Quero%20conhecer%20a%20LINKA"
         className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition-colors hover:border-primary hover:text-primary"
       >
         Falar com a gente
@@ -64,7 +64,7 @@ function Heroi() {
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-muted">
         A LINKA mantém cada aparelho de demonstração ligado, com a campanha certa e sob o
-        controle da marca — e transforma o que o visitante faz na loja em número.
+        controle da marca, e transforma o que o visitante faz na loja em número.
       </p>
     </section>
   );
@@ -76,7 +76,7 @@ function Problema() {
       <div className="grid gap-6 sm:grid-cols-3">
         <Cartao
           titulo="O aparelho está ligado?"
-          texto="Descobre-se quando o gerente da loja reclama — ou quando ninguém reclama e ele passa o mês apagado."
+          texto="Descobre-se quando o gerente da loja reclama. Ou quando ninguém reclama e ele passa o mês apagado."
         />
         <Cartao
           titulo="Está com a campanha certa?"
@@ -106,12 +106,12 @@ function OQueFaz() {
         <Cartao
           selo="Mede"
           titulo="Quem pegou, por quanto tempo, e o que quis testar"
-          texto="Cada bloco de uso vira uma visita, com os recursos que a pessoa abriu. Câmera, som, tela, vídeo — medidos por aparelho, por loja e por hora do dia."
+          texto="Cada bloco de uso vira uma visita, com os recursos que a pessoa abriu. Câmera, som, tela, vídeo. Tudo medido por aparelho, por loja e por hora do dia."
         />
         <Cartao
           selo="Opera à distância"
           titulo="Sem visita técnica para quase tudo"
-          texto="Trocar conteúdo, limpar as fotos que o visitante deixou, atualizar o aplicativo da frota inteira e diagnosticar um aparelho — tudo do painel, sem ninguém dirigir até a loja."
+          texto="Trocar conteúdo, limpar as fotos que o visitante deixou, atualizar o aplicativo da frota inteira e diagnosticar um aparelho: tudo do painel, sem ninguém dirigir até a loja."
         />
       </div>
     </Secao>
@@ -143,7 +143,7 @@ function Tese() {
       </div>
       <p className="mt-10 rounded-xl border border-primary/40 bg-primary/5 px-6 py-5 text-base leading-relaxed">
         O aparelho de demonstração é o único lugar do varejo físico onde a pessoa{" "}
-        <strong className="text-foreground">declara o que quer antes de comprar</strong> — ela pega,
+        <strong className="text-foreground">declara o que quer antes de comprar</strong>: ela pega,
         escolhe, testa. Hoje ninguém registra isso. É o que a LINKA mede.
       </p>
     </Secao>
@@ -162,7 +162,7 @@ function Privacidade() {
             Existe uma corrida no varejo para colocar câmera na prateleira, estimar idade e
             gênero de quem passa e escolher a oferta por isso. Imagem de rosto é{" "}
             <strong className="text-foreground">dado pessoal sensível</strong> na LGPD, exige
-            consentimento específico — e já há condenação judicial no Brasil por fazer isso
+            consentimento específico, e já há condenação judicial no Brasil por fazer isso
             sem pedir.
           </p>
         </div>
@@ -179,10 +179,11 @@ function Privacidade() {
         </div>
       </div>
       <p className="mt-6 text-sm text-muted">
+        Nossa{" "}
         <a href="/privacidade" className="underline hover:text-primary">
-          Política de privacidade
+          política de privacidade
         </a>{" "}
-        — específica desta plataforma, não um modelo genérico.
+        é específica desta plataforma, não um modelo genérico.
       </p>
     </Secao>
   );
@@ -205,7 +206,7 @@ function ParaOndeVai() {
         />
         <Cartao
           titulo="Teste A/B na loja física"
-          texto="Peça A em metade das lojas, peça B na outra metade, mesma semana — e a plataforma diz qual segurou mais gente. É o que a marca faz há vinte anos no digital e nunca conseguiu na loja."
+          texto="Peça A em metade das lojas, peça B na outra metade, mesma semana. A plataforma diz qual segurou mais gente. É o que a marca faz há vinte anos no digital e nunca conseguiu na loja."
         />
       </div>
     </Secao>
@@ -224,7 +225,7 @@ function Fechamento() {
           aconteceu com eles ontem, essa conversa é curta e a gente mostra funcionando.
         </p>
         <a
-          href="mailto:suporte@linkaretail.com.br?subject=LINKA%20—%20quero%20conhecer"
+          href="mailto:suporte@linkaretail.com.br?subject=Quero%20conhecer%20a%20LINKA"
           className="mt-8 inline-block rounded-lg bg-primary px-6 py-3 font-medium text-black transition-opacity hover:opacity-90"
         >
           suporte@linkaretail.com.br
