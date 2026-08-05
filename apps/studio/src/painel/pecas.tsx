@@ -1,88 +1,16 @@
-import { interpolate, Easing } from "remotion";
-import { COR, PILHA_DE_FONTE } from "../marca";
+import { Easing } from "remotion";
+import { COR } from "../marca";
 
 /**
- * As peças da interface do painel, para vídeo.
+ * O que sobra de interface desenhada na peça: o cursor, e a curva de entrada.
  *
- * ── Isto NÃO é o painel de verdade ────────────────────────────────────────
- * É um redesenho para filmar: mais espaçado, tipo maior, menos denso. O painel
- * real é feito para trabalhar oito horas; este é feito para ser lido em três
- * segundos, num quadro que ninguém pode pausar.
- *
- * ── A regra do dado ───────────────────────────────────────────────────────
- * Tudo aqui é neutro e ilustrativo: "Loja Centro", "Bancada 04". Interface com
- * dado de exemplo é prática normal de produto. O que NUNCA entra é número de
- * resultado — nada de "+37% de conversão", nada de seta de crescimento. Esse é
- * o número que a marca cobra na reunião seguinte, e a gente não tem.
+ * Aqui morava um painel inteiro que eu tinha desenhado imitando o produto.
+ * Ele foi descartado quando as capturas do painel de verdade entraram — dava
+ * para fazer bonito, mas ilustração do produto não prova que o produto existe.
  */
-
-export const FONTE_UI = PILHA_DE_FONTE;
 
 /** Curva de entrada: rápida no começo, assenta no fim. Padrão da peça. */
 export const ENTRADA = Easing.bezier(0.16, 1, 0.3, 1);
-
-/** Aparece subindo. `atraso` escalona linha por linha. */
-export function entra(frame: number, inicio: number, duracao = 18) {
-  return {
-    opacidade: interpolate(frame, [inicio, inicio + duracao], [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: ENTRADA,
-    }),
-    deslocamento: interpolate(frame, [inicio, inicio + duracao], [14, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: ENTRADA,
-    }),
-  };
-}
-
-/** O ponto de status de um aparelho. */
-export function Ponto({ cor, brilho = 0 }: { cor: string; brilho?: number }) {
-  return (
-    <span
-      style={{
-        width: 10,
-        height: 10,
-        borderRadius: 999,
-        background: cor,
-        display: "inline-block",
-        flexShrink: 0,
-        boxShadow: brilho > 0 ? `0 0 ${12 * brilho}px ${cor}` : undefined,
-      }}
-    />
-  );
-}
-
-/** Um selo pequeno, do tipo que rotula estado numa tabela. */
-export function Selo({
-  children,
-  cor = COR.fraco,
-  fundo = "transparent",
-}: {
-  children: React.ReactNode;
-  cor?: string;
-  fundo?: string;
-}) {
-  return (
-    <span
-      style={{
-        fontFamily: FONTE_UI,
-        fontSize: 15,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        color: cor,
-        background: fundo,
-        border: `1px solid ${fundo === "transparent" ? COR.linha : "transparent"}`,
-        borderRadius: 999,
-        padding: "4px 12px",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
 
 /**
  * O cursor do mouse.
@@ -132,47 +60,3 @@ export function Cursor({
   );
 }
 
-/** Barra horizontal que cresce — usada nos recursos testados. */
-export function Barra({
-  rotulo,
-  fracao,
-  progresso,
-}: {
-  rotulo: string;
-  fracao: number;
-  progresso: number;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-      <span
-        style={{
-          fontFamily: FONTE_UI,
-          fontSize: 20,
-          color: COR.texto,
-          width: 96,
-          flexShrink: 0,
-        }}
-      >
-        {rotulo}
-      </span>
-      <div
-        style={{
-          flex: 1,
-          height: 14,
-          borderRadius: 999,
-          background: COR.superficie2,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${fracao * progresso * 100}%`,
-            height: "100%",
-            borderRadius: 999,
-            background: COR.verde,
-          }}
-        />
-      </div>
-    </div>
-  );
-}

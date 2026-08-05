@@ -13,14 +13,15 @@ export const RemotionRoot: React.FC = () => {
   return (
     <>
       {/* O painel respondendo as três perguntas da seção 01 da página.
-          16:9 porque painel é horizontal — em vertical ele não lê. */}
+          1760×990 é o tamanho NATIVO das capturas: ampliar borraria o texto
+          das tabelas, e pixel interpolado é pior que pixel verdadeiro. */}
       <Composition
         id="painel-em-movimento"
         component={PainelEmMovimento}
         durationInFrames={900}
         fps={30}
-        width={1920}
-        height={1080}
+        width={1760}
+        height={990}
       />
     </>
   );
