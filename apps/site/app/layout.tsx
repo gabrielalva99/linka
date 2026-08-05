@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { RESUMO, SITE } from "./site";
+import { CONTATO, RESUMO, SITE } from "./site";
 
 /** New Black Typeface — a fonte da marca, servida do próprio domínio. */
 const marca = localFont({
@@ -79,7 +79,7 @@ const dadoEstruturado = {
       name: "LINKA",
       url: SITE,
       description: RESUMO,
-      email: "suporte@linkaretail.com.br",
+      email: CONTATO,
       areaServed: "BR",
     },
     {

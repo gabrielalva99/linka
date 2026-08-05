@@ -16,3 +16,16 @@ export const SITE = "https://linkaretail.com.br";
  */
 export const RESUMO =
   "Plataforma que controla, atualiza e mede os aparelhos de demonstração de uma marca no varejo físico. Campanha certa em cada loja, medição de quem pegou o aparelho e do que quis testar, sem câmera e sem reconhecimento facial.";
+
+/**
+ * Para onde vai quem quer conversar sobre contratar.
+ *
+ * É outro endereço do que o da política de privacidade, e de propósito: lá o
+ * contato é o encarregado de dados (suporte@), um canal com prazo legal para
+ * responder. Misturar os dois enterraria um pedido de LGPD no meio de proposta
+ * comercial.
+ */
+export const CONTATO = "comercial@linkaretail.com.br";
+
+/** Pré-preenche o assunto para a mensagem não chegar sem nada na linha. */
+export const CONTATO_MAILTO = `mailto:${CONTATO}?subject=${encodeURIComponent("Quero conhecer a LINKA")}`;

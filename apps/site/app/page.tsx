@@ -1,4 +1,5 @@
 import { LinkaLogo } from "./linka-logo";
+import { CONTATO, CONTATO_MAILTO } from "./site";
 
 /**
  * Página de vendas da LINKA.
@@ -40,7 +41,7 @@ function Cabecalho() {
     <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
       <LinkaLogo className="h-7 w-auto" />
       <a
-        href="mailto:suporte@linkaretail.com.br?subject=Quero%20conhecer%20a%20LINKA"
+        href={CONTATO_MAILTO}
         className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition-colors hover:border-primary hover:text-primary"
       >
         Falar com a gente
@@ -225,10 +226,10 @@ function Fechamento() {
           aconteceu com eles ontem, essa conversa é curta e a gente mostra funcionando.
         </p>
         <a
-          href="mailto:suporte@linkaretail.com.br?subject=Quero%20conhecer%20a%20LINKA"
+          href={CONTATO_MAILTO}
           className="mt-8 inline-block rounded-lg bg-primary px-6 py-3 font-medium text-black transition-opacity hover:opacity-90"
         >
-          suporte@linkaretail.com.br
+          {CONTATO}
         </a>
       </div>
     </section>
@@ -247,7 +248,7 @@ function Rodape() {
           <a href="https://painel.linkaretail.com.br" className="hover:text-primary">
             Acessar o painel
           </a>
-          <a href="mailto:suporte@linkaretail.com.br" className="hover:text-primary">
+          <a href={`mailto:${CONTATO}`} className="hover:text-primary">
             Contato
           </a>
         </div>
