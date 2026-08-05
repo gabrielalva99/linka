@@ -24,23 +24,22 @@ const SUAVE = Easing.bezier(0.16, 1, 0.3, 1);
 export function Pergunta({
   janela,
   texto,
-  primeira = false,
 }: {
   janela: readonly [number, number] | number[];
   texto: string;
-  primeira?: boolean;
 }) {
   const frame = useCurrentFrame();
   const [ini, fim] = janela as [number, number];
   if (frame < ini - 6 || frame > fim + 6) return null;
 
-  const cortina = primeira
-    ? 1
-    : interpolate(frame, [ini, ini + 14, fim - 22, fim], [0, 1, 1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: SUAVE,
-      });
+  /* A cortina escurece a loja sem apagá-la: a pergunta é feita POR CIMA da
+     cena, não no lugar dela. Corte para preto entre cada pergunta partiria a
+     peça em três filmes soltos. */
+  const cortina = interpolate(frame, [ini, ini + 14, fim - 22, fim], [0, 0.82, 0.82, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: SUAVE,
+  });
 
   /** A saída é junta: palavra por palavra na ida, tudo de uma vez na volta. */
   const saida = interpolate(frame, [fim - 26, fim - 8], [1, 0], {

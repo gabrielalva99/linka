@@ -1,46 +1,46 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { COR, PILHA_DE_FONTE } from "./marca";
-import { Contador, Varredura } from "./painel/destaques";
-import { TelaQueAssenta } from "./painel/entradas";
+import { CartaoDados, CartaoFrota, CartaoPublicar } from "./painel/cartoes";
 import { LinkaLogo } from "./painel/LinkaLogo";
-import { Cursor, ENTRADA } from "./painel/pecas";
+import { Loja } from "./painel/Loja";
 import { Pergunta } from "./painel/Pergunta";
 
 /**
- * O painel da LINKA em movimento — peça de venda para a página.
+ * A peça de venda da LINKA — a loja e o painel, ao mesmo tempo.
  *
- * ── As capturas são do painel de verdade ──────────────────────────────────
- * Não é uma interface desenhada imitando o produto. São telas de produção,
- * fotografadas com uma rede de demonstração de nomes neutros que é criada e
- * apagada. Caminho em `capturar-painel.md`, semeadura em `demo/semear.sql`.
+ * ── A ideia ───────────────────────────────────────────────────────────────
+ * Imagem de loja ao fundo, escurecida; o painel flutuando por cima. Não é
+ * ilustração do argumento, é o argumento: o H1 da página diz que "a loja
+ * física gera dado a cada toque", e aqui o toque e o dado estão no mesmo
+ * quadro.
  *
- * ── O que ele conta ───────────────────────────────────────────────────────
- * As TRÊS PERGUNTAS da seção 01 da página, e a tela que responde cada uma:
+ * ── O flow ────────────────────────────────────────────────────────────────
+ *   0–4s    a loja, sozinha. Mão pegando um aparelho do suporte. É onde o
+ *           dado nasce, e onde ele se perde hoje.
+ *   4–10s   "O aparelho está ligado?"              → a frota, linha a linha,
+ *                                                    duas vermelhas, o aviso
+ *   10–17s  "Está com a campanha certa?"           → publicar em 8 lojas,
+ *                                                    e os 96 acendendo
+ *   17–24s  "Qual recurso o cliente mais procura?" → as barras e as horas
+ *   24–28s  "No LINKA você acompanha" + três linhas
+ *   28–30s  a marca
  *
- *   "O aparelho está ligado?"              → visão geral: 2 caídos em 12, com
- *                                            loja, motivo e há quanto tempo
- *   "Está com a campanha certa?"           → campanhas em camadas, e a frota
- *                                            com 10/10 tocando o vídeo certo
- *   "Qual recurso o cliente mais procura?" → o que o visitante quis testar, e
- *                                            o movimento hora a hora
+ * ── Por que um cartão de cada vez, e não o painel inteiro ─────────────────
+ * O painel inteiro sobre a loja encolheria para dois terços do quadro, e a
+ * fonte de 19 px viraria 12 px na tela de quem assiste. Um cartão só, grande,
+ * responde a pergunta e ainda pode ser lido.
  *
- * Mudou uma pergunta aqui? MUDE TAMBÉM na seção 01 da página.
+ * ── O que morreu no caminho, para não voltar ──────────────────────────────
+ * Captura de tela com truque por cima. A imagem era fatiada em faixas para
+ * "entrar" (as emendas apareciam, cortando o cartão da Loja Sul ao meio) e a
+ * câmera dava zoom sobre ela (comia 35 px de cada lado e decepava o menu
+ * lateral). Foto não tem partes para animar. Agora cada linha entra porque
+ * ela É uma linha.
  *
- * ── O movimento, e por que ele é assim ────────────────────────────────────
- * A primeira versão era fade-entra, zoom tímido, fade-sai. Lia como slide.
- * Agora cada peça tem seu próprio movimento, e nenhum é decorativo:
- *
- *   tela        entra em faixas, de cima para baixo, como conteúdo carregando
- *   câmera      avança e ASSENTA em dois segundos
- *   troca       a tela que sai sobe e desbota, a de baixo já está entrando
- *   pergunta    palavra por palavra, no ritmo de quem lê
- *   números     contam de zero
- *   barras      crescem por varredura, sendo descobertas da esquerda
- *   cursor      viaja com desaceleração e clica no aviso
- *
- * ── Resolução ─────────────────────────────────────────────────────────────
- * 1760×990 é o tamanho NATIVO das capturas. Ampliar borraria o texto das
- * tabelas: pixel interpolado é pior que pixel verdadeiro.
+ * ── A regra do dado ───────────────────────────────────────────────────────
+ * Interface real com dado de exemplo: sim. Número de RESULTADO: não. Não há
+ * percentual de conversão, comparação nem seta de crescimento em lugar
+ * nenhum. Esse é o número que a marca cobra na reunião seguinte.
  *
  * ── Laço ──────────────────────────────────────────────────────────────────
  * Abre no preto e fecha no preto. Roda em `loop` sem emenda.
@@ -48,204 +48,230 @@ import { Pergunta } from "./painel/Pergunta";
 
 /** A linha do tempo inteira, em quadros (30 fps · 900 quadros · 30 s). */
 const T = {
-  pergunta1: [12, 104],
-  visao: [96, 322],
+  abertura: [0, 126],
 
-  pergunta2: [322, 402],
-  campanhas: [396, 530],
-  frota: [524, 612],
+  pergunta1: [120, 196],
+  frota: [186, 306],
 
-  pergunta3: [612, 692],
-  testar: [686, 790],
-  hora: [786, 840],
+  pergunta2: [300, 376],
+  publicar: [366, 516],
 
-  fecho: [836, 900],
+  pergunta3: [510, 594],
+  dados: [584, 726],
+
+  acompanha: [720, 846],
+  fecho: [842, 900],
 } as const;
 
-/** Quantos quadros a câmera leva para assentar. Depois disso ela PARA. */
-const ASSENTA = 54;
+const SUAVE = Easing.bezier(0.16, 1, 0.3, 1);
 
 export const PainelEmMovimento: React.FC = () => {
-  const frame = useCurrentFrame();
-
   return (
-    <AbsoluteFill name="Painel em movimento" style={{ background: COR.fundo }}>
-      <Tela arquivo="painel/visao.png" janela={T.visao} zoomDe={1.0} zoomPara={1.04} focoY={-2}>
-        {/* Os dois cartões do topo contam de zero. As coordenadas vieram do
-            `getBoundingClientRect()` do navegador na hora da captura, e ficam
-            DENTRO da transformação da imagem para acompanharem o zoom. */}
-        <Contador
-          x={558} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 52}
-          tamanho={24} cor={COR.atencao} fundo="#121513"
-        />
-        <Contador
-          x={862} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 60}
-          tamanho={24} cor={COR.texto} fundo="#121513"
-        />
-      </Tela>
+    <AbsoluteFill name="LINKA" style={{ background: COR.fundo }}>
+      <Cena janela={T.abertura} entrada={0}>
+        <Loja arquivo="loja/tablet.mp4" inicio={T.abertura[0]} duracao={150} />
+      </Cena>
 
-      <Tela
-        arquivo="painel/campanhas.png" janela={T.campanhas}
-        zoomDe={1.0} zoomPara={1.03} focoY={-1}
-      />
+      <Cena janela={[T.pergunta1[0], T.frota[1]]} entrada={10}>
+        <Loja arquivo="loja/bancada.mp4" inicio={T.pergunta1[0]} duracao={200} />
+        <Centro>
+          <CartaoFrota inicio={T.frota[0]} />
+        </Centro>
+      </Cena>
 
-      <Tela arquivo="painel/frota.png" janela={T.frota} zoomDe={1.03} zoomPara={1.0} focoY={0} />
+      <Cena janela={[T.pergunta2[0], T.publicar[1]]} entrada={10}>
+        <Loja arquivo="loja/vitrine.mp4" inicio={T.pergunta2[0]} duracao={230} />
+        <Centro>
+          <CartaoPublicar inicio={T.publicar[0]} />
+        </Centro>
+      </Cena>
 
-      <Tela arquivo="painel/testar.png" janela={T.testar} zoomDe={1.0} zoomPara={1.03} focoY={2}>
-        {/* As quatro barras crescem por varredura: não são redesenhadas, são
-            descobertas da esquerda para a direita. */}
-        <Varredura x={537} y={188} w={896} h={146} inicio={T.testar[0] + 34} duracao={44} />
-      </Tela>
+      <Cena janela={[T.pergunta3[0], T.dados[1]]} entrada={10}>
+        <Loja arquivo="loja/bancada.mp4" inicio={T.pergunta3[0]} duracao={220} zoomDe={1.14} zoomPara={1.06} />
+        <Centro>
+          <CartaoDados inicio={T.dados[0]} />
+        </Centro>
+      </Cena>
 
-      <Tela arquivo="painel/hora.png" janela={T.hora} zoomDe={1.03} zoomPara={1.0} focoY={-2}>
-        <Varredura x={537} y={152} w={896} h={166} inicio={T.hora[0] + 18} duracao={34} />
-      </Tela>
+      <Cena janela={T.acompanha} entrada={14}>
+        <Loja arquivo="loja/tablet.mp4" inicio={T.acompanha[0]} duracao={140} zoomDe={1.1} zoomPara={1.2} />
+        <Acompanha inicio={T.acompanha[0]} />
+      </Cena>
 
-      <CursorNoAviso frame={frame} />
-
-      <Pergunta janela={T.pergunta1} texto="O aparelho está ligado?" primeira />
+      <Pergunta janela={T.pergunta1} texto="O aparelho está ligado?" />
       <Pergunta janela={T.pergunta2} texto="Está com a campanha certa?" />
       <Pergunta janela={T.pergunta3} texto="Qual recurso o cliente mais procura?" />
 
-      <Fecho frame={frame} />
+      <Fecho />
     </AbsoluteFill>
   );
 };
 
 /**
- * Uma tela do painel: entra em faixas, a câmera avança e assenta, e ela sai.
+ * Um trecho da peça, com entrada e saída próprias.
  *
- * ── Por que a câmera para depois de dois segundos ─────────────────────────
- * Legibilidade: ninguém lê uma tabela que está andando.
- *
- * E tamanho de arquivo: zoom contínuo sobre captura de tela é o pior caso do
- * H.264 — todo pixel muda em todo quadro e nada é reaproveitado. Medido nesta
- * peça, no mesmo `crf 20`:
- *
- *     movimento até o fim   8,20 MB
- *     câmera assentando     3,72 MB   ← mesma qualidade, metade do arquivo
- *
- * Não foi compressão mais agressiva: foi parar de mexer no que não precisava
- * se mexer.
+ * As cenas se sobrepõem alguns quadros de propósito: a de baixo já está
+ * chegando quando a de cima ainda sai, e isso é o que faz a troca parecer
+ * corte de montagem em vez de slide virando.
  */
-function Tela({
-  arquivo,
+function Cena({
   janela,
-  zoomDe,
-  zoomPara,
-  focoY,
+  entrada,
   children,
 }: {
-  arquivo: string;
   janela: readonly [number, number] | number[];
-  zoomDe: number;
-  zoomPara: number;
-  /** Deslocamento vertical em %, para a câmera não ficar sempre no centro. */
-  focoY: number;
-  /**
-   * Destaques desenhados por cima — contador, varredura.
-   *
-   * Ficam dentro do mesmo contêiner transformado da imagem de propósito. Numa
-   * tentativa anterior estavam soltos no quadro, em coordenada fixa: como a
-   * captura tem zoom, os dois se separavam e o contador aparecia ao lado do
-   * número que devia estar cobrindo.
-   */
-  children?: React.ReactNode;
+  entrada: number;
+  children: React.ReactNode;
 }) {
   const frame = useCurrentFrame();
   const [ini, fim] = janela as [number, number];
   if (frame < ini - 4 || frame > fim + 4) return null;
 
-  const escala = interpolate(frame, [ini, ini + ASSENTA], [zoomDe, zoomPara], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.bezier(0.22, 1, 0.3, 1),
-  });
-  const deslocaY = interpolate(frame, [ini, ini + ASSENTA], [0, focoY], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.bezier(0.22, 1, 0.3, 1),
-  });
+  /* A primeira cena abre com `entrada: 0` — a peça já começa na loja, sem
+     nascer de um fade. Aí o intervalo teria dois zeros seguidos, e
+     `interpolate` exige a faixa estritamente crescente. */
+  const opacidade =
+    entrada === 0
+      ? interpolate(frame, [fim - 14, fim], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: SUAVE,
+        })
+      : interpolate(frame, [ini, ini + entrada, fim - 14, fim], [0, 1, 1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: SUAVE,
+        });
 
-  /* A saída sobe e desbota junto, e a tela seguinte já está entrando por
-     baixo: o conjunto lê como uma pilha andando, não como duas fotos
-     trocando de lugar. */
-  const saida = interpolate(frame, [fim - 16, fim], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.bezier(0.4, 0, 1, 1),
-  });
+  return <AbsoluteFill style={{ opacity: opacidade }}>{children}</AbsoluteFill>;
+}
 
+function Centro({ children }: { children: React.ReactNode }) {
   return (
-    <AbsoluteFill style={{ opacity: 1 - saida, translate: `0px ${-saida * 34}px` }}>
-      <TelaQueAssenta arquivo={arquivo} inicio={ini} escala={escala} deslocaY={deslocaY}>
-        {children}
-      </TelaQueAssenta>
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      {children}
     </AbsoluteFill>
   );
 }
 
 /**
- * O cursor indo até o aviso de aparelho caído, na visão geral.
+ * O fechamento do argumento: o que a marca passa a acompanhar.
  *
- * É o que transforma "tela bonita" em "alguém operando". A viagem desacelera
- * na chegada, como mão humana: velocidade constante lê como robô.
- *
- * As coordenadas são do quadro de 1760×990 e miram o cartão da Loja Centro.
- * Refez a captura e o layout mudou? Precisam ser reconferidas.
+ * As três linhas são AFIRMAÇÃO DE PRODUTO e todas são verdade hoje — foram
+ * conferidas contra o que o painel entrega. Mexer aqui é mexer numa promessa
+ * comercial, não num texto de tela.
  */
-function CursorNoAviso({ frame }: { frame: number }) {
-  const ini = 200;
-  const fim = 262;
-  if (frame < ini - 34 || frame > fim + 16) return null;
+function Acompanha({ inicio }: { inicio: number }) {
+  const frame = useCurrentFrame();
+  const linhas = [
+    "cada aparelho, em cada loja, agora",
+    "a campanha que está no ar, e onde ela chegou",
+    "quem pegou, por quanto tempo, e o que quis testar",
+  ];
 
-  const p = interpolate(frame, [ini - 34, ini], [0, 1], {
+  const titulo = interpolate(frame, [inicio + 8, inicio + 34], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    easing: ENTRADA,
+    easing: SUAVE,
   });
 
   return (
-    <Cursor
-      x={interpolate(p, [0, 1], [1240, 620])}
-      y={interpolate(p, [0, 1], [860, 336])}
-      clicando={interpolate(frame, [ini + 4, ini + 30], [0, 1], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })}
-      opacidade={
-        interpolate(frame, [ini - 34, ini - 26], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        }) *
-        interpolate(frame, [fim, fim + 14], [1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        })
-      }
-    />
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      {/* Véu extra só nesta cena. Nas outras o cartão do painel é opaco e
+          segura a leitura sozinho; aqui o texto fica direto sobre a imagem, e
+          a manga clara do casaco passava por trás das linhas. */}
+      <AbsoluteFill style={{ background: COR.fundo, opacity: 0.55 }} />
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 30, width: 1160 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 18,
+            opacity: titulo,
+            translate: `0px ${(1 - titulo) * 16}px`,
+          }}
+        >
+          <span style={{ width: 42, height: 4, background: COR.verde, borderRadius: 2 }} />
+          <span
+            style={{
+              fontFamily: PILHA_DE_FONTE,
+              fontSize: 56,
+              fontWeight: 700,
+              letterSpacing: "-0.03em",
+              color: COR.texto,
+            }}
+          >
+            No LINKA você acompanha
+          </span>
+        </div>
+
+        {linhas.map((linha, i) => {
+          const entra = inicio + 34 + i * 16;
+          const p = interpolate(frame, [entra, entra + 26], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: SUAVE,
+          });
+          return (
+            <div
+              key={linha}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 20,
+                paddingLeft: 60,
+                opacity: p,
+                translate: `${(1 - p) * -22}px 0px`,
+              }}
+            >
+              <span
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: 999,
+                  background: COR.verde,
+                  flexShrink: 0,
+                  boxShadow: `0 0 12px ${COR.verde}`,
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: PILHA_DE_FONTE,
+                  fontSize: 36,
+                  color: COR.verdeClaro,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {linha}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
   );
 }
 
-/** O fecho: a marca entra, o endereço vem atrás, e tudo volta ao preto. */
-function Fecho({ frame }: { frame: number }) {
+/** A marca pousa, e o endereço vem atrás. */
+function Fecho() {
+  const frame = useCurrentFrame();
   if (frame < T.fecho[0]) return null;
 
-  const fundo = interpolate(frame, [T.fecho[0], T.fecho[0] + 16], [0, 1], {
+  const fundo = interpolate(frame, [T.fecho[0], T.fecho[0] + 14], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const marca = interpolate(frame, [T.fecho[0] + 12, T.fecho[0] + 44], [0, 1], {
+  const marca = interpolate(frame, [T.fecho[0] + 10, T.fecho[0] + 40], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    easing: ENTRADA,
+    easing: SUAVE,
   });
-  const endereco = interpolate(frame, [T.fecho[0] + 28, T.fecho[0] + 56], [0, 1], {
+  const endereco = interpolate(frame, [T.fecho[0] + 24, T.fecho[0] + 50], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    easing: ENTRADA,
+    easing: SUAVE,
   });
-  const sai = interpolate(frame, [T.fecho[1] - 20, T.fecho[1]], [1, 0], {
+  const sai = interpolate(frame, [T.fecho[1] - 16, T.fecho[1]], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -264,26 +290,26 @@ function Fecho({ frame }: { frame: number }) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 30,
+          gap: 28,
           opacity: sai,
         }}
       >
         <div
           style={{
             opacity: marca,
-            translate: `0px ${(1 - marca) * 18}px`,
+            translate: `0px ${(1 - marca) * 16}px`,
             scale: 0.96 + marca * 0.04,
           }}
         >
-          <LinkaLogo altura={118} />
+          <LinkaLogo altura={112} />
         </div>
         <span
           style={{
             fontFamily: PILHA_DE_FONTE,
-            fontSize: 26,
+            fontSize: 25,
             color: COR.fraco,
             opacity: endereco,
-            translate: `0px ${(1 - endereco) * 12}px`,
+            translate: `0px ${(1 - endereco) * 10}px`,
           }}
         >
           linkaretail.com.br
