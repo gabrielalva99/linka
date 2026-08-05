@@ -17,9 +17,11 @@
  */
 
 export const metadata = {
-  title: "Política de privacidade · LINKA",
+  // O "· LINKA" vem do template no layout; repetir aqui daria "… · LINKA · LINKA".
+  title: "Política de privacidade",
   description:
     "O que a plataforma LINKA mede nos aparelhos de demonstração, o que ela não mede, e como tratamos dados pessoais.",
+  alternates: { canonical: "/privacidade" },
 };
 
 const ATUALIZADA_EM = "4 de agosto de 2026";
