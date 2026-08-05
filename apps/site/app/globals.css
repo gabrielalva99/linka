@@ -19,3 +19,54 @@ body {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ── A rede de sinais do herói ─────────────────────────────────────────────
+   Animação de CSS e não de JavaScript: a página continua sendo renderizada no
+   servidor e a composição já chega mexendo, sem esperar script nenhum. */
+
+/* O pulso: um traço curto correndo do nó de origem ao de destino. O tamanho
+   da corrida entra por variável porque cada ligação tem um comprimento. */
+@keyframes linka-corre {
+  from {
+    stroke-dashoffset: var(--linka-corrida);
+    opacity: 0;
+  }
+  12%,
+  80% {
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* Os nós respiram, com defasagem. Em uníssono a rede pisca como semáforo. */
+@keyframes linka-respira {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.linka-pulso {
+  animation: linka-corre 4.5s linear infinite;
+}
+
+.linka-no {
+  animation: linka-respira 3.6s ease-in-out infinite;
+}
+
+/* Quem pediu ao sistema para parar de animar vê a constelação parada — e ela
+   continua fazendo sentido, porque o movimento aqui é tempero, não conteúdo. */
+@media (prefers-reduced-motion: reduce) {
+  .linka-pulso {
+    display: none;
+  }
+  .linka-no {
+    animation: none;
+  }
+}

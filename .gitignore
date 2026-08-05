@@ -47,3 +47,17 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Skills de terceiro (Remotion), instaladas por `npx skills add`.
+#
+# Fora do repositório de propósito: são 2,9 MB de documentação — e o
+# instalador grava TUDO duas vezes, em .agents/ e em .claude/skills/ (no
+# Windows não vira link simbólico), com o mesmo arquivo de mapa de 333 KB
+# repetido quatro vezes. Eram 297 arquivos.
+#
+# O que entra no repositório é o `skills-lock.json`, com origem e hash de cada
+# skill. Reinstala idêntico com:  npx skills add remotion-dev/skills
+#
+# Skill escrita PARA ESTE projeto não cai aqui: o padrão só pega remotion-*.
+.agents/
+.claude/skills/remotion-*

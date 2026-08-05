@@ -1,0 +1,25 @@
+{
+  "name": "@linka/studio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Peças de vídeo da LINKA renderizadas por código (Remotion).",
+  "scripts": {
+    "studio": "remotion studio",
+    "banner": "remotion render banner-topo out/banner-topo.mp4 --codec=h264",
+    "banner:webm": "remotion render banner-topo out/banner-topo.webm --codec=vp9",
+    "banner:poster": "remotion still banner-topo out/banner-topo.jpg --frame=90 --image-format=jpeg --jpeg-quality=88",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.506",
+    "@remotion/fonts": "4.0.506",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "4.0.506"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.3"
+  }
+}
