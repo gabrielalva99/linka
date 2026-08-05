@@ -4,6 +4,11 @@ import { COR, PILHA_DE_FONTE } from "../marca";
 /**
  * Os cartões do painel, reconstruídos em DOM.
  *
+ * ── Os tempos são em quadros de 25 fps ────────────────────────────────────
+ * Um segundo é 25, não 30. A composição casa com a cadência dos clipes de
+ * loja: a 30 o transcode duplicava um quadro a cada cinco e a imagem
+ * engasgava.
+ *
  * ── Por que não é mais captura de tela ────────────────────────────────────
  * A versão anterior era foto do painel com truques por cima: a imagem fatiada
  * em faixas para "entrar", e a câmera dando zoom. Os dois truques quebraram —
@@ -31,7 +36,7 @@ export function Cartao({
   titulo,
   selo,
   inicio,
-  largura = 1180,
+  largura = 1290,
   children,
 }: {
   titulo: string;
@@ -41,7 +46,7 @@ export function Cartao({
   children: React.ReactNode;
 }) {
   const frame = useCurrentFrame();
-  const p = interpolate(frame, [inicio, inicio + 26], [0, 1], {
+  const p = interpolate(frame, [inicio, inicio + 22], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
@@ -113,7 +118,7 @@ export function CartaoFrota({ inicio }: { inicio: number }) {
   const frame = useCurrentFrame();
 
   /** O aviso só desce depois que as linhas vermelhas já apareceram. */
-  const aviso = interpolate(frame, [inicio + 74, inicio + 96], [0, 1], {
+  const aviso = interpolate(frame, [inicio + 62, inicio + 80], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
@@ -154,14 +159,14 @@ export function CartaoFrota({ inicio }: { inicio: number }) {
 
       {FROTA.map((d, i) => {
         // Cada linha entra sozinha, e é isso que dá o ritmo de frota chegando.
-        const entra = inicio + 22 + i * 7;
-        const p = interpolate(frame, [entra, entra + 18], [0, 1], {
+        const entra = inicio + 18 + i * 6;
+        const p = interpolate(frame, [entra, entra + 15], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: SUAVE,
         });
         // O ponto de status acende depois da linha assentar.
-        const acende = interpolate(frame, [entra + 12, entra + 24], [0, 1], {
+        const acende = interpolate(frame, [entra + 10, entra + 20], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         });
@@ -223,17 +228,17 @@ const LOJAS = [
 export function CartaoPublicar({ inicio }: { inicio: number }) {
   const frame = useCurrentFrame();
 
-  const marcadas = interpolate(frame, [inicio + 24, inicio + 84], [0, LOJAS.length], {
+  const marcadas = interpolate(frame, [inicio + 20, inicio + 70], [0, LOJAS.length], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.3, 0, 0.2, 1),
   });
-  const publicando = interpolate(frame, [inicio + 96, inicio + 122], [0, 1], {
+  const publicando = interpolate(frame, [inicio + 80, inicio + 102], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const noAr = frame >= inicio + 122;
-  const onda = interpolate(frame, [inicio + 122, inicio + 168], [0, 1], {
+  const noAr = frame >= inicio + 102;
+  const onda = interpolate(frame, [inicio + 102, inicio + 140], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -397,8 +402,8 @@ export function CartaoDados({ inicio }: { inicio: number }) {
       <Rotulo>O que o visitante quis testar</Rotulo>
       <div style={{ display: "flex", flexDirection: "column", gap: 15, margin: "16px 0 30px" }}>
         {RECURSOS.map((r, i) => {
-          const entra = inicio + 26 + i * 10;
-          const p = interpolate(frame, [entra, entra + 34], [0, 1], {
+          const entra = inicio + 22 + i * 8;
+          const p = interpolate(frame, [entra, entra + 28], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: SUAVE,
@@ -453,8 +458,8 @@ export function CartaoDados({ inicio }: { inicio: number }) {
         }}
       >
         {HORAS.map((x, i) => {
-          const entra = inicio + 82 + i * 4;
-          const p = interpolate(frame, [entra, entra + 22], [0, 1], {
+          const entra = inicio + 70 + i * 4;
+          const p = interpolate(frame, [entra, entra + 18], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: SUAVE,

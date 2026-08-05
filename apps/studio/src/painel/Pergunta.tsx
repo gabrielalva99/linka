@@ -35,20 +35,20 @@ export function Pergunta({
   /* A cortina escurece a loja sem apagá-la: a pergunta é feita POR CIMA da
      cena, não no lugar dela. Corte para preto entre cada pergunta partiria a
      peça em três filmes soltos. */
-  const cortina = interpolate(frame, [ini, ini + 14, fim - 22, fim], [0, 0.82, 0.82, 0], {
+  const cortina = interpolate(frame, [ini, ini + 12, fim - 18, fim], [0, 0.82, 0.82, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
   });
 
   /** A saída é junta: palavra por palavra na ida, tudo de uma vez na volta. */
-  const saida = interpolate(frame, [fim - 26, fim - 8], [1, 0], {
+  const saida = interpolate(frame, [fim - 22, fim - 7], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
   });
 
-  const traco = interpolate(frame, [ini + 6, ini + 24], [0, 1], {
+  const traco = interpolate(frame, [ini + 5, ini + 20], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
@@ -78,7 +78,7 @@ export function Pergunta({
         <span
           style={{
             fontFamily: PILHA_DE_FONTE,
-            fontSize: 74,
+            fontSize: 80,
             fontWeight: 700,
             letterSpacing: "-0.03em",
             color: COR.texto,
@@ -87,8 +87,8 @@ export function Pergunta({
           }}
         >
           {palavras.map((palavra, i) => {
-            const entra = ini + 14 + i * 4;
-            const p = interpolate(frame, [entra, entra + 20], [0, 1], {
+            const entra = ini + 12 + i * 3;
+            const p = interpolate(frame, [entra, entra + 17], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
               easing: SUAVE,
