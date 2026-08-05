@@ -46,20 +46,36 @@ import { Pergunta } from "./painel/Pergunta";
  * Abre no preto e fecha no preto. Roda em `loop` sem emenda.
  */
 
-/** A linha do tempo inteira, em quadros (30 fps · 900 quadros · 30 s). */
+/**
+ * A linha do tempo inteira, em quadros (30 fps · 900 quadros · 30 s).
+ *
+ * ── Onde as cenas se trocam, e por quê ────────────────────────────────────
+ * O corte de uma cena para a outra acontece com a PERGUNTA no auge, cobrindo
+ * a tela a 82%. É corte seco, escondido: em 18% de visibilidade ninguém vê.
+ *
+ * Antes era transição cruzada, e ela tinha dois defeitos ao mesmo tempo. Duas
+ * cenas em meia opacidade não somam uma — empilhadas sobre o preto davam uma
+ * mistura suja e escura no meio do caminho, e depois a segunda "clareava de
+ * repente" ao chegar em 100%. E enquanto durava, as duas lojas apareciam
+ * sobrepostas na tela.
+ *
+ * A regra que vale daqui em diante: **nada de cruzar duas imagens de loja.**
+ * Ou a pergunta cobre o corte, ou a cena nova entra POR CIMA de uma que
+ * continua opaca — nunca as duas desbotando ao mesmo tempo.
+ */
 const T = {
-  abertura: [0, 126],
+  abertura: [0, 136],
 
   pergunta1: [120, 196],
-  frota: [186, 306],
+  frota: [134, 316],
 
   pergunta2: [300, 376],
-  publicar: [366, 516],
+  publicar: [314, 526],
 
   pergunta3: [510, 594],
-  dados: [584, 726],
+  dados: [524, 758],
 
-  acompanha: [720, 846],
+  acompanha: [730, 858],
   fecho: [842, 900],
 } as const;
 
@@ -72,29 +88,29 @@ export const PainelEmMovimento: React.FC = () => {
         <Loja arquivo="loja/tablet.mp4" inicio={T.abertura[0]} duracao={150} />
       </Cena>
 
-      <Cena janela={[T.pergunta1[0], T.frota[1]]} entrada={10}>
-        <Loja arquivo="loja/bancada.mp4" inicio={T.pergunta1[0]} duracao={200} />
+      <Cena janela={T.frota} entrada={0}>
+        <Loja arquivo="loja/bancada.mp4" inicio={T.frota[0]} duracao={190} />
         <Centro>
-          <CartaoFrota inicio={T.frota[0]} />
+          <CartaoFrota inicio={T.frota[0] + 46} />
         </Centro>
       </Cena>
 
-      <Cena janela={[T.pergunta2[0], T.publicar[1]]} entrada={10}>
-        <Loja arquivo="loja/vitrine.mp4" inicio={T.pergunta2[0]} duracao={230} />
+      <Cena janela={T.publicar} entrada={0}>
+        <Loja arquivo="loja/vitrine.mp4" inicio={T.publicar[0]} duracao={218} />
         <Centro>
-          <CartaoPublicar inicio={T.publicar[0]} />
+          <CartaoPublicar inicio={T.publicar[0] + 46} />
         </Centro>
       </Cena>
 
-      <Cena janela={[T.pergunta3[0], T.dados[1]]} entrada={10}>
-        <Loja arquivo="loja/bancada.mp4" inicio={T.pergunta3[0]} duracao={220} zoomDe={1.14} zoomPara={1.06} />
+      <Cena janela={T.dados} entrada={0}>
+        <Loja arquivo="loja/bancada.mp4" inicio={T.dados[0]} duracao={240} zoomDe={1.14} zoomPara={1.06} />
         <Centro>
-          <CartaoDados inicio={T.dados[0]} />
+          <CartaoDados inicio={T.dados[0] + 52} />
         </Centro>
       </Cena>
 
-      <Cena janela={T.acompanha} entrada={14}>
-        <Loja arquivo="loja/tablet.mp4" inicio={T.acompanha[0]} duracao={140} zoomDe={1.1} zoomPara={1.2} />
+      <Cena janela={T.acompanha} entrada={24}>
+        <Loja arquivo="loja/tablet.mp4" inicio={T.acompanha[0]} duracao={134} zoomDe={1.1} zoomPara={1.2} />
         <Acompanha inicio={T.acompanha[0]} />
       </Cena>
 
@@ -108,11 +124,15 @@ export const PainelEmMovimento: React.FC = () => {
 };
 
 /**
- * Um trecho da peça, com entrada e saída próprias.
+ * Um trecho da peça.
  *
- * As cenas se sobrepõem alguns quadros de propósito: a de baixo já está
- * chegando quando a de cima ainda sai, e isso é o que faz a troca parecer
- * corte de montagem em vez de slide virando.
+ * ── A cena NUNCA desbota na saída ─────────────────────────────────────────
+ * Ela fica opaca até o último quadro e simplesmente some — porque a próxima
+ * já cobriu a tela, ou porque a pergunta está por cima escondendo o corte.
+ *
+ * Desbotar na saída era o defeito: duas cenas em meia opacidade sobre o preto
+ * dão uma mistura escura, e ainda mostram as duas lojas ao mesmo tempo. Fade
+ * só existe aqui na ENTRADA, e sempre por cima de algo opaco.
  */
 function Cena({
   janela,
@@ -120,30 +140,29 @@ function Cena({
   children,
 }: {
   janela: readonly [number, number] | number[];
+  /** Quadros de entrada. Zero = corte seco (o normal nesta peça). */
   entrada: number;
   children: React.ReactNode;
 }) {
   const frame = useCurrentFrame();
   const [ini, fim] = janela as [number, number];
-  if (frame < ini - 4 || frame > fim + 4) return null;
+  if (frame < ini || frame > fim) return null;
 
-  /* A primeira cena abre com `entrada: 0` — a peça já começa na loja, sem
-     nascer de um fade. Aí o intervalo teria dois zeros seguidos, e
-     `interpolate` exige a faixa estritamente crescente. */
-  const opacidade =
-    entrada === 0
-      ? interpolate(frame, [fim - 14, fim], [1, 0], {
+  if (entrada === 0) return <AbsoluteFill>{children}</AbsoluteFill>;
+
+  return (
+    <AbsoluteFill
+      style={{
+        opacity: interpolate(frame, [ini, ini + entrada], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: SUAVE,
-        })
-      : interpolate(frame, [ini, ini + entrada, fim - 14, fim], [0, 1, 1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-          easing: SUAVE,
-        });
-
-  return <AbsoluteFill style={{ opacity: opacidade }}>{children}</AbsoluteFill>;
+        }),
+      }}
+    >
+      {children}
+    </AbsoluteFill>
+  );
 }
 
 function Centro({ children }: { children: React.ReactNode }) {
