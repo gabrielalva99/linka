@@ -1,6 +1,7 @@
 import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { COR, PILHA_DE_FONTE } from "./marca";
 import { LinkaLogo } from "./painel/LinkaLogo";
+import { Contador, Varredura } from "./painel/destaques";
 import { Cursor, ENTRADA } from "./painel/pecas";
 
 /**
@@ -22,8 +23,12 @@ import { Cursor, ENTRADA } from "./painel/pecas";
  *
  *   "O aparelho está ligado?"              → visão geral: 2 caídos em 12,
  *                                            com loja, motivo e há quanto tempo
- *   "Está com a campanha certa?"           → frota: 10/10 com o vídeo certo,
- *                                            10/10 protegidos, 10/10 atualizados
+ *   "Está com a campanha certa?"           → campanhas: as três no ar, e a
+ *                                            precedência entre elas; depois a
+ *                                            frota, com 10/10 tocando o vídeo
+ *                                            certo. Antes daqui só aparecia a
+ *                                            tela de Dispositivos, que responde
+ *                                            mas se chama outra coisa.
  *   "Qual recurso o cliente mais procura?" → o que o visitante quis testar,
  *                                            e o movimento hora a hora
  *
@@ -45,7 +50,8 @@ const T = {
   visao: [96, 322],
 
   pergunta2: [322, 402],
-  frota: [396, 612],
+  campanhas: [396, 530],
+  frota: [526, 612],
 
   pergunta3: [612, 692],
   testar: [686, 792],
@@ -62,10 +68,25 @@ export const PainelEmMovimento: React.FC = () => {
       {/* Cada tela do painel entra, respira com um leve avanço de câmera, e sai.
           O movimento é de 3%: o suficiente para não parecer um slide parado, e
           pouco o bastante para ninguém tentar ler um texto que está andando. */}
-      <Tela arquivo="painel/visao.png" janela={T.visao} zoomDe={1.0} zoomPara={1.035} focoY={-2} />
+      <Tela arquivo="painel/visao.png" janela={T.visao} zoomDe={1.0} zoomPara={1.035} focoY={-2}>
+        {/* Os dois cartões do topo contam de zero. Coordenadas medidas no
+            navegador na hora da captura, não estimadas no PNG. */}
+        <Contador x={558} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 26}
+                  tamanho={24} cor={COR.atencao} fundo="#121513" />
+        <Contador x={862} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 34}
+                  tamanho={24} cor={COR.texto} fundo="#121513" />
+      </Tela>
+      <Tela arquivo="painel/campanhas.png" janela={T.campanhas} zoomDe={1.0} zoomPara={1.03} focoY={-1} />
       <Tela arquivo="painel/frota.png" janela={T.frota} zoomDe={1.03} zoomPara={1.0} focoY={0} />
-      <Tela arquivo="painel/testar.png" janela={T.testar} zoomDe={1.0} zoomPara={1.04} focoY={3} />
-      <Tela arquivo="painel/hora.png" janela={T.hora} zoomDe={1.04} zoomPara={1.0} focoY={-3} />
+      <Tela arquivo="painel/testar.png" janela={T.testar} zoomDe={1.0} zoomPara={1.03} focoY={2}>
+        {/* As quatro barras crescem por varredura: não são redesenhadas, são
+            descobertas da esquerda para a direita. */}
+        <Varredura x={537} y={188} w={896} h={146} inicio={T.testar[0] + 18} duracao={40} />
+      </Tela>
+      <Tela arquivo="painel/hora.png" janela={T.hora} zoomDe={1.03} zoomPara={1.0} focoY={-2}>
+        <Varredura x={537} y={152} w={896} h={166} inicio={T.hora[0] + 10} duracao={32} />
+      </Tela>
+
 
       <CursorNoAviso frame={frame} />
 
@@ -110,6 +131,7 @@ function Tela({
   zoomDe,
   zoomPara,
   focoY,
+  children,
 }: {
   arquivo: string;
   janela: readonly [number, number] | number[];
@@ -117,10 +139,30 @@ function Tela({
   zoomPara: number;
   /** Deslocamento vertical em %, para a câmera não ficar sempre no centro. */
   focoY: number;
+  /**
+   * Destaques desenhados POR CIMA da captura — contador, varredura.
+   *
+   * Eles ficam dentro do mesmo contêiner transformado da imagem de propósito.
+   * Na primeira tentativa estavam soltos no quadro, em coordenada fixa: como a
+   * captura tem zoom e deslocamento, os dois se separavam e o contador
+   * aparecia ao lado do número que devia estar cobrindo.
+   */
+  children?: React.ReactNode;
 }) {
   const frame = useCurrentFrame();
   const [ini, fim] = janela as [number, number];
   if (frame < ini - 4 || frame > fim + 4) return null;
+
+  const escala = interpolate(frame, [ini, ini + ASSENTA], [zoomDe, zoomPara], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.22, 1, 0.3, 1),
+  });
+  const deslocaY = interpolate(frame, [ini, ini + ASSENTA], [0, focoY], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.22, 1, 0.3, 1),
+  });
 
   return (
     <AbsoluteFill
@@ -132,24 +174,10 @@ function Tela({
         }),
       }}
     >
-      <Img
-        src={staticFile(arquivo)}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          scale: interpolate(frame, [ini, ini + ASSENTA], [zoomDe, zoomPara], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.22, 1, 0.3, 1),
-          }),
-          translate: `0px ${interpolate(frame, [ini, ini + ASSENTA], [0, focoY], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.22, 1, 0.3, 1),
-          })}%`,
-        }}
-      />
+      <AbsoluteFill style={{ scale: escala, translate: `0px ${deslocaY}%` }}>
+        <Img src={staticFile(arquivo)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {children}
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 }
