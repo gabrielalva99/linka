@@ -1,44 +1,46 @@
-import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { COR, PILHA_DE_FONTE } from "./marca";
-import { LinkaLogo } from "./painel/LinkaLogo";
 import { Contador, Varredura } from "./painel/destaques";
+import { TelaQueAssenta } from "./painel/entradas";
+import { LinkaLogo } from "./painel/LinkaLogo";
 import { Cursor, ENTRADA } from "./painel/pecas";
+import { Pergunta } from "./painel/Pergunta";
 
 /**
  * O painel da LINKA em movimento — peça de venda para a página.
  *
- * ── O que mudou, e por que importa ────────────────────────────────────────
- * A primeira versão desta peça era uma interface que EU desenhei imitando o
- * painel. Ficava bonita e não provava nada: era ilustração do produto, não o
- * produto. Agora são capturas do painel de verdade, em produção.
- *
- * O caminho para produzi-las está em `capturar-painel.md`, ao lado. Em
- * resumo: rede de demonstração criada no banco real com nomes neutros, telas
- * capturadas pelo navegador, e a rede apagada em seguida. A interface é
- * genuína; o dado é de exemplo e não afirma resultado nenhum.
+ * ── As capturas são do painel de verdade ──────────────────────────────────
+ * Não é uma interface desenhada imitando o produto. São telas de produção,
+ * fotografadas com uma rede de demonstração de nomes neutros que é criada e
+ * apagada. Caminho em `capturar-painel.md`, semeadura em `demo/semear.sql`.
  *
  * ── O que ele conta ───────────────────────────────────────────────────────
- * As TRÊS PERGUNTAS da seção 01 da página, e a tela do painel que responde
- * cada uma. Nada aqui é escolhido por ser bonito:
+ * As TRÊS PERGUNTAS da seção 01 da página, e a tela que responde cada uma:
  *
- *   "O aparelho está ligado?"              → visão geral: 2 caídos em 12,
- *                                            com loja, motivo e há quanto tempo
- *   "Está com a campanha certa?"           → campanhas: as três no ar, e a
- *                                            precedência entre elas; depois a
- *                                            frota, com 10/10 tocando o vídeo
- *                                            certo. Antes daqui só aparecia a
- *                                            tela de Dispositivos, que responde
- *                                            mas se chama outra coisa.
- *   "Qual recurso o cliente mais procura?" → o que o visitante quis testar,
- *                                            e o movimento hora a hora
+ *   "O aparelho está ligado?"              → visão geral: 2 caídos em 12, com
+ *                                            loja, motivo e há quanto tempo
+ *   "Está com a campanha certa?"           → campanhas em camadas, e a frota
+ *                                            com 10/10 tocando o vídeo certo
+ *   "Qual recurso o cliente mais procura?" → o que o visitante quis testar, e
+ *                                            o movimento hora a hora
  *
- * Mudou uma pergunta aqui? MUDE TAMBÉM na seção 01 da página. O encaixe entre
- * as duas é o que faz o vídeo pertencer ao site.
+ * Mudou uma pergunta aqui? MUDE TAMBÉM na seção 01 da página.
+ *
+ * ── O movimento, e por que ele é assim ────────────────────────────────────
+ * A primeira versão era fade-entra, zoom tímido, fade-sai. Lia como slide.
+ * Agora cada peça tem seu próprio movimento, e nenhum é decorativo:
+ *
+ *   tela        entra em faixas, de cima para baixo, como conteúdo carregando
+ *   câmera      avança e ASSENTA em dois segundos
+ *   troca       a tela que sai sobe e desbota, a de baixo já está entrando
+ *   pergunta    palavra por palavra, no ritmo de quem lê
+ *   números     contam de zero
+ *   barras      crescem por varredura, sendo descobertas da esquerda
+ *   cursor      viaja com desaceleração e clica no aviso
  *
  * ── Resolução ─────────────────────────────────────────────────────────────
- * A composição é 1760×990 porque é o tamanho NATIVO das capturas. Ampliar
- * para 2400 borraria o texto do painel — pixel interpolado é pior que pixel
- * verdadeiro, e num vídeo cheio de tabela isso aparece na hora.
+ * 1760×990 é o tamanho NATIVO das capturas. Ampliar borraria o texto das
+ * tabelas: pixel interpolado é pior que pixel verdadeiro.
  *
  * ── Laço ──────────────────────────────────────────────────────────────────
  * Abre no preto e fecha no preto. Roda em `loop` sem emenda.
@@ -51,79 +53,80 @@ const T = {
 
   pergunta2: [322, 402],
   campanhas: [396, 530],
-  frota: [526, 612],
+  frota: [524, 612],
 
   pergunta3: [612, 692],
-  testar: [686, 792],
-  hora: [788, 840],
+  testar: [686, 790],
+  hora: [786, 840],
 
   fecho: [836, 900],
 } as const;
+
+/** Quantos quadros a câmera leva para assentar. Depois disso ela PARA. */
+const ASSENTA = 54;
 
 export const PainelEmMovimento: React.FC = () => {
   const frame = useCurrentFrame();
 
   return (
     <AbsoluteFill name="Painel em movimento" style={{ background: COR.fundo }}>
-      {/* Cada tela do painel entra, respira com um leve avanço de câmera, e sai.
-          O movimento é de 3%: o suficiente para não parecer um slide parado, e
-          pouco o bastante para ninguém tentar ler um texto que está andando. */}
-      <Tela arquivo="painel/visao.png" janela={T.visao} zoomDe={1.0} zoomPara={1.035} focoY={-2}>
-        {/* Os dois cartões do topo contam de zero. Coordenadas medidas no
-            navegador na hora da captura, não estimadas no PNG. */}
-        <Contador x={558} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 26}
-                  tamanho={24} cor={COR.atencao} fundo="#121513" />
-        <Contador x={862} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 34}
-                  tamanho={24} cor={COR.texto} fundo="#121513" />
+      <Tela arquivo="painel/visao.png" janela={T.visao} zoomDe={1.0} zoomPara={1.04} focoY={-2}>
+        {/* Os dois cartões do topo contam de zero. As coordenadas vieram do
+            `getBoundingClientRect()` do navegador na hora da captura, e ficam
+            DENTRO da transformação da imagem para acompanharem o zoom. */}
+        <Contador
+          x={558} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 52}
+          tamanho={24} cor={COR.atencao} fundo="#121513"
+        />
+        <Contador
+          x={862} y={176} w={90} h={32} ate={2} inicio={T.visao[0] + 60}
+          tamanho={24} cor={COR.texto} fundo="#121513"
+        />
       </Tela>
-      <Tela arquivo="painel/campanhas.png" janela={T.campanhas} zoomDe={1.0} zoomPara={1.03} focoY={-1} />
+
+      <Tela
+        arquivo="painel/campanhas.png" janela={T.campanhas}
+        zoomDe={1.0} zoomPara={1.03} focoY={-1}
+      />
+
       <Tela arquivo="painel/frota.png" janela={T.frota} zoomDe={1.03} zoomPara={1.0} focoY={0} />
+
       <Tela arquivo="painel/testar.png" janela={T.testar} zoomDe={1.0} zoomPara={1.03} focoY={2}>
         {/* As quatro barras crescem por varredura: não são redesenhadas, são
             descobertas da esquerda para a direita. */}
-        <Varredura x={537} y={188} w={896} h={146} inicio={T.testar[0] + 18} duracao={40} />
-      </Tela>
-      <Tela arquivo="painel/hora.png" janela={T.hora} zoomDe={1.03} zoomPara={1.0} focoY={-2}>
-        <Varredura x={537} y={152} w={896} h={166} inicio={T.hora[0] + 10} duracao={32} />
+        <Varredura x={537} y={188} w={896} h={146} inicio={T.testar[0] + 34} duracao={44} />
       </Tela>
 
+      <Tela arquivo="painel/hora.png" janela={T.hora} zoomDe={1.03} zoomPara={1.0} focoY={-2}>
+        <Varredura x={537} y={152} w={896} h={166} inicio={T.hora[0] + 18} duracao={34} />
+      </Tela>
 
       <CursorNoAviso frame={frame} />
 
-      <Pergunta frame={frame} janela={T.pergunta1} texto="O aparelho está ligado?" primeira />
-      <Pergunta frame={frame} janela={T.pergunta2} texto="Está com a campanha certa?" />
-      <Pergunta frame={frame} janela={T.pergunta3} texto="Qual recurso o cliente mais procura?" />
+      <Pergunta janela={T.pergunta1} texto="O aparelho está ligado?" primeira />
+      <Pergunta janela={T.pergunta2} texto="Está com a campanha certa?" />
+      <Pergunta janela={T.pergunta3} texto="Qual recurso o cliente mais procura?" />
 
       <Fecho frame={frame} />
     </AbsoluteFill>
   );
 };
 
-/** Quantos quadros a câmera leva para assentar. Depois disso ela PARA. */
-const ASSENTA = 52;
-
 /**
- * Uma captura do painel, com avanço de câmera que assenta.
- *
- * O `zoom` é sempre pequeno e a direção alterna entre as telas: entrar sempre
- * para dentro dá enjoo, e alternar dá ritmo sem que ninguém perceba por quê.
+ * Uma tela do painel: entra em faixas, a câmera avança e assenta, e ela sai.
  *
  * ── Por que a câmera para depois de dois segundos ─────────────────────────
- * Duas razões, e as duas são fortes.
+ * Legibilidade: ninguém lê uma tabela que está andando.
  *
- * Legibilidade: ninguém lê uma tabela que está andando. O movimento serve
- * para a tela entrar viva; a partir daí ele só atrapalha.
- *
- * Tamanho do arquivo: zoom contínuo sobre captura de tela é o pior caso do
- * H.264 — todo pixel muda em todo quadro e nada pode ser reaproveitado.
- * Medido nesta peça, no mesmo `crf 20`:
+ * E tamanho de arquivo: zoom contínuo sobre captura de tela é o pior caso do
+ * H.264 — todo pixel muda em todo quadro e nada é reaproveitado. Medido nesta
+ * peça, no mesmo `crf 20`:
  *
  *     movimento até o fim   8,20 MB
  *     câmera assentando     3,72 MB   ← mesma qualidade, metade do arquivo
  *
  * Não foi compressão mais agressiva: foi parar de mexer no que não precisava
- * se mexer. O arquivo que vai para o site usa `crf 23` (2,90 MB), que é onde
- * a perda ainda não aparece no texto das tabelas.
+ * se mexer.
  */
 function Tela({
   arquivo,
@@ -140,12 +143,12 @@ function Tela({
   /** Deslocamento vertical em %, para a câmera não ficar sempre no centro. */
   focoY: number;
   /**
-   * Destaques desenhados POR CIMA da captura — contador, varredura.
+   * Destaques desenhados por cima — contador, varredura.
    *
-   * Eles ficam dentro do mesmo contêiner transformado da imagem de propósito.
-   * Na primeira tentativa estavam soltos no quadro, em coordenada fixa: como a
-   * captura tem zoom e deslocamento, os dois se separavam e o contador
-   * aparecia ao lado do número que devia estar cobrindo.
+   * Ficam dentro do mesmo contêiner transformado da imagem de propósito. Numa
+   * tentativa anterior estavam soltos no quadro, em coordenada fixa: como a
+   * captura tem zoom, os dois se separavam e o contador aparecia ao lado do
+   * número que devia estar cobrindo.
    */
   children?: React.ReactNode;
 }) {
@@ -164,113 +167,39 @@ function Tela({
     easing: Easing.bezier(0.22, 1, 0.3, 1),
   });
 
+  /* A saída sobe e desbota junto, e a tela seguinte já está entrando por
+     baixo: o conjunto lê como uma pilha andando, não como duas fotos
+     trocando de lugar. */
+  const saida = interpolate(frame, [fim - 16, fim], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.4, 0, 1, 1),
+  });
+
   return (
-    <AbsoluteFill
-      style={{
-        opacity: interpolate(frame, [ini, ini + 14, fim - 12, fim], [0, 1, 1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-          easing: ENTRADA,
-        }),
-      }}
-    >
-      <AbsoluteFill style={{ scale: escala, translate: `0px ${deslocaY}%` }}>
-        <Img src={staticFile(arquivo)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    <AbsoluteFill style={{ opacity: 1 - saida, translate: `0px ${-saida * 34}px` }}>
+      <TelaQueAssenta arquivo={arquivo} inicio={ini} escala={escala} deslocaY={deslocaY}>
         {children}
-      </AbsoluteFill>
+      </TelaQueAssenta>
     </AbsoluteFill>
   );
 }
 
 /**
- * A pergunta em tela cheia.
+ * O cursor indo até o aviso de aparelho caído, na visão geral.
  *
- * Da segunda em diante ela vem sobre uma cortina preta que cobre a tela
- * anterior e sai revelando a próxima. Corte seco entre duas capturas de
- * painel lê como emenda de gravação; a cortina faz a troca virar narrativa.
- */
-function Pergunta({
-  frame,
-  janela,
-  texto,
-  primeira = false,
-}: {
-  frame: number;
-  janela: readonly [number, number] | number[];
-  texto: string;
-  primeira?: boolean;
-}) {
-  const [ini, fim] = janela as [number, number];
-  if (frame < ini - 6 || frame > fim + 6) return null;
-
-  const cortina = primeira
-    ? 1
-    : interpolate(frame, [ini, ini + 16, fim - 20, fim], [0, 1, 1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: ENTRADA,
-      });
-
-  const aparece = interpolate(frame, [ini + 8, ini + 30, fim - 26, fim - 8], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: ENTRADA,
-  });
-
-  const sobe = interpolate(frame, [ini + 8, ini + 34], [24, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: ENTRADA,
-  });
-
-  return (
-    <AbsoluteFill
-      style={{
-        alignItems: "center",
-        justifyContent: "center",
-        background: COR.fundo,
-        opacity: cortina,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 20,
-          opacity: aparece,
-          translate: `0px ${sobe}px`,
-        }}
-      >
-        <span style={{ width: 42, height: 4, background: COR.verde, borderRadius: 2 }} />
-        <span
-          style={{
-            fontFamily: PILHA_DE_FONTE,
-            fontSize: 74,
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            color: COR.texto,
-          }}
-        >
-          {texto}
-        </span>
-      </div>
-    </AbsoluteFill>
-  );
-}
-
-/**
- * O cursor indo até o aviso de aparelho caído, na tela de visão geral.
+ * É o que transforma "tela bonita" em "alguém operando". A viagem desacelera
+ * na chegada, como mão humana: velocidade constante lê como robô.
  *
- * É o que transforma "tela bonita" em "alguém operando". As coordenadas são
- * do quadro de 1760×990 e miram o cartão da Loja Centro — se a captura for
- * refeita e o layout mudar, elas precisam ser reconferidas.
+ * As coordenadas são do quadro de 1760×990 e miram o cartão da Loja Centro.
+ * Refez a captura e o layout mudou? Precisam ser reconferidas.
  */
 function CursorNoAviso({ frame }: { frame: number }) {
-  const ini = 190;
-  const fim = 250;
-  if (frame < ini - 30 || frame > fim + 16) return null;
+  const ini = 200;
+  const fim = 262;
+  if (frame < ini - 34 || frame > fim + 16) return null;
 
-  const p = interpolate(frame, [ini - 30, ini], [0, 1], {
+  const p = interpolate(frame, [ini - 34, ini], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: ENTRADA,
@@ -278,23 +207,40 @@ function CursorNoAviso({ frame }: { frame: number }) {
 
   return (
     <Cursor
-      x={interpolate(p, [0, 1], [1180, 620])}
-      y={interpolate(p, [0, 1], [820, 336])}
-      clicando={interpolate(frame, [ini + 4, ini + 28], [0, 1], {
+      x={interpolate(p, [0, 1], [1240, 620])}
+      y={interpolate(p, [0, 1], [860, 336])}
+      clicando={interpolate(frame, [ini + 4, ini + 30], [0, 1], {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
       })}
-      opacidade={interpolate(frame, [fim, fim + 14], [1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })}
+      opacidade={
+        interpolate(frame, [ini - 34, ini - 26], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        }) *
+        interpolate(frame, [fim, fim + 14], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        })
+      }
     />
   );
 }
 
+/** O fecho: a marca entra, o endereço vem atrás, e tudo volta ao preto. */
 function Fecho({ frame }: { frame: number }) {
   if (frame < T.fecho[0]) return null;
-  const entra = interpolate(frame, [T.fecho[0] + 10, T.fecho[0] + 40], [0, 1], {
+
+  const fundo = interpolate(frame, [T.fecho[0], T.fecho[0] + 16], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const marca = interpolate(frame, [T.fecho[0] + 12, T.fecho[0] + 44], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: ENTRADA,
+  });
+  const endereco = interpolate(frame, [T.fecho[0] + 28, T.fecho[0] + 56], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: ENTRADA,
@@ -310,10 +256,7 @@ function Fecho({ frame }: { frame: number }) {
         alignItems: "center",
         justifyContent: "center",
         background: COR.fundo,
-        opacity: interpolate(frame, [T.fecho[0], T.fecho[0] + 18], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        }),
+        opacity: fundo,
       }}
     >
       <div
@@ -322,11 +265,27 @@ function Fecho({ frame }: { frame: number }) {
           flexDirection: "column",
           alignItems: "center",
           gap: 30,
-          opacity: entra * sai,
+          opacity: sai,
         }}
       >
-        <LinkaLogo altura={118} />
-        <span style={{ fontFamily: PILHA_DE_FONTE, fontSize: 26, color: COR.fraco }}>
+        <div
+          style={{
+            opacity: marca,
+            translate: `0px ${(1 - marca) * 18}px`,
+            scale: 0.96 + marca * 0.04,
+          }}
+        >
+          <LinkaLogo altura={118} />
+        </div>
+        <span
+          style={{
+            fontFamily: PILHA_DE_FONTE,
+            fontSize: 26,
+            color: COR.fraco,
+            opacity: endereco,
+            translate: `0px ${(1 - endereco) * 12}px`,
+          }}
+        >
           linkaretail.com.br
         </span>
       </div>
