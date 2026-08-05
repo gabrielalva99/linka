@@ -16,14 +16,26 @@ import { useEffect, useState } from "react";
  *     que página sem animação.
  */
 
+/**
+ * Os `id` são URL pública: alguém vai colar linkaretail.com.br/#o-dado-que-falta
+ * numa conversa. Então eles seguem três regras:
+ *
+ *  1. Dizem o que a pessoa vai encontrar. Havia um `#tese` aqui — vocabulário
+ *     nosso, que não significa nada para um diretor de marca.
+ *  2. Sem acento. Acento vira `%C3%A7` quando o link é copiado, e o endereço
+ *     chega no WhatsApp parecendo defeito.
+ *  3. Não mudam mais. Âncora que circulou e some vira link quebrado; estas
+ *     foram acertadas em 05/08, horas depois de o site subir, justamente por
+ *     ser a última janela barata.
+ */
 const SECOES = [
-  { id: "perguntas", rotulo: "Perguntas" },
+  { id: "perguntas-sem-resposta", rotulo: "Perguntas" },
   { id: "dispositivos", rotulo: "Dispositivos" },
   { id: "plataforma", rotulo: "Plataforma" },
-  { id: "tese", rotulo: "O dado que falta" },
-  { id: "medicao", rotulo: "O que se mede" },
+  { id: "o-dado-que-falta", rotulo: "O dado que falta" },
+  { id: "o-que-se-mede", rotulo: "O que se mede" },
   { id: "aplicacoes", rotulo: "Aplicações" },
-  { id: "como-entra", rotulo: "Como entra" },
+  { id: "como-comecar", rotulo: "Como começar" },
 ];
 
 export function IndiceLateral() {

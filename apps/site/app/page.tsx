@@ -11,16 +11,19 @@ import { IndiceLateral, RevelaSecoes } from "./indice";
  * bancada e hoje não tem como saber o que acontece nela. Não é para o
  * varejista (que não compra isso) nem para técnico (que não decide).
  *
- * ── O argumento, na ordem em que a página o entrega ───────────────────────
- *   herói         a loja gera dado a cada toque e quase nada é captado
- *   01 perguntas  três perguntas sem resposta hoje (a dor, em linhas)
- *   02 dispositivos  qualquer dispositivo da loja é ponto de dado
- *   03 plataforma    o que já funciona: conteúdo, dados, operação
- *   04 tese          o ponto cego das fontes que a marca já paga  ← pico
- *   05 medição       o que a marca passa a saber
- *   06 aplicações    o que ela decide com isso
- *   07 como entra    que começar é simples
- *   fechamento       o e-mail
+ * ── O argumento, e a âncora pública de cada seção ─────────────────────────
+ *   herói                       a loja gera dado e quase nada é captado
+ *   01 #perguntas-sem-resposta  a dor, em três linhas
+ *   02 #dispositivos            qualquer dispositivo da loja é ponto de dado
+ *   03 #plataforma              o que já opera, com o painel em vídeo
+ *   04 #o-dado-que-falta        o ponto cego das fontes que a marca já paga ← pico
+ *   05 #o-que-se-mede           o que a marca passa a saber
+ *   06 #aplicacoes              o que ela decide com isso
+ *   07 #como-comecar            que começar é simples
+ *   fechamento                  o e-mail
+ *
+ * As âncoras são URL pública e não devem mudar: alguém vai colar
+ * linkaretail.com.br/#o-dado-que-falta numa conversa. Regras em `indice.tsx`.
  *
  * ── O que ela NÃO faz, e é decisão, não esquecimento ──────────────────────
  * 1. Não cita cliente, não usa depoimento e não inventa resultado. Sem
@@ -33,8 +36,6 @@ import { IndiceLateral, RevelaSecoes } from "./indice";
  * 4. Não expõe o acesso ao painel: o link vai por envio direto.
  * 5. Não tem formulário. Sem CRM e sem alguém de plantão, formulário que
  *    ninguém responde é pior do que um e-mail direto.
- *
- * As duas imagens reais entram nos dois placeholders marcados.
  */
 
 /*
@@ -168,7 +169,7 @@ function Problema() {
   ];
 
   return (
-    <section id="perguntas" className="border-b border-line">
+    <section id="perguntas-sem-resposta" className="border-b border-line">
       <div className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <TituloSecao indice="01" titulo="Três perguntas que hoje não têm resposta" />
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted">
@@ -376,7 +377,7 @@ function Tese() {
   ];
 
   return (
-    <section id="tese" className="relative border-b border-line bg-surface">
+    <section id="o-dado-que-falta" className="relative border-b border-line bg-surface">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-32 left-0 h-[500px] w-[760px] rounded-full bg-primary/10 blur-[130px]"
@@ -451,7 +452,7 @@ function Medicao() {
   ];
 
   return (
-    <section id="medicao" className="border-b border-line">
+    <section id="o-que-se-mede" className="border-b border-line">
       <div className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 lg:px-12 lg:py-36">
         <div className="max-w-3xl">
           <TituloSecao indice="05" titulo="O que a marca passa a saber" />
@@ -575,7 +576,7 @@ function ComoEntra() {
   ];
 
   return (
-    <section id="como-entra" className="border-b border-line bg-ink-950">
+    <section id="como-comecar" className="border-b border-line bg-ink-950">
       <div className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <TituloSecao indice="07" titulo="Como entra na sua rede" />
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted">
