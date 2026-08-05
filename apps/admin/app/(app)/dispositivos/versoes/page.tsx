@@ -64,7 +64,7 @@ export default async function VersoesPage() {
         sozinho. Não precisa de cabo nem de ninguém na loja.
       </p>
       <p className="mt-1 text-sm text-muted">
-        Publicar atinge <strong className="font-medium text-fg">toda a frota, de
+        Publicar atinge <strong className="font-medium text-foreground">toda a frota, de
         todos os clientes</strong> — e as contagens abaixo também. Aparelho
         arquivado não entra.
       </p>

@@ -73,7 +73,7 @@ export default function LoginPage() {
             ficar de fora sem caminho de volta. */}
         <Link
           href="/esqueci-senha"
-          className="mt-6 inline-block text-sm text-muted hover:text-fg hover:underline"
+          className="mt-6 inline-block text-sm text-muted hover:text-foreground hover:underline"
         >
           {t.login.forgot}
         </Link>

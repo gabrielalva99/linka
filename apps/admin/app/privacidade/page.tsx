@@ -26,7 +26,7 @@ const ATUALIZADA_EM = "4 de agosto de 2026";
 
 export default function PoliticaDePrivacidade() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16 text-fg">
+    <main className="mx-auto max-w-3xl px-6 py-16 text-foreground">
       <h1 className="text-3xl font-semibold">Política de privacidade</h1>
       <p className="mt-2 text-sm text-muted">Atualizada em {ATUALIZADA_EM}</p>
 

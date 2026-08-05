@@ -101,7 +101,7 @@ export default function NovaSenhaPage() {
             </p>
             <Link
               href="/esqueci-senha"
-              className="mt-6 inline-block text-sm text-muted hover:text-fg hover:underline"
+              className="mt-6 inline-block text-sm text-muted hover:text-foreground hover:underline"
             >
               {t.login.forgot}
             </Link>

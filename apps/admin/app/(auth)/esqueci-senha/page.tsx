@@ -100,7 +100,7 @@ export default function EsqueciSenhaPage() {
 
         <Link
           href="/login"
-          className="mt-6 inline-block text-sm text-muted hover:text-fg hover:underline"
+          className="mt-6 inline-block text-sm text-muted hover:text-foreground hover:underline"
         >
           {t.login.backToLogin}
         </Link>

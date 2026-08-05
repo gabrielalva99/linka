@@ -48,7 +48,7 @@ export function ReportToggle({
           })
         }
         disabled={pending}
-        className="text-xs text-muted hover:text-fg hover:underline disabled:opacity-40"
+        className="text-xs text-muted hover:text-foreground hover:underline disabled:opacity-40"
       >
         {pending
           ? "Salvando…"

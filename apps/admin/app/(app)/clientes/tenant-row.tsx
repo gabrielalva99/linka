@@ -269,7 +269,7 @@ export function TenantRow({
           <>
             <button
               onClick={() => setEditando(true)}
-              className="text-xs text-muted hover:text-fg hover:underline"
+              className="text-xs text-muted hover:text-foreground hover:underline"
             >
               Renomear
             </button>
@@ -282,7 +282,7 @@ export function TenantRow({
                     setErro(null);
                     setConfirmandoDesativar(true);
                   }}
-                  className="ml-3 text-xs text-muted hover:text-fg hover:underline"
+                  className="ml-3 text-xs text-muted hover:text-foreground hover:underline"
                 >
                   Desativar
                 </button>
