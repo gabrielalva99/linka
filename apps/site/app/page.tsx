@@ -179,7 +179,7 @@ function Privacidade() {
         </div>
       </div>
       <p className="mt-6 text-sm text-muted">
-        <a href="https://painel.linkaretail.com.br/privacidade" className="underline hover:text-primary">
+        <a href="/privacidade" className="underline hover:text-primary">
           Política de privacidade
         </a>{" "}
         — específica desta plataforma, não um modelo genérico.
@@ -240,7 +240,7 @@ function Rodape() {
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-10 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <LinkaLogo className="h-5 w-auto" />
         <div className="flex flex-wrap gap-6">
-          <a href="https://painel.linkaretail.com.br/privacidade" className="hover:text-primary">
+          <a href="/privacidade" className="hover:text-primary">
             Privacidade
           </a>
           <a href="https://painel.linkaretail.com.br" className="hover:text-primary">

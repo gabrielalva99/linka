@@ -42,6 +42,18 @@ const nextConfig: NextConfig = {
     return [
       { source: "/frota", destination: "/dispositivos", permanent: true },
       { source: "/frota/:caminho*", destination: "/dispositivos/:caminho*", permanent: true },
+      // A política de privacidade nasceu aqui porque o site público ainda não
+      // existia, e o Google exige a URL para publicar o app. Agora ela mora no
+      // site, que é o endereço que um cliente ou o procurement digita.
+      //
+      // O redirecionamento fica: a URL antiga já pode ter sido enviada a alguém,
+      // e política de privacidade que dá 404 é pior do que política velha —
+      // parece que a empresa tirou o documento do ar.
+      {
+        source: "/privacidade",
+        destination: "https://linkaretail.com.br/privacidade",
+        permanent: true,
+      },
     ];
   },
 
