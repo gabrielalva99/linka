@@ -19,7 +19,7 @@ import { PerguntaGrafica } from "./grafico/PerguntaGrafica";
  * ── A diferença estrutural ────────────────────────────────────────────────
  * Lá cada cena carrega o próprio fundo, então toda troca de cena é um corte —
  * escondido pela cortina de 82% da pergunta. Aqui existe UM fundo só, na raiz,
- * que nunca é desmontado nos 54 segundos. As cenas contêm apenas os cartões.
+ * que nunca é desmontado nos 59 segundos. As cenas contêm apenas os cartões.
  *
  * Consequências, todas boas:
  *   · nenhum corte para esconder → a cortina vira TROCA DE FOCO, e o fundo
@@ -47,7 +47,88 @@ const P1 = 92;
 const P2 = 372;
 const P3 = 704;
 
-export const DURACAO_GRAFICA = 1380;
+/* ── o relógio do fecho de argumento ──────────────────────────────────────────
+ *
+ * ── Por que a janela desta cena é DERIVADA, e não escrita na mão ──────────
+ * Porque escrita na mão deu errado. A cena tinha 218 quadros cravados e a
+ * saída começava em `duracao - 40` = 178 — mas a última linha só terminava de
+ * pousar no quadro 184. **O bloco começava a sair seis quadros ANTES de a
+ * frase mais importante da peça acabar de aparecer**, e ela nunca chegava a
+ * 100% de opacidade. Dava para ver que havia texto; não dava para ler.
+ *
+ * É exatamente o erro que `quadrosDe()` existe para impedir nas perguntas —
+ * eu criei a proteção lá e escrevi o número na mão aqui.
+ *
+ * Agora a janela nasce do texto: mexeu nas frases, o tempo se ajusta sozinho.
+ *
+ * ── Por que este bloco mora aqui em cima, longe do componente ─────────────
+ * Porque a LINHA DO TEMPO da composição depende dele. `quadrosDoAcompanha()`
+ * roda na montagem do módulo, e uma `const` declarada mais abaixo ainda não
+ * existe nessa hora — "Cannot access before initialization", que foi o que
+ * aconteceu na primeira tentativa. Declaração de função sobe; `const` não.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * As três linhas são AFIRMAÇÃO DE PRODUTO e todas são verdade hoje. Mexer aqui
+ * é mexer numa promessa comercial, não num texto de tela.
+ */
+const LINHAS = [
+  "cada aparelho, em cada loja, agora",
+  "a campanha que está no ar, e onde ela chegou",
+  "quem pegou, por quanto tempo, e o que quis testar",
+];
+
+const PRIMEIRA_LINHA = 50;
+const RAMPA_DA_LINHA = 26;
+/**
+ * Quanto tempo a última linha fica inteira e parada antes de o bloco sair.
+ *
+ * Ela tem 10 palavras e 48 caracteres — é a frase mais longa da peça. As duas
+ * de cima CONTINUAM na tela enquanto ela entra, então elas se leem com folga;
+ * só a última tem prazo, porque a saída do bloco vem logo atrás dela. É por
+ * isso que o número que importa aqui é este, e não o intervalo entre linhas.
+ */
+const SEGURA = 70;
+const RAMPA_DA_SAIDA = 34;
+/** Intervalo entre a saída de uma linha e a da seguinte. */
+const PASSO_DA_SAIDA = 7;
+
+/** Em que quadro cada linha começa a entrar. O intervalo nasce da leitura. */
+function entradasDasLinhas() {
+  const entradas: number[] = [];
+  let quando = PRIMEIRA_LINHA;
+  for (const l of LINHAS) {
+    entradas.push(quando);
+    /* ~4 quadros por palavra: não se escalona texto mais rápido do que ele é
+       lido, senão o olho é puxado para o movimento novo no meio da leitura. */
+    quando += RAMPA_DA_LINHA + l.split(/\s+/).length * 4;
+  }
+  return entradas;
+}
+
+/** Quadro em que a última linha termina de pousar. */
+function ultimaPousa() {
+  const e = entradasDasLinhas();
+  return e[e.length - 1] + RAMPA_DA_LINHA;
+}
+
+/** Quadro em que o bloco começa a sair. */
+function saiEm() {
+  return ultimaPousa() + SEGURA;
+}
+
+/** Quantos quadros esta cena precisa. A janela nasce do texto. */
+export function quadrosDoAcompanha() {
+  return saiEm() + (LINHAS.length - 1) * PASSO_DA_SAIDA + RAMPA_DA_SAIDA;
+}
+
+const ACOMPANHA_DE = 1044;
+const ACOMPANHA_ATE = ACOMPANHA_DE + quadrosDoAcompanha();
+/** O colapso da rede começa enquanto o texto ainda está saindo. */
+const FECHO_DE = ACOMPANHA_ATE - 22;
+const FECHO_DURA = 142;
+
+export const DURACAO_GRAFICA = FECHO_DE + FECHO_DURA;
 
 const T = {
   pergunta1: [P1, P1 + quadrosDe(Q1)],
@@ -58,8 +139,8 @@ const T = {
   publicar: [386, 736],
   dados: [718, 1068],
 
-  acompanha: [1044, 1262],
-  fecho: [1238, DURACAO_GRAFICA],
+  acompanha: [ACOMPANHA_DE, ACOMPANHA_ATE],
+  fecho: [FECHO_DE, DURACAO_GRAFICA],
 } as const;
 
 /**
@@ -80,10 +161,10 @@ const CAMERA: ChaveDeCamera[] = [
   { f: 836, escala: 1.18, x: 92, y: -28 },
   { f: 1014, escala: 1.25, x: 132, y: -48 },
   { f: 1068, escala: 1.08, x: 300, y: -10 },
-  { f: 1236, escala: 1.02, x: 344, y: 6 },
+  { f: FECHO_DE - 2, escala: 1.02, x: 344, y: 6 },
   /* O retorno ao centro acontece DURANTE o colapso: a rede não pode terminar
      de se contrair fora do lugar onde a marca vai pousar. */
-  { f: 1294, escala: 1.14, x: 0, y: 0 },
+  { f: FECHO_DE + 56, escala: 1.14, x: 0, y: 0 },
   { f: DURACAO_GRAFICA, escala: 1.2, x: 0, y: 0 },
 ];
 
@@ -100,8 +181,8 @@ const LUZ: [number, number][] = [
   [1130, 0.95],
   /* A luz só cai DEPOIS do colapso. Se cair antes, a rede se apaga em vez de
      se recolher — e o gesto do fecho some. */
-  [1236, 0.62],
-  [1292, 0.5],
+  [FECHO_DE - 2, 0.62],
+  [FECHO_DE + 54, 0.5],
   [DURACAO_GRAFICA, 0.22],
 ];
 
@@ -119,7 +200,7 @@ export const PainelGrafico: React.FC = () => {
         /* Os dois aparelhos apagados ficam vermelhos enquanto o aviso do
            cartão da frota está no ar. A mesma informação, nas duas camadas. */
         falhas={[268, 372]}
-        convergencia={[1238, 1292]}
+        convergencia={[FECHO_DE, FECHO_DE + 54]}
       />
 
       {/* "O aparelho está ligado?" → a frota, linha a linha, e o aviso */}
@@ -210,10 +291,9 @@ function Cena({
 /* ── o que a marca passa a acompanhar ─────────────────────────────────────── */
 
 /**
- * As três linhas são AFIRMAÇÃO DE PRODUTO e todas são verdade hoje. Mexer aqui
- * é mexer numa promessa comercial, não num texto de tela.
+ * O tratamento gráfico do fecho de argumento. O RELÓGIO dele está lá no alto
+ * do arquivo, junto com `LINHAS` — ver o comentário de `SEGURA`.
  *
- * ── O tratamento gráfico ──────────────────────────────────────────────────
  * O bloco vive à esquerda e a rede fica à direita (a câmera empurra a rede
  * para lá justamente aqui). Um trilho vertical desce ligando os três marcadores
  * — é a mesma linguagem dos elos da rede, aplicada ao texto: o que está sendo
@@ -223,12 +303,6 @@ function Cena({
  * linha e a outra nasce do tamanho da frase. Escalonar texto mais rápido do que
  * ele é lido puxa o olho para o movimento novo antes de a leitura terminar.
  */
-const LINHAS = [
-  "cada aparelho, em cada loja, agora",
-  "a campanha que está no ar, e onde ela chegou",
-  "quem pegou, por quanto tempo, e o que quis testar",
-];
-
 function Acompanha({ duracao }: { duracao: number }) {
   const frame = useCurrentFrame();
 
@@ -237,7 +311,8 @@ function Acompanha({ duracao }: { duracao: number }) {
     extrapolateRight: "clamp",
     easing: CENA,
   });
-  const saida = interpolate(frame, [duracao - 40, duracao - 6], [1, 0], {
+  /* O contêiner sai junto com a ÚLTIMA linha, não antes dela. */
+  const saida = interpolate(frame, [saiEm(), duracao], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SAI,
@@ -249,14 +324,8 @@ function Acompanha({ duracao }: { duracao: number }) {
     easing: ENTRA,
   });
 
-  /** ~4 quadros por palavra: o intervalo nasce do que há para ler. */
-  const entradas: number[] = [];
-  let quando = 50;
-  for (const l of LINHAS) {
-    entradas.push(quando);
-    quando += 26 + l.split(/\s+/).length * 4;
-  }
-  const ultima = entradas[entradas.length - 1] + 26;
+  const entradas = entradasDasLinhas();
+  const ultima = ultimaPousa();
 
   /** O trilho desce acompanhando as linhas, e para quando a última pousa. */
   const trilho = interpolate(frame, [entradas[0] - 6, ultima], [0, 1], {
@@ -328,10 +397,19 @@ function Acompanha({ duracao }: { duracao: number }) {
             />
             <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
               {LINHAS.map((linha, i) => {
-                const p = interpolate(frame, [entradas[i], entradas[i] + 26], [0, 1], {
+                const p = interpolate(frame, [entradas[i], entradas[i] + RAMPA_DA_LINHA], [0, 1], {
                   extrapolateLeft: "clamp",
                   extrapolateRight: "clamp",
                   easing: ENTRA,
+                });
+                /* Saem na mesma ordem em que entraram, com poucos quadros
+                   entre uma e outra — então a ÚLTIMA a deixar a tela é a
+                   afirmação mais forte das três, e não a primeira. */
+                const saiEsta = saiEm() + i * PASSO_DA_SAIDA;
+                const s = interpolate(frame, [saiEsta, saiEsta + RAMPA_DA_SAIDA], [1, 0], {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                  easing: SAI,
                 });
                 /** O marcador estala depois de a linha assentar. */
                 const marca = interpolate(frame, [entradas[i] + 12, entradas[i] + 30], [0, 1], {
@@ -346,7 +424,7 @@ function Acompanha({ duracao }: { duracao: number }) {
                       display: "flex",
                       alignItems: "center",
                       gap: 26,
-                      opacity: p,
+                      opacity: p * s,
                       translate: `${(1 - p) * -34}px 0px`,
                     }}
                   >
