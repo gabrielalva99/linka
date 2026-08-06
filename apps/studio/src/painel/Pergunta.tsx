@@ -35,14 +35,23 @@ export function Pergunta({
   /* A cortina escurece a loja sem apagá-la: a pergunta é feita POR CIMA da
      cena, não no lugar dela. Corte para preto entre cada pergunta partiria a
      peça em três filmes soltos. */
-  const cortina = interpolate(frame, [ini, ini + 12, fim - 18, fim], [0, 0.82, 0.82, 0], {
+  const cortina = interpolate(frame, [ini, ini + 12, fim - 30, fim], [0, 0.82, 0.82, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
   });
 
-  /** A saída é junta: palavra por palavra na ida, tudo de uma vez na volta. */
-  const saida = interpolate(frame, [fim - 22, fim - 7], [1, 0], {
+  /**
+ * A saída é junta — palavra por palavra na ida, tudo junto na volta — mas
+ * LENTA: 26 quadros, mais de um segundo.
+ *
+ * Já foi de 15 quadros, e a frase sumia antes de ser lida. Medindo a versão
+ * antiga: a pergunta de seis palavras ficava inteira e parada na tela por 18
+ * quadros, 0,72 s. Ninguém lê "Qual recurso o cliente mais procura?" nesse
+ * tempo. Agora são 22 quadros parada mais 26 saindo — cerca de 2 s legíveis
+ * depois de a frase estar completa.
+ */
+  const saida = interpolate(frame, [fim - 36, fim - 10], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: SUAVE,
@@ -87,8 +96,8 @@ export function Pergunta({
           }}
         >
           {palavras.map((palavra, i) => {
-            const entra = ini + 12 + i * 3;
-            const p = interpolate(frame, [entra, entra + 17], [0, 1], {
+            const entra = ini + 12 + i * 4;
+            const p = interpolate(frame, [entra, entra + 20], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
               easing: SUAVE,

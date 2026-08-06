@@ -14,12 +14,15 @@ import { Pergunta } from "./painel/Pergunta";
  * cada toque", e aqui o toque e o dado dividem a tela.
  *
  * ── O flow ────────────────────────────────────────────────────────────────
- *   0–4,5s    a loja sozinha. Mão pegando um aparelho do suporte.
- *   4,5–11s   "O aparelho está ligado?"              → a frota, linha a linha
- *   11–18s    "Está com a campanha certa?"           → publicar em 8 lojas
- *   18–26s    "Qual recurso o cliente mais procura?" → as barras e as horas
- *   26–29s    "No LINKA você acompanha" + três linhas
- *   29–30s    a marca
+ *   0–4,5s     a loja sozinha. Mão pegando um aparelho do suporte.
+ *   4,5–13s    "O aparelho está ligado?"              → a frota, linha a linha
+ *   13–20,5s   "Está com a campanha certa?"           → publicar em 8 lojas
+ *   20,5–29s   "Qual recurso o cliente mais procura?" → as barras e as horas
+ *   29–31,5s   "No LINKA você acompanha" + três linhas
+ *   31,5–33,4s a marca
+ *
+ * As perguntas ganharam 110 quadros cada (4,4 s). Com 78 elas sumiam antes de
+ * serem lidas: a de seis palavras ficava inteira e parada só 0,72 s.
  *
  * ── 25 fps ────────────────────────────────────────────────────────────────
  * Igual à cadência dos clipes. A 30 o transcode duplicava um quadro a cada
@@ -47,7 +50,7 @@ import { Pergunta } from "./painel/Pergunta";
  */
 
 /**
- * A linha do tempo, em quadros de 25 fps (750 quadros · 30 s).
+ * A linha do tempo, em quadros de 25 fps (835 quadros · 33,4 s).
  *
  * ── A regra que rege TODA troca de cena ───────────────────────────────────
  * A cena que sai fica OPACA até o fim. A que entra desbota POR CIMA dela.
@@ -65,17 +68,17 @@ import { Pergunta } from "./painel/Pergunta";
 const T = {
   abertura: [0, 132],
 
-  pergunta1: [100, 178],
-  frota: [112, 294],
+  pergunta1: [100, 210],
+  frota: [112, 326],
 
-  pergunta2: [262, 340],
-  publicar: [274, 474],
+  pergunta2: [294, 404],
+  publicar: [306, 530],
 
-  pergunta3: [442, 520],
-  dados: [454, 654],
+  pergunta3: [498, 608],
+  dados: [510, 734],
 
-  acompanha: [630, 722],
-  fecho: [708, 750],
+  acompanha: [710, 810],
+  fecho: [788, 835],
 } as const;
 
 /**
@@ -96,14 +99,14 @@ export const PainelEmMovimento: React.FC = () => {
       </Cena>
 
       <Cena janela={T.frota} entrada={ENTRADA}>
-        <Loja arquivo="loja/bancada.mp4" inicio={T.frota[0]} duracao={185} />
+        <Loja arquivo="loja/bancada.mp4" inicio={T.frota[0]} duracao={212} />
         <Centro>
           <CartaoFrota inicio={T.frota[0] + 12} />
         </Centro>
       </Cena>
 
       <Cena janela={T.publicar} entrada={ENTRADA}>
-        <Loja arquivo="loja/vitrine.mp4" inicio={T.publicar[0]} duracao={202} />
+        <Loja arquivo="loja/vitrine.mp4" inicio={T.publicar[0]} duracao={222} />
         <Centro>
           <CartaoPublicar inicio={T.publicar[0] + 12} />
         </Centro>
@@ -113,7 +116,7 @@ export const PainelEmMovimento: React.FC = () => {
         <Loja
           arquivo="loja/bancada.mp4"
           inicio={T.dados[0]}
-          duracao={202}
+          duracao={222}
           zoomDe={1.12}
           zoomPara={1.04}
         />
@@ -126,7 +129,7 @@ export const PainelEmMovimento: React.FC = () => {
         <Loja
           arquivo="loja/tablet.mp4"
           inicio={T.acompanha[0]}
-          duracao={95}
+          duracao={100}
           zoomDe={1.08}
           zoomPara={1.16}
           brilho={0.4}
@@ -303,7 +306,7 @@ function Fecho() {
   const [ini, fim] = T.fecho;
   if (frame < ini) return null;
 
-  const fundo = interpolate(frame, [ini, ini + 12], [0, 1], {
+  const fundo = interpolate(frame, [ini, ini + 20], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

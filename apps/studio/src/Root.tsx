@@ -33,7 +33,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="painel-em-movimento"
         component={PainelEmMovimento}
-        durationInFrames={750}
+        durationInFrames={835}
         fps={25}
         width={1920}
         height={1080}
