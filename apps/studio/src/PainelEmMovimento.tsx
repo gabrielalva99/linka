@@ -46,22 +46,45 @@ import { Pergunta } from "./painel/Pergunta";
  * percentual, comparação ou seta de crescimento em lugar nenhum.
  */
 
-/** A linha do tempo, em quadros de 25 fps (750 quadros · 30 s). */
+/**
+ * A linha do tempo, em quadros de 25 fps (750 quadros · 30 s).
+ *
+ * ── A regra que rege TODA troca de cena ───────────────────────────────────
+ * A cena que sai fica OPACA até o fim. A que entra desbota POR CIMA dela.
+ * Assim a soma nunca cai abaixo de 100% e não existe mergulho no escuro.
+ *
+ * Por isso cada `fim` é maior que o `inicio` da cena seguinte: a de baixo só
+ * some DEPOIS que a de cima cobriu a tela inteira. Se as duas janelas apenas
+ * se encostarem, sobra um quadro sem cena nenhuma — preto puro piscando no
+ * meio do vídeo. Aconteceu, nos quadros 273 e 453.
+ *
+ * Já foram tentados e não servem:
+ *   as duas desbotando juntas  →  mistura escura no meio, e duas lojas na tela
+ *   corte seco encostado       →  um quadro preto de 40 ms piscando
+ */
 const T = {
-  abertura: [0, 116],
+  abertura: [0, 132],
 
   pergunta1: [100, 178],
-  frota: [112, 272],
+  frota: [112, 294],
 
   pergunta2: [262, 340],
-  publicar: [274, 452],
+  publicar: [274, 474],
 
   pergunta3: [442, 520],
-  dados: [454, 650],
+  dados: [454, 654],
 
-  acompanha: [630, 724],
+  acompanha: [630, 722],
   fecho: [708, 750],
 } as const;
+
+/**
+ * Quadros de desbotamento na entrada de cada cena.
+ *
+ * Ela começa exatamente no auge da pergunta, que cobre a tela a 82% — então a
+ * troca é suave E quase invisível ao mesmo tempo.
+ */
+const ENTRADA = 18;
 
 const SUAVE = Easing.bezier(0.16, 1, 0.3, 1);
 
@@ -69,28 +92,28 @@ export const PainelEmMovimento: React.FC = () => {
   return (
     <AbsoluteFill name="LINKA" style={{ background: COR.fundo }}>
       <Cena janela={T.abertura} entrada={0}>
-        <Loja arquivo="loja/tablet.mp4" inicio={T.abertura[0]} duracao={140} />
+        <Loja arquivo="loja/tablet.mp4" inicio={T.abertura[0]} duracao={135} />
       </Cena>
 
-      <Cena janela={T.frota} entrada={0}>
-        <Loja arquivo="loja/bancada.mp4" inicio={T.frota[0]} duracao={170} />
+      <Cena janela={T.frota} entrada={ENTRADA}>
+        <Loja arquivo="loja/bancada.mp4" inicio={T.frota[0]} duracao={185} />
         <Centro>
           <CartaoFrota inicio={T.frota[0] + 12} />
         </Centro>
       </Cena>
 
-      <Cena janela={T.publicar} entrada={0}>
-        <Loja arquivo="loja/vitrine.mp4" inicio={T.publicar[0]} duracao={190} />
+      <Cena janela={T.publicar} entrada={ENTRADA}>
+        <Loja arquivo="loja/vitrine.mp4" inicio={T.publicar[0]} duracao={202} />
         <Centro>
           <CartaoPublicar inicio={T.publicar[0] + 12} />
         </Centro>
       </Cena>
 
-      <Cena janela={T.dados} entrada={0}>
+      <Cena janela={T.dados} entrada={ENTRADA}>
         <Loja
           arquivo="loja/bancada.mp4"
           inicio={T.dados[0]}
-          duracao={200}
+          duracao={202}
           zoomDe={1.12}
           zoomPara={1.04}
         />
@@ -99,11 +122,11 @@ export const PainelEmMovimento: React.FC = () => {
         </Centro>
       </Cena>
 
-      <Cena janela={T.acompanha} entrada={22}>
+      <Cena janela={T.acompanha} entrada={24}>
         <Loja
           arquivo="loja/tablet.mp4"
           inicio={T.acompanha[0]}
-          duracao={110}
+          duracao={95}
           zoomDe={1.08}
           zoomPara={1.16}
           brilho={0.4}
@@ -123,9 +146,12 @@ export const PainelEmMovimento: React.FC = () => {
 /**
  * Um trecho da peça.
  *
- * A cena NUNCA desbota na saída: fica opaca até o último quadro e some, porque
- * a próxima já cobriu a tela ou a pergunta está por cima escondendo o corte.
- * Fade só existe na ENTRADA, e sempre por cima de algo opaco.
+ * A cena NUNCA desbota na saída: fica opaca até o último quadro e só então
+ * some — e a essa altura a de cima já cobriu a tela inteira.
+ *
+ * Fade existe só na ENTRADA, sempre por cima de algo opaco. É o que dá
+ * transição suave sem mergulho no escuro: duas camadas em meia opacidade
+ * sobre o preto não somam uma, mas meia opacidade sobre uma camada cheia soma.
  */
 function Cena({
   janela,
