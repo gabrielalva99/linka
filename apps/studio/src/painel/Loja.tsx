@@ -1,6 +1,7 @@
-import { AbsoluteFill, Easing, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { Video } from "@remotion/media";
 import { COR } from "../marca";
+import { CENA } from "../curvas";
 
 /**
  * A imagem de loja ao fundo.
@@ -10,37 +11,43 @@ import { COR } from "../marca";
  * bancada numa loja, e o painel sozinho nunca chega lá. Aqui está o instante
  * em que o dado nasce: alguém pegando um aparelho de demonstração do suporte.
  *
- * ── A graduação, e quanto ela pesa ────────────────────────────────────────
+ * ── `deInicio` existe por causa de um bug que passou despercebido ─────────
+ * Sem `<Sequence>`, o cabeçote do vídeo segue o quadro da COMPOSIÇÃO, não o
+ * da cena. Como cada clipe tem 225 quadros, o `loop` dava a volta nos quadros
+ * 225, 450 e 675 — que caíam bem no meio das três cenas de cartão. Era um
+ * corte seco acidental dentro de cada cena, e a varredura de quadros
+ * repetidos nunca ia achar (um salto não é uma repetição).
+ *
+ * Agora cada cena vive dentro de uma `<Sequence>`, o tempo do vídeo é local, e
+ * `deInicio` escolhe de que ponto do arquivo aquela cena parte. Isso resolve o
+ * segundo defeito junto: antes `bancada.mp4` era usado em duas cenas partindo
+ * quase do mesmo ponto, e o filme mostrava o mesmo plano duas vezes em 33 s.
+ *
+ * ── A graduação ───────────────────────────────────────────────────────────
  * O material é de banco: claro, quente, saturado. Cru, ele briga com o preto
  * da marca e denuncia "peça publicitária" — o contrário do que as telas reais
- * do painel construíram.
+ * do painel construíram. Mas já esteve escuro demais: a 38% o vídeo lia como
+ * fundo preto parado. O padrão agora é 62%, e cada cena pode variar — a peça
+ * clareia conforme o argumento avança, para não ter um platô de luz.
  *
- * Mas já esteve escuro DEMAIS. A 38% de brilho a imagem sumia, e o que devia
- * ser vídeo rodando lia como fundo preto parado. Agora está em 62%: dá para
- * ver a mão, o aparelho e a bancada se movendo, e ainda assim o cartão do
- * painel manda na cena.
- *
- * A graduação é CSS, não está gravada no arquivo. O ffmpeg que vem com o
- * Remotion é enxuto e não traz filtro de cor — e acabou sendo melhor assim,
- * porque dá para ajustar vendo o resultado.
- *
- * ── `loop` ────────────────────────────────────────────────────────────────
- * Ligado sempre. Se uma cena passar do fim do clipe, ele recomeça em vez de
- * congelar no último quadro — que foi um defeito real que chegou ao ar.
+ * ── A câmera tem massa ────────────────────────────────────────────────────
+ * O zoom usava `Easing.linear`, que é o keyframe sem curva do After Effects —
+ * a assinatura mais antiga de "ninguém tocou nas curvas". E a taxa variava
+ * entre cenas, então no corte a câmera mudava de velocidade de repente.
  */
 export function Loja({
   arquivo,
-  inicio,
   duracao,
-  /** Aproximação lenta, para a imagem não ficar parada atrás do cartão. */
+  /** Segundo do arquivo em que esta cena começa. Evita repetir plano. */
+  deInicio = 0,
   zoomDe = 1.04,
-  zoomPara = 1.12,
-  /** A cena de texto precisa de mais escuro: lá o texto fica direto na imagem. */
+  zoomPara = 1.11,
   brilho = 0.62,
 }: {
   arquivo: string;
-  inicio: number;
+  /** Quantos quadros a cena dura. Governa o percurso da câmera. */
   duracao: number;
+  deInicio?: number;
   zoomDe?: number;
   zoomPara?: number;
   brilho?: number;
@@ -51,15 +58,16 @@ export function Loja({
     <AbsoluteFill style={{ background: COR.fundo }}>
       <AbsoluteFill
         style={{
-          scale: interpolate(frame, [inicio, inicio + duracao], [zoomDe, zoomPara], {
+          scale: interpolate(frame, [0, duracao], [zoomDe, zoomPara], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.linear,
+            easing: CENA,
           }),
         }}
       >
         <Video
           src={staticFile(arquivo)}
+          trimBefore={deInicio * 25}
           loop
           muted
           style={{
@@ -74,11 +82,10 @@ export function Loja({
       {/* Véu verde bem fraco: costura a imagem à paleta sem tingir. */}
       <AbsoluteFill style={{ background: COR.verde, opacity: 0.04 }} />
 
-      {/* Vinheta suave. Antes era pesada e fechava a imagem inteira; agora só
-          assenta as bordas e deixa o meio respirar. */}
+      {/* Vinheta suave. Assenta as bordas e deixa o meio respirar. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(125% 95% at 50% 50%, transparent 42%, ${COR.fundo}cc 100%)`,
+          background: `radial-gradient(125% 95% at 50% 50%, transparent 44%, ${COR.fundo}c4 100%)`,
         }}
       />
     </AbsoluteFill>
