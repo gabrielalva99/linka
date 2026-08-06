@@ -1,6 +1,6 @@
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { COR, PILHA_DE_FONTE } from "../marca";
-import { CENA, emCadeia, ENTRA, ESTALO } from "../curvas";
+import { CENA, emCadeia, ENTRA, ESTALO, SAI } from "../curvas";
 
 /**
  * Os cartões do painel, reconstruídos em DOM.
@@ -36,6 +36,34 @@ export function Cartao({
   moldura,
   /** Quantos quadros a cena inteira dura. Governa a deriva secundária. */
   duracao,
+  /**
+   * Quadro (local à cena) em que o cartão começa a SAIR.
+   *
+   * Existe para a versão gráfica. Lá o fundo é contínuo e não há cortina de
+   * 82% para esconder a troca, então o cartão precisa se despedir por conta
+   * própria — recua, desfoca e sobe — em vez de ser simplesmente coberto.
+   * Sem isto ele some junto com a cena e o corte aparece.
+   *
+   * Na versão com imagem de loja fica indefinido: lá o comportamento antigo
+   * está validado e não se mexe nele para acomodar a nova.
+   */
+  saidaEm,
+  /**
+   * Trava o cartão em pixel cheio depois que ele termina de entrar.
+   *
+   * ── Por que isto existe ─────────────────────────────────────────────────
+   * Transformação contínua em cima de TEXTO faz a letra ferver. Deslocamento
+   * e escala fracionários obrigam o navegador a re-rasterizar cada glifo a
+   * cada quadro, e o antisserrilhado muda junto — a tabela inteira parece
+   * tremer. Num cartão com sete linhas de tabela e números, é a primeira
+   * coisa que incomoda quem assiste, mesmo sem saber apontar o quê.
+   *
+   * A deriva e a contra-escala existiam para o cartão não parecer adesivo
+   * colado na lente. O preço não vale: quem mantém a cena viva é o FUNDO —
+   * a rede se mexe atrás do vidro e o `backdropFilter` reamostra sozinho.
+   * Movimento no leito, tipografia parada.
+   */
+  ancorado = false,
   largura = 1290,
   children,
 }: {
@@ -43,6 +71,8 @@ export function Cartao({
   selo?: React.ReactNode;
   moldura: number;
   duracao: number;
+  saidaEm?: number;
+  ancorado?: boolean;
   largura?: number;
   children: React.ReactNode;
 }) {
@@ -52,17 +82,24 @@ export function Cartao({
     extrapolateRight: "clamp",
     easing: ENTRA,
   });
+  const s =
+    saidaEm === undefined
+      ? 1
+      : interpolate(frame, [saidaEm, saidaEm + 34], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: SAI,
+        });
 
   /**
-   * Movimento secundário.
+   * Movimento secundário — só na peça com imagem de loja.
    *
-   * O fundo dá zoom para a frente e o cartão recuava zero — ele lia como um
-   * adesivo colado na lente, não como um objeto sobre a cena. Agora ele
-   * contra-escala de leve (dois planos) e deriva num seno de período longo.
-   * É pequeno de propósito: 4 px e 1,2%. Se der para notar, está errado.
+   * Lá o fundo dá zoom para a frente e o cartão precisa reagir, senão lê como
+   * adesivo colado na lente. Aqui o custo é a tipografia fervendo (ver
+   * `ancorado`), e na versão gráfica o fundo já cumpre esse papel sozinho.
    */
-  const andado = Math.max(0, frame - moldura) / Math.max(1, duracao);
-  const deriva = Math.sin((frame - moldura) / 47) * 4;
+  const andado = ancorado ? 0 : Math.max(0, frame - moldura) / Math.max(1, duracao);
+  const deriva = ancorado ? 0 : Math.sin((frame - moldura) / 47) * 4;
 
   return (
     <div
@@ -75,11 +112,16 @@ export function Cartao({
         boxShadow: "0 44px 96px rgba(0,0,0,0.58)",
         overflow: "hidden",
         fontFamily: PILHA_DE_FONTE,
-        opacity: p,
+        opacity: p * s,
         // O desfoque saindo tira o ar de "div que apareceu".
-        filter: `blur(${(1 - p) * 9}px)`,
-        translate: `0px ${(1 - p) * 56 + deriva}px`,
-        scale: (0.94 + p * 0.06) * (1 - 0.012 * andado),
+        // Na saída ele volta, e mais forte: o cartão recua para dentro do
+        // fundo em vez de desbotar em cima dele.
+        // Assentado, o filtro sai de cena por completo: `blur(0px)` ainda
+        // manda o texto pelo caminho de rasterização do filtro, e o objetivo
+        // aqui é o cartão parado ser pixel idêntico a ele mesmo.
+        filter: p >= 1 && s >= 1 ? undefined : `blur(${(1 - p) * 9 + (1 - s) * 14}px)`,
+        translate: `0px ${(1 - p) * 56 + deriva - (1 - s) * 40}px`,
+        scale: (0.94 + p * 0.06) * (1 - 0.012 * andado) * (0.96 + s * 0.04),
       }}
     >
       <div
@@ -122,9 +164,19 @@ function Selo({ children }: { children: React.ReactNode }) {
 
 /* ── a frota, respondendo "o aparelho está ligado?" ───────────────────────── */
 
+/**
+ * Nenhum valor de `seg` abaixo de 10, de propósito.
+ *
+ * O contador anda junto com a peça (`desde`), então "9 s" virava "10 s" um
+ * segundo depois do cartão assentar — a linha ganhava um dígito e o texto
+ * pulava para a direita. Uma linha de tabela mexendo sozinha, no exato momento
+ * em que tudo o mais parou, é o tipo de coisa que o olho pega sem saber
+ * apontar. Com todos começando em dois dígitos, nada reposiciona em 9 s de
+ * cena. Se mexer aqui, confira que `seg + 9` continua com dois dígitos.
+ */
 const FROTA = [
   { cod: "DM001", nome: "Bancada 01", loja: "Loja Centro", ok: true, seg: 20 },
-  { cod: "DM002", nome: "Bancada 02", loja: "Loja Centro", ok: true, seg: 9 },
+  { cod: "DM002", nome: "Bancada 02", loja: "Loja Centro", ok: true, seg: 12 },
   { cod: "DM003", nome: "Bancada 03", loja: "Loja Norte", ok: false, seg: null },
   { cod: "DM004", nome: "Bancada 01", loja: "Loja Norte", ok: true, seg: 44 },
   { cod: "DM005", nome: "Bancada 02", loja: "Loja Sul", ok: true, seg: 10 },
@@ -136,10 +188,14 @@ export function CartaoFrota({
   moldura,
   conteudo,
   duracao,
+  saidaEm,
+  ancorado,
 }: {
   moldura: number;
   conteudo: number;
   duracao: number;
+  saidaEm?: number;
+  ancorado?: boolean;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -158,6 +214,8 @@ export function CartaoFrota({
       titulo="Frota · 96 aparelhos"
       duracao={duracao}
       moldura={moldura}
+      saidaEm={saidaEm}
+      ancorado={ancorado}
       selo={<Selo>Atualizado agora</Selo>}
     >
       <div
@@ -274,10 +332,14 @@ export function CartaoPublicar({
   moldura,
   conteudo,
   duracao,
+  saidaEm,
+  ancorado,
 }: {
   moldura: number;
   conteudo: number;
   duracao: number;
+  saidaEm?: number;
+  ancorado?: boolean;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -320,7 +382,13 @@ export function CartaoPublicar({
   );
 
   return (
-    <Cartao titulo="Conteúdo · Campanha de agosto" moldura={moldura} duracao={duracao}>
+    <Cartao
+      titulo="Conteúdo · Campanha de agosto"
+      moldura={moldura}
+      duracao={duracao}
+      saidaEm={saidaEm}
+      ancorado={ancorado}
+    >
       <div style={{ display: "flex", gap: 30 }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 9 }}>
           <Rotulo>Onde publicar</Rotulo>
@@ -389,10 +457,11 @@ export function CartaoPublicar({
               gap: 11,
             }}
           >
-            <Numero>{lojas}</Numero>
+            {/* 8 lojas → um dígito · 96 aparelhos → dois. */}
+            <Numero reserva={30}>{lojas}</Numero>
             <span style={{ fontSize: 22, color: COR.fraco }}>lojas</span>
             <span style={{ fontSize: 22, color: COR.linha }}>·</span>
-            <Numero>{aparelhos}</Numero>
+            <Numero reserva={60}>{aparelhos}</Numero>
             <span style={{ fontSize: 22, color: COR.fraco }}>aparelhos</span>
           </div>
 
@@ -489,10 +558,14 @@ export function CartaoDados({
   moldura,
   conteudo,
   duracao,
+  saidaEm,
+  ancorado,
 }: {
   moldura: number;
   conteudo: number;
   duracao: number;
+  saidaEm?: number;
+  ancorado?: boolean;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -504,6 +577,8 @@ export function CartaoDados({
       titulo="Dados · últimos 7 dias"
       moldura={moldura}
       duracao={duracao}
+      saidaEm={saidaEm}
+      ancorado={ancorado}
       selo={<Selo>12 aparelhos · 4 lojas</Selo>}
     >
       <Rotulo>O que o visitante quis testar</Rotulo>
@@ -660,7 +735,16 @@ function Rotulo({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Numero({ children }: { children: React.ReactNode }) {
+/**
+ * Um número grande do painel.
+ *
+ * `reserva` guarda a largura do MAIOR valor que o contador vai chegar a
+ * mostrar. Sem isso, o contador subindo de 0 a 96 empurra o rótulo "aparelhos"
+ * para a direita quando cruza de um para dois dígitos — no meio da contagem,
+ * a palavra ao lado dá um pulo. Reservando o espaço, o dígito novo aparece
+ * dentro da caixa e nada em volta se mexe.
+ */
+function Numero({ children, reserva }: { children: React.ReactNode; reserva: number }) {
   return (
     <span
       style={{
@@ -669,6 +753,8 @@ function Numero({ children }: { children: React.ReactNode }) {
         color: COR.texto,
         letterSpacing: "-0.03em",
         lineHeight: 1,
+        display: "inline-block",
+        minWidth: reserva,
       }}
     >
       {children}

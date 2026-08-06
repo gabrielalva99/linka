@@ -314,12 +314,23 @@ function OQueFaz() {
  * O painel respondendo as três perguntas da seção 01.
  *
  * O arquivo é renderizado por código em `apps/studio` (Remotion) e commitado
- * pronto — ninguém renderiza vídeo em produção. 1,6 MB, 1440×810, 30 s.
+ * pronto — ninguém renderiza vídeo em produção. Composição `painel-grafico`,
+ * 8,5 MB, 2400×1350, 55 s, 25 fps. Para gerar de novo:
+ *
+ *     pnpm --filter @linka/studio exec remotion render painel-grafico \
+ *       ../site/public/painel.mp4 --codec=h264 --crf=25 --scale=1.25
+ *
+ * ── O pôster não é enfeite ────────────────────────────────────────────────
+ * `painel.jpg` é o quadro 330 da mesma composição (a tabela da frota cheia,
+ * com os dois aparelhos caídos em vermelho). Ele é a ÚNICA coisa que quem
+ * usa `prefers-reduced-motion` vê — então tem que sustentar o argumento
+ * sozinho, e não pode ser um quadro qualquer nem o primeiro, que é quase
+ * preto. Trocou o vídeo? Escolha o pôster de novo.
  *
  * ── As quatro coisas que fazem vídeo em página não ser um erro ─────────────
  * 1. `muted` + `playsInline`: sem os dois o navegador BLOQUEIA o autoplay e o
  *    bloco fica congelado no poster. É a causa nº 1 de "o vídeo não roda".
- * 2. `poster` + `preload="none"`: o quadro aparece na hora e o 6,1 MB só sai
+ * 2. `poster` + `preload="none"`: o quadro aparece na hora e o 8,5 MB só sai
  *    da rede quando precisa — ele está abaixo da dobra, não pode competir com
  *    o texto que o visitante veio ler.
  * 3. `prefers-reduced-motion`: quem pediu ao sistema para parar de animar vê o

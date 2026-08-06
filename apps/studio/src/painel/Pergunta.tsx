@@ -31,12 +31,15 @@ import { CENA, ENTRA, SAI } from "../curvas";
  * trás — e é debaixo dela que o corte entre cenas acontece, invisível.
  */
 
-const ENTRADA_DA_CORTINA = 14;
-const PASSO_DA_PALAVRA = 4;
-const RAMPA_DA_PALAVRA = 20;
+/* Exportadas porque a versão gráfica da peça (`src/grafico/`) desenha a
+   pergunta de outro jeito, mas precisa do MESMO relógio — se as duas versões
+   calcularem tempo por conta própria, uma delas sai de sincronia em silêncio. */
+export const ENTRADA_DA_CORTINA = 14;
+export const PASSO_DA_PALAVRA = 4;
+export const RAMPA_DA_PALAVRA = 20;
 /** Quanto tempo a frase fica inteira e imóvel, antes de começar a sair. */
-const PARADA = 38;
-const SAIDA = 30;
+export const PARADA = 38;
+export const SAIDA = 30;
 
 /** Quantos quadros esta frase precisa. A janela nasce do texto. */
 export function quadrosDe(texto: string) {
@@ -104,7 +107,6 @@ export function Pergunta({
     <>
       {/* a cortina escurece a cena */}
       <AbsoluteFill style={{ background: COR.fundo, opacity: cortina }} />
-
       {/* o texto vive por fora dela, com o próprio branco e a própria saída */}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 22, opacity: saida }}>

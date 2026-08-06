@@ -91,7 +91,6 @@ export const PainelEmMovimento: React.FC = () => {
       <Cena janela={T.abertura} entrada={0}>
         <Loja arquivo="loja/tablet.mp4" duracao={dur(T.abertura)} brilho={0.66} />
       </Cena>
-
       {/* "O aparelho está ligado?" → a frota, linha a linha, e o aviso */}
       <Cena janela={T.frota} entrada={ENTRADA}>
         <Loja arquivo="loja/bancada.mp4" duracao={dur(T.frota)} brilho={0.58} />
@@ -103,7 +102,6 @@ export const PainelEmMovimento: React.FC = () => {
           />
         </Centro>
       </Cena>
-
       {/* "Está com a campanha certa?" → publicar em 8 lojas, 96 aparelhos */}
       <Cena janela={T.publicar} entrada={ENTRADA}>
         <Loja arquivo="loja/vitrine.mp4" duracao={dur(T.publicar)} brilho={0.62} />
@@ -115,7 +113,6 @@ export const PainelEmMovimento: React.FC = () => {
           />
         </Centro>
       </Cena>
-
       {/* "Qual recurso o cliente mais procura?" → as barras e as horas */}
       <Cena janela={T.dados} entrada={ENTRADA}>
         <Loja arquivo="loja/balcao.mp4" duracao={dur(T.dados)} brilho={0.66} />
@@ -127,7 +124,6 @@ export const PainelEmMovimento: React.FC = () => {
           />
         </Centro>
       </Cena>
-
       {/* o que a marca passa a acompanhar */}
       <Cena janela={T.acompanha} entrada={24}>
         <Loja
@@ -140,7 +136,6 @@ export const PainelEmMovimento: React.FC = () => {
         />
         <Acompanha inicio={0} />
       </Cena>
-
       {/* As perguntas ficam por cima de tudo: elas são a cortina e o texto. */}
       {/* o fecho tem a própria cena, com a loja quase apagada por trás — é o
           que impede o fim de congelar e o que costura a emenda do laço */}
@@ -154,11 +149,9 @@ export const PainelEmMovimento: React.FC = () => {
           zoomPara={1.06}
         />
       </Cena>
-
       <Pergunta janela={T.pergunta1} texto={Q1} cobertura={0.86} />
       <Pergunta janela={T.pergunta2} texto={Q2} cobertura={0.8} />
       <Pergunta janela={T.pergunta3} texto={Q3} cobertura={0.74} />
-
       <Fecho />
     </AbsoluteFill>
   );
@@ -211,8 +204,7 @@ function Desbota({ entrada, children }: { entrada: number; children: React.React
           extrapolateRight: "clamp",
           easing: CENA,
         }),
-      }}
-    >
+      }}>
       {children}
     </AbsoluteFill>
   );

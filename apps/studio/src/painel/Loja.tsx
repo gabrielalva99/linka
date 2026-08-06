@@ -64,7 +64,7 @@ export function Loja({
             easing: CENA,
           }),
         }}
-      >
+        hidden>
         <Video
           src={staticFile(arquivo)}
           trimBefore={deInicio * 25}
@@ -75,19 +75,15 @@ export function Loja({
             height: "100%",
             objectFit: "cover",
             filter: `brightness(${brilho}) saturate(0.6) contrast(1.05)`,
-          }}
-        />
+          }} />
       </AbsoluteFill>
-
       {/* Véu verde bem fraco: costura a imagem à paleta sem tingir. */}
       <AbsoluteFill style={{ background: COR.verde, opacity: 0.04 }} />
-
       {/* Vinheta suave. Assenta as bordas e deixa o meio respirar. */}
       <AbsoluteFill
         style={{
           background: `radial-gradient(125% 95% at 50% 50%, transparent 44%, ${COR.fundo}c4 100%)`,
-        }}
-      />
+        }} />
     </AbsoluteFill>
   );
 }
