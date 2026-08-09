@@ -128,7 +128,16 @@ export default async function DashboardPage() {
       // aqui porque é pendência que não apita e cobra depois — o número de
       // "recurso mais usado" fica errado sem ninguém perceber.
       supabase.rpc("pacotes_sem_classificacao"),
-      porCliente(supabase.from("media_assets").select("id"), filtro),
+      // SÓ PEÇAS PRINCIPAIS entram nesta conta.
+      //
+      // Variante nunca está em `campaign_items`, e isso é o desenho, não uma
+      // falta: a campanha aponta para a peça principal e o servidor troca pelo
+      // formato de cada aparelho. Sem este filtro, subir um pack de catorze
+      // formatos fazia a tela inicial anunciar "13 vídeos fora de campanha" —
+      // treze avisos que ninguém pode resolver, logo na tela cujo trabalho é
+      // mostrar o que precisa de ação. Alerta que não fecha ensina a equipe a
+      // ignorar a tela inteira.
+      porCliente(supabase.from("media_assets").select("id").is("variant_of", null), filtro),
       porCliente(supabase.from("campaign_items").select("media_id"), filtro),
     ]);
 

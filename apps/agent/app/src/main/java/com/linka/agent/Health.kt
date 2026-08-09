@@ -7,8 +7,10 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
+import android.view.WindowManager
 
 /**
  * Sinais de saúde do aparelho — respondem "por que essa loja não está no ar?"
@@ -71,12 +73,26 @@ object Health {
      * peça fica ilegível. Um valor medido uma vez só estaria errado metade do
      * tempo, e ninguém saberia qual metade.
      *
-     * VEM DE `displayMetrics`, e não da tela física, de propósito: o que importa
-     * para escolher o criativo é a área em que o vídeo realmente aparece. Em
-     * quiosque de tela cheia as duas coincidem; quando não coincidirem, a área do
-     * aplicativo é a resposta certa.
+     * É A TELA FÍSICA, e não a área do aplicativo. Medido no Razr em 08/08: por
+     * `displayMetrics` o aparelho reportava 1224x2790 — 202 pixels a menos, que
+     * são as barras de sistema. A agência corta o criativo para a tela do
+     * aparelho (1224x2992), então a diferença fazia o servidor não encontrar o
+     * arquivo exato e cair no mais parecido: entregava 1080x2520 a um aparelho
+     * que tinha peça feita sob medida. O quiosque ocupa a tela inteira de
+     * qualquer forma, então a área máxima é a que descreve o que o cliente vê.
      */
     fun tela(ctx: Context): Pair<Int, Int>? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            val b = wm?.maximumWindowMetrics?.bounds
+            if (b != null && b.width() > 0 && b.height() > 0) {
+                return b.width() to b.height()
+            }
+        }
+        // Reserva para Android 10 e anterior: a área do aplicativo. Erra pelas
+        // barras, mas a proporção continua próxima o bastante para a escolha por
+        // formato funcionar — e é melhor que não reportar nada.
+        @Suppress("DEPRECATION")
         val dm = ctx.resources?.displayMetrics ?: return null
         val w = dm.widthPixels
         val h = dm.heightPixels
