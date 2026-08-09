@@ -82,7 +82,10 @@ export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
         ? t.home.pendUnclassified
         : t.home.pendUnclassifiedP
       ).replace("{n}", String(pendencias.pacotesSemClasse)),
-      href: "/relatorios",
+      // Leva para onde SE RESOLVE, não para onde o efeito aparece. Apontava para
+      // o relatório, que só mostra o número contaminado — quem clicava não tinha
+      // o que fazer ali, e um aviso sem saída ensina a ignorar o bloco todo.
+      href: "/dispositivos/aplicativos",
     });
   }
 

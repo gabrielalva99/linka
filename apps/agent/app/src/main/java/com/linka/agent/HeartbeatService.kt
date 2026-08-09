@@ -73,7 +73,33 @@ class HeartbeatService : Service() {
      */
     private fun checkManutencao() {
         val ate = Prefs.manutencaoAte(this)
-        if (ate == 0L || System.currentTimeMillis() < ate) return
+        if (ate == 0L) return
+
+        // A JANELA ACABA QUANDO A VITRINE VOLTA, e não só quando o relógio vence.
+        //
+        // Medido em 08/08: o Gabriel olhou um aparelho, viu o vídeo tocando e
+        // disse — com razão — que ele não estava em manutenção. O painel
+        // discordava, e o painel estava lendo a verdade: a janela seguia aberta
+        // por mais cinco minutos depois de a vitrine ter voltado sozinha.
+        //
+        // Nesse intervalo o aparelho fica num estado que ninguém sabe que existe:
+        // vitrine no ar e com cara de normal, quiosque DESLIGADO (o cliente sai do
+        // app), e a atualização recusada — o SelfUpdate se nega a instalar durante
+        // manutenção. Numa loja: o promotor devolve o aparelho à gôndola e vai
+        // embora, e ele passa minutos destravado sem ninguém por perto.
+        //
+        // A checagem é o quiosque, e não o caminho de volta, de propósito. Fechar
+        // a janela em cada saída exigiria que todo caminho lembrasse de fazê-lo, e
+        // foi justamente um caminho esquecido que criou isto. O quiosque ligado é
+        // FATO: `liberarParaManutencao` destranca ao abrir a janela, então quiosque
+        // de pé significa que a manutenção terminou, tenha ela terminado como for.
+        if (Kiosk.lockTaskOn(this)) {
+            Prefs.setManutencaoAte(this, 0L)
+            Telemetry.beatAsync(this)
+            return
+        }
+
+        if (System.currentTimeMillis() < ate) return
         Prefs.setManutencaoAte(this, 0L)
         try {
             startActivity(
