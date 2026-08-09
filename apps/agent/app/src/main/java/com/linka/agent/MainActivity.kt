@@ -1477,6 +1477,24 @@ const val PASSADAS_DA_NUVEM = 3
         // uma hora. Baixar o mesmo video 250 vezes custa 7,8 GB e nao preocupa
         // ninguem; o loop e que e caro.
         val daNuvem = !playingLocal
+        // DOIS APARELHOS LADO A LADO NO MESMO QUADRO.
+        //
+        // O rodízio já sincroniza a TROCA de vídeo: a conta floor(epoch/período)
+        // é a mesma em todo aparelho, então a virada cai no mesmo instante. O que
+        // faltava era a posição DENTRO do vídeo — e ela só aparece quando a
+        // campanha tem uma peça só, porque aí não existe virada: cada aparelho
+        // começa o laço no instante em que carregou. Numa peça de 15 segundos,
+        // meio segundo de diferença no boot vira defasagem permanente, e a mesa
+        // com dois aparelhos fica visivelmente errada.
+        //
+        // A correção usa o mesmo relógio do rodízio: a posição é `epoch % duração`.
+        // Ninguém troca mensagem com ninguém — dois aparelhos com a hora certa
+        // caem no mesmo quadro sozinhos, e um aparelho que reinicia no meio do dia
+        // volta alinhado em vez de esperar a próxima virada.
+        //
+        // Só vale para vídeo em laço (arquivo local). Da nuvem o vídeo toca uma
+        // passada e para, então não há laço para alinhar.
+        var jaAlinhou = false
         val exo = ExoPlayer.Builder(this).build().apply {
             setMediaItem(MediaItem.fromUri(sourceFor(url)))
             repeatMode = if (daNuvem) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
@@ -1503,6 +1521,23 @@ const val PASSADAS_DA_NUVEM = 3
                 }
 
                 override fun onPlaybackStateChanged(state: Int) {
+                    // ALINHA O LAÇO, uma vez, assim que a duração é conhecida.
+                    //
+                    // Só dá para calcular aqui: antes de preparar, o reprodutor não
+                    // sabe quanto dura o arquivo. O salto acontece nos primeiros
+                    // milissegundos, antes de alguém olhar.
+                    //
+                    // Falha fechada de propósito: sem duração utilizável, não faz
+                    // nada e o vídeo toca do começo, como sempre tocou. Dois
+                    // aparelhos fora de sincronia é um detalhe estético; vitrine
+                    // que não sobe porque a conta deu errado é a loja parada.
+                    if (state == Player.STATE_READY && !jaAlinhou && !daNuvem) {
+                        jaAlinhou = true
+                        val dur = duration
+                        if (dur > 1000 && dur != androidx.media3.common.C.TIME_UNSET) {
+                            seekTo(System.currentTimeMillis() % dur)
+                        }
+                    }
                     // Acabou uma passada vinda da nuvem. Enquanto o arquivo nao
                     // desce, mostra que esta preparando em vez de recomecar: a
                     // vitrine fica alguns minutos sem video na instalacao, e isso

@@ -249,6 +249,14 @@ object Telemetry {
         val identidade = Identidade.estavel(ctx)
         body.put("stable_id", identidade.valor)
         body.put("stable_id_source", identidade.fonte)
+        // A TELA DE AGORA, e é ela que decide qual versão da peça este aparelho
+        // recebe. Em dobrável muda quando o aparelho abre, então vai em toda
+        // batida — medir uma vez no provisionamento estaria errado metade do
+        // tempo, e ninguém saberia qual metade.
+        Health.tela(ctx)?.let { (w, h) ->
+            body.put("screen_width", w)
+            body.put("screen_height", h)
+        }
         // "Está atualizado?" não é mais respondido aqui. O aparelho só sabia a
         // versão publicada por um valor em cache, então respondia com atraso e o
         // painel contava errado. Quem compara agora é o servidor, que tem as duas

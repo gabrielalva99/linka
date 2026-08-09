@@ -56,4 +56,30 @@ object Health {
         // Valor sentinela quando o sistema não quer informar.
         return if (rssi == Int.MIN_VALUE || rssi == 0) null else rssi
     }
+
+    /**
+     * O TAMANHO DA TELA ONDE A VITRINE APARECE, agora.
+     *
+     * É o que permite ao servidor escolher, entre as versões de uma peça, o
+     * arquivo feito para este formato. Sem isto, o servidor cai na resolução
+     * cadastrada no modelo — que acerta o aparelho comum e erra o dobrável.
+     *
+     * POR QUE VAI EM TODA BATIDA, e não uma vez no provisionamento: no Razr a
+     * tela MUDA quando o aparelho abre. Medido no pack real, um criativo da tela
+     * externa (1080x1272, quase quadrado) exibido na interna (1224x2992) precisa
+     * ampliar tanto para preencher a altura que corta as laterais inteiras — a
+     * peça fica ilegível. Um valor medido uma vez só estaria errado metade do
+     * tempo, e ninguém saberia qual metade.
+     *
+     * VEM DE `displayMetrics`, e não da tela física, de propósito: o que importa
+     * para escolher o criativo é a área em que o vídeo realmente aparece. Em
+     * quiosque de tela cheia as duas coincidem; quando não coincidirem, a área do
+     * aplicativo é a resposta certa.
+     */
+    fun tela(ctx: Context): Pair<Int, Int>? {
+        val dm = ctx.resources?.displayMetrics ?: return null
+        val w = dm.widthPixels
+        val h = dm.heightPixels
+        return if (w > 0 && h > 0) w to h else null
+    }
 }
