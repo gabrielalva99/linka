@@ -322,7 +322,11 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "confirmDelete": "Excluir este modelo?",
-    "devices": "{n} {aparelhos}"
+    "devices": "{n} {aparelhos}",
+    "screen": "Tela",
+    "screenWidth": "Largura da tela em pixels",
+    "screenHeight": "Altura da tela em pixels",
+    "noScreen": "não informada"
   },
   "deviceForm": {
     "new": "Novo dispositivo",

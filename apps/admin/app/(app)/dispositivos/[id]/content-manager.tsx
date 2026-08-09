@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getMessages } from "@/lib/i18n";
+import { dimensoesDoVideo } from "@/lib/midia";
 import { addMedia, assignContent, type AssignState } from "./actions";
 
 type Media = { id: string; name: string; url: string };
@@ -54,6 +55,11 @@ export function ContentManager({
         return;
       }
       const { data } = supabase.storage.from("content").getPublicUrl(path);
+      // A resolução é lida do arquivo, no navegador. É ela que permite ao
+      // servidor entregar a cada aparelho a versão feita para a tela dele.
+      // Falhar aqui não impede o envio: sem dimensão, o vídeo só não participa
+      // da escolha por formato.
+      const dim = await dimensoesDoVideo(file);
       await addMedia({
         deviceId,
         name: file.name,
@@ -61,6 +67,8 @@ export function ContentManager({
         url: data.publicUrl,
         contentType: file.type,
         size: file.size,
+        width: dim?.width,
+        height: dim?.height,
       });
       setUploaded(file.name);
       if (fileRef.current) fileRef.current.value = "";

@@ -29,14 +29,56 @@ export async function createModel(
   return { status: "ok" };
 }
 
-/** Corrige o nome do modelo. Errado, ele aparecia na coluna Modelo da frota inteira. */
-export async function renameModel(id: string, name: string, line: string) {
+/**
+ * Corrige o nome do modelo e o tamanho da tela.
+ *
+ * A TELA É O QUE ESCOLHE O CRIATIVO. Com ela preenchida, o servidor entrega a
+ * cada aparelho a versão do vídeo feita para o formato dele; sem ela, todos
+ * recebem a peça principal — que é o comportamento de sempre, e não uma falha.
+ *
+ * As duas juntas ou nenhuma: meia medida (só a largura) não decide nada e
+ * ficaria guardada parecendo configuração feita.
+ */
+export async function renameModel(
+  id: string,
+  name: string,
+  line: string,
+  screenWidth?: string,
+  screenHeight?: string,
+) {
   const nome = name.trim();
   if (!nome) return { ok: false as const, error: "Digite um nome." };
+
+  const w = String(screenWidth ?? "").trim();
+  const h = String(screenHeight ?? "").trim();
+  if ((w === "") !== (h === "")) {
+    return {
+      ok: false as const,
+      error: "Preencha largura e altura da tela, ou deixe as duas em branco.",
+    };
+  }
+  let largura: number | null = null;
+  let altura: number | null = null;
+  if (w !== "") {
+    largura = Number(w);
+    altura = Number(h);
+    if (
+      !Number.isInteger(largura) || !Number.isInteger(altura) ||
+      largura <= 0 || altura <= 0 || largura > 20000 || altura > 20000
+    ) {
+      return { ok: false as const, error: "Tela inválida. Use números em pixels, como 1080 e 2400." };
+    }
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("device_models")
-    .update({ name: nome, line: line.trim() || null })
+    .update({
+      name: nome,
+      line: line.trim() || null,
+      screen_width: largura,
+      screen_height: altura,
+    })
     .eq("id", id);
   if (error) {
     return {
@@ -44,7 +86,10 @@ export async function renameModel(id: string, name: string, line: string) {
       error: error.code === "23505" ? "Já existe um modelo com esse nome." : "Não foi possível salvar.",
     };
   }
-  await logAction("renomear_modelo", "device_model", id, { nome });
+  await logAction("renomear_modelo", "device_model", id, {
+    nome,
+    tela: largura ? `${largura}x${altura}` : null,
+  });
   revalidatePath("/dispositivos/modelos");
   revalidatePath("/dispositivos");
   return { ok: true as const };

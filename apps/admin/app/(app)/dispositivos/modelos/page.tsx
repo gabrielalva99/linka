@@ -14,7 +14,7 @@ export default async function ModelosPage() {
   // aceita filtro e somava aparelho arquivado, inflando o peso de cada modelo.
   const [{ data: models }, aparelhos] = await Promise.all([
     porCliente(
-      supabase.from("device_models").select("id, name, line"),
+      supabase.from("device_models").select("id, name, line, screen_width, screen_height"),
       filtro,
     )
       .order("line", { ascending: true })
@@ -44,6 +44,7 @@ export default async function ModelosPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">{t.models.name}</th>
                 <th className="px-4 py-2 font-medium">{t.models.line}</th>
+                <th className="px-4 py-2 font-medium">{t.models.screen}</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -54,6 +55,8 @@ export default async function ModelosPage() {
                   id={m.id as string}
                   nome={m.name as string}
                   linha={m.line as string | null}
+                  telaLargura={m.screen_width as number | null}
+                  telaAltura={m.screen_height as number | null}
                   aparelhos={aparelhos.get(m.id as string) ?? 0}
                   podeEditar={podeEditar}
                 />

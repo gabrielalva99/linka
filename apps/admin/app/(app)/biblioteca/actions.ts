@@ -13,6 +13,44 @@ export async function setMediaFit(id: string, fit: ContentFit, deviceId?: string
   if (deviceId) revalidatePath(`/dispositivos/${deviceId}`);
 }
 
+/**
+ * Liga este arquivo a uma peça, como a versão dela para outro formato de tela.
+ *
+ * O QUE ISSO MUDA NA VITRINE. A campanha continua apontando para a peça
+ * principal; na hora de entregar, o servidor troca pelo arquivo cujo formato
+ * combina com a tela daquele aparelho. É assim que a mesma campanha do Dia dos
+ * Pais toca inteira no Razr fechado, no Razr aberto e no G06 sem ninguém montar
+ * três campanhas.
+ *
+ * `null` desfaz o vínculo e devolve o arquivo à condição de peça independente.
+ *
+ * As regras duras (mesmo cliente, um nível só, sem laço) vivem em gatilho no
+ * banco, e não aqui. Esta função é uma das portas; o gatilho vale para todas —
+ * inclusive para quem chamar a API por fora do painel.
+ */
+export async function setVariantOf(id: string, parentId: string | null) {
+  const supabase = await createSupabaseServerClient();
+  const { error, count } = await supabase
+    .from("media_assets")
+    .update({ variant_of: parentId }, { count: "exact" })
+    .eq("id", id);
+
+  // Conta as linhas em vez de confiar na ausência de erro: UPDATE barrado por RLS
+  // afeta ZERO linhas e volta sem erro nenhum. Sem esta checagem, quem não tem
+  // permissão veria "salvo" numa tela que não salvou nada — o mesmo defeito que
+  // já apareceu na exclusão de vídeo e na auditoria.
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para alterar este arquivo." };
+  }
+
+  await logAction("vincular_variante", "media_asset", id, { variante_de: parentId });
+  revalidatePath("/biblioteca");
+  return { ok: true as const };
+}
+
 export type DeleteState =
   | { ok: true }
   | { ok: false; reason: "in_use"; count: number }

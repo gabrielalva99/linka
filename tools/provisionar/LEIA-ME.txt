@@ -1,65 +1,115 @@
 LINKA - PROVISIONAMENTO DE APARELHO
 ===================================
 
+O programa faz tudo sozinho: instala, assume o controle, confere as travas e
+cadastra o aparelho na frota. Voce nao digita nenhum comando.
+
+O que voce faz e PREPARAR o aparelho antes de conectar o cabo. E onde tudo
+costuma dar errado.
+
+
 O QUE VAI NESTA PASTA (montada pelo suporte antes da visita):
-  PROVISIONAR.bat        <- o tecnico clica duas vezes aqui
+  PROVISIONAR.bat        <- voce clica duas vezes aqui
   Provisionar-LINKA.ps1
   adb.exe                (+ AdbWinApi.dll e AdbWinUsbApi.dll)
-  linka-agente.apk       (reserva: o programa baixa a versao atual sozinho
-                          quando o notebook tem internet)
+  linka-agente.apk       (reserva: com internet, o programa baixa a versao
+                          atual sozinho e ignora este arquivo)
+  codigo-de-inscricao.txt  (o codigo do cliente, ja preenchido)
+  loja-atual.txt           (o codigo da loja da visita)
 
 
-ROTEIRO NA LOJA (por aparelho, 5 a 8 minutos)
----------------------------------------------
+ANTES DE SAIR DO ESCRITORIO
+---------------------------
 
-1. NO APARELHO - liberar a depuracao
+  [ ] A loja da visita esta CADASTRADA no painel (Redes e lojas)
+  [ ] O codigo dela esta anotado - o programa vai perguntar
+  [ ] O notebook tem internet na loja (celular como roteador serve)
+
+Sem a loja cadastrada, o aparelho entra na frota SEM LOJA e alguem tem que
+corrigir depois, aparelho por aparelho.
+
+
+PREPARAR O APARELHO (5 passos, no proprio aparelho)
+---------------------------------------------------
+
+1. LIGAR A DEPURACAO USB
    Ajustes > Sobre o telefone > tocar 7 vezes em "Numero da versao"
    Ajustes > Sistema > Opcoes do desenvolvedor > ligar "Depuracao USB"
 
-2. NO APARELHO - remover as contas
-   Ajustes > Contas (ou "Senhas e contas")
-   Remover TODAS. Sem isso o Android nao deixa o LINKA assumir o controle.
+2. REMOVER TODAS AS CONTAS
+   Ajustes > Contas (ou "Senhas e contas") > remover uma por uma
+   O Android NAO deixa o LINKA assumir o controle com conta cadastrada.
 
-3. CONECTAR o cabo USB no computador
-   Na tela do aparelho vai aparecer "Permitir depuracao USB?"
+3. TIRAR A SENHA DA TELA DE BLOQUEIO
+   Ajustes > Seguranca > Bloqueio de tela > NENHUM
+   Aparelho de vitrine nao pode ter PIN: depois de qualquer reinicio a loja
+   fica com a tela pedindo senha e ninguem sabe qual e.
+
+4. UM USUARIO SO
+   Ajustes > Sistema > Varios usuarios: remover os extras.
+   Remover tambem "app clonado" e "espaco seguro", se existirem.
+
+5. CONECTAR NO WI-FI DA LOJA
+   O aparelho precisa de internet para entrar na frota.
+
+
+NA HORA
+-------
+
+6. Conectar o cabo USB no aparelho e no computador.
+   Na tela do aparelho aparece "Permitir depuracao USB?"
    -> marcar "Sempre permitir" e tocar em PERMITIR
 
-4. NO COMPUTADOR - clicar duas vezes em PROVISIONAR.bat
-   O programa faz o resto e mostra APARELHO PRONTO ou o que falta fazer.
+7. No computador: clicar duas vezes em PROVISIONAR.bat
 
-5. NO APARELHO - abrir o app LINKA e digitar o CODIGO DE PAREAMENTO
-   O codigo vem do painel, do proprio aparelho, e nao existe antes de ele
-   estar cadastrado. Ver "DE ONDE VEM O CODIGO" no fim desta folha.
+8. Ele pergunta o CODIGO DA LOJA.
+   Se ja aparecer o codigo certo entre colchetes, so apertar ENTER.
+   Se for outra loja, digitar o codigo dela.
+   (Ele guarda a resposta: nos proximos aparelhos da mesma loja, e so ENTER.)
 
-6. Conferir: em ate 1 minuto o video comeca a tocar sozinho.
+9. FIQUE DE OLHO NA TELA DO APARELHO.
+   Se o programa escrever ">>> OLHE A TELA DO APARELHO <<<", o aparelho esta
+   pedindo uma permissao e parou esperando. Toque em PERMITIR e o programa
+   segue sozinho.
+
+10. Esperar a mensagem APARELHO PRONTO.
 
 
-DE ONDE VEM O CODIGO DE PAREAMENTO (escritorio, antes da visita)
-----------------------------------------------------------------
-O codigo nasce junto com o cadastro do aparelho. Um aparelho que nao foi
-cadastrado no painel nao tem codigo, e nao ha como inventar um.
+CONFERIR ANTES DE DEVOLVER O APARELHO A VITRINE
+------------------------------------------------
 
- 1. No painel: Dispositivos > Novo aparelho.
- 2. Preencher nome e loja. Modelo e numero de serie o proprio aparelho
-    informa depois de parear; nao precisa digitar.
- 3. Salvar e abrir a ficha do aparelho. O codigo aparece em destaque no
-    topo, com as instrucoes.
- 4. Anotar o codigo na etiqueta do aparelho que vai para aquela loja.
+  [ ] O programa disse APARELHO PRONTO (nao "NAO CONCLUIDO")
+  [ ] Na tela do aparelho apareceu, por 5 segundos, o cliente e a LOJA CERTA
+  [ ] O video comecou a tocar sozinho
+  [ ] No painel, em Dispositivos, o aparelho aparece em ate 1 minuto
+      mostrando "Wi-Fi e modo aviao bloqueados"
 
-O codigo some da tela sozinho assim que o aparelho se conecta pela primeira
-vez. Se ele ainda estiver aparecendo, o aparelho nunca falou com o painel.
+Se qualquer um desses falhar, NAO devolva o aparelho a vitrine.
+Nao dependemos do seu relato: o aparelho reporta sozinho ao painel se as
+travas pegaram. Se o painel nao mostrar, o servico nao terminou.
 
 
 SE DER ERRADO
 -------------
-O programa sempre diz o que fazer. Se pedir para avisar o suporte:
-tire uma foto da tela do computador e mande junto com o codigo do aparelho.
+O programa sempre diz o que fazer, em portugues, e para no ponto do erro.
+Ele nunca anuncia "pronto" sem ter conferido.
+
+Os tres casos mais comuns e o que significam:
+
+  "ainda tem N conta(s) cadastrada(s)"     -> voltar ao passo 2
+  "tem SENHA na tela de bloqueio"          -> voltar ao passo 3
+  "O aparelho NAO entrou na frota"         -> olhar a tela do aparelho AGORA
+                                              e dizer ao suporte o que aparece
+
+Se pedir para avisar o suporte: tire uma foto da tela do computador.
 
 NAO tente resolver por conta propria nem instalar nada extra no aparelho.
 
 
-COMO O ESCRITORIO CONFERE
--------------------------
-Nao dependemos do relato do tecnico: cada aparelho reporta sozinho ao painel
-se esta com as travas aplicadas. Em Dispositivos, o aparelho mostra
-"Wi-Fi e modo aviao bloqueados". Se nao mostrar, o servico nao terminou.
+O QUE NAO E ERRO
+----------------
+- "Sem internet para buscar a versao publicada" -> ele usa o arquivo da pasta
+  e segue. So avise o suporte depois da visita.
+- "O aparelho ja tem uma versao mais nova" -> normal em aparelho que ja tinha
+  o app. Ele mantem a que esta e continua.
+- "Este aparelho JA ESTAVA provisionado" -> nada a fazer, pode devolver.

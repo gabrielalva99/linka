@@ -17,12 +17,16 @@ export function ModelRow({
   id,
   nome,
   linha,
+  telaLargura,
+  telaAltura,
   aparelhos,
   podeEditar,
 }: {
   id: string;
   nome: string;
   linha: string | null;
+  telaLargura: number | null;
+  telaAltura: number | null;
   aparelhos: number;
   podeEditar: boolean;
 }) {
@@ -32,6 +36,8 @@ export function ModelRow({
   const [editando, setEditando] = useState(false);
   const [n, setN] = useState(nome);
   const [l, setL] = useState(linha ?? "");
+  const [tw, setTw] = useState(telaLargura ? String(telaLargura) : "");
+  const [th, setTh] = useState(telaAltura ? String(telaAltura) : "");
   const [confirmando, setConfirmando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -47,11 +53,32 @@ export function ModelRow({
         <td className="px-4 py-2">
           <input value={l} onChange={(e) => setL(e.target.value)} className={campo} />
         </td>
+        <td className="px-4 py-2">
+          <div className="flex items-center gap-1">
+            <input
+              value={tw}
+              onChange={(e) => setTw(e.target.value.replace(/\D/g, ""))}
+              placeholder="1080"
+              inputMode="numeric"
+              className={`${campo} w-20`}
+              aria-label={t.models.screenWidth}
+            />
+            <span className="text-xs text-muted">×</span>
+            <input
+              value={th}
+              onChange={(e) => setTh(e.target.value.replace(/\D/g, ""))}
+              placeholder="2400"
+              inputMode="numeric"
+              className={`${campo} w-20`}
+              aria-label={t.models.screenHeight}
+            />
+          </div>
+        </td>
         <td className="px-4 py-2 text-right">
           <button
             onClick={() =>
               startTransition(async () => {
-                const r = await renameModel(id, n, l);
+                const r = await renameModel(id, n, l, tw, th);
                 if (!r.ok) setErro(r.error);
                 else {
                   setEditando(false);
@@ -70,6 +97,9 @@ export function ModelRow({
               setEditando(false);
               setN(nome);
               setL(linha ?? "");
+              setTw(telaLargura ? String(telaLargura) : "");
+              setTh(telaAltura ? String(telaAltura) : "");
+              setErro(null);
             }}
             className="ml-2 text-xs text-muted hover:underline"
           >
@@ -107,6 +137,18 @@ export function ModelRow({
         )}
       </td>
       <td className="px-4 py-3 text-muted">{linha ?? "—"}</td>
+      {/* Modelo sem tela não é erro — só significa que os aparelhos dele recebem
+          a peça principal, como sempre receberam. O aviso existe para quem está
+          procurando por que o criativo por formato não pegou naquele modelo. */}
+      <td className="whitespace-nowrap px-4 py-3 text-muted">
+        {telaLargura && telaAltura ? (
+          <span className="font-mono text-xs">
+            {telaLargura}×{telaAltura}
+          </span>
+        ) : (
+          <span className="text-xs">{t.models.noScreen}</span>
+        )}
+      </td>
       <td className="whitespace-nowrap px-4 py-3 text-right">
         {erro && <span className="mr-2 text-xs text-danger">{erro}</span>}
         {confirmando ? (

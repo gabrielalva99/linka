@@ -131,9 +131,20 @@ export async function addMedia(input: {
   url: string;
   contentType: string;
   size: number;
+  width?: number;
+  height?: number;
 }) {
   const tenant = await getActiveTenant();
   if (!tenant) return;
+
+  // A resolução vem do navegador, então é entrada de fora e passa pela mesma
+  // régua de qualquer entrada: número inteiro, positivo e dentro do razoável.
+  // Valor esquisito vira nulo em vez de erro — a mídia continua servindo, só
+  // não participa da escolha por formato.
+  const dimensao = (v: number | undefined) =>
+    typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 20000 ? v : null;
+  const width = dimensao(input.width);
+  const height = dimensao(input.height);
 
   const supabase = await createSupabaseServerClient();
   await supabase.from("media_assets").insert({
@@ -143,6 +154,9 @@ export async function addMedia(input: {
     url: input.url,
     content_type: input.contentType,
     size_bytes: input.size,
+    // As duas juntas ou nenhuma: só a largura não decide formato nenhum.
+    width: width && height ? width : null,
+    height: width && height ? height : null,
   });
   await supabase
     .from("devices")
