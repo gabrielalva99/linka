@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getActiveTenant } from "@/lib/tenant";
 import { logAction } from "@/lib/audit";
 import type { ContentFit } from "@linka/shared";
 
@@ -11,6 +12,65 @@ export async function setMediaFit(id: string, fit: ContentFit, deviceId?: string
   await supabase.from("media_assets").update({ fit_mode: fit }).eq("id", id);
   revalidatePath("/biblioteca");
   if (deviceId) revalidatePath(`/dispositivos/${deviceId}`);
+}
+
+/**
+ * Registra na biblioteca um arquivo recém-enviado ao armazenamento.
+ *
+ * Existe separado do envio pela tela do aparelho porque aquele caminho APLICA o
+ * vídeo no aparelho junto — efeito colateral que não se quer ao abastecer a
+ * biblioteca. Enquanto ele era o único caminho, subir catorze arquivos de uma
+ * campanha significava aplicar catorze vídeos num aparelho ao acaso.
+ */
+export async function addToLibrary(input: {
+  name: string;
+  path: string;
+  url: string;
+  contentType: string;
+  size: number;
+  width?: number;
+  height?: number;
+}) {
+  const tenant = await getActiveTenant();
+  if (!tenant) return { ok: false as const, error: "Sem cliente ativo." };
+
+  // A resolução vem do navegador: entrada de fora, mesma régua de sempre.
+  const dim = (v: number | undefined) =>
+    typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 20000 ? v : null;
+  const w = dim(input.width);
+  const h = dim(input.height);
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("media_assets")
+    .insert({
+      tenant_id: tenant.id,
+      name: input.name,
+      storage_path: input.path,
+      url: input.url,
+      content_type: input.contentType,
+      size_bytes: input.size,
+      // As duas juntas ou nenhuma: só a largura não decide formato nenhum.
+      width: w && h ? w : null,
+      height: w && h ? h : null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    // URL única é proteção de isolamento entre clientes (ver a migration de
+    // 08/08). Aqui ela aparece como "este arquivo já está na biblioteca", que é
+    // o que de fato aconteceu quando alguém reenvia o mesmo lote.
+    if (error.code === "23505") {
+      return { ok: false as const, error: "Este arquivo já está na biblioteca." };
+    }
+    return { ok: false as const, error: error.message };
+  }
+  if (!data) return { ok: false as const, error: "Sem permissão para enviar." };
+
+  await logAction("enviar_video", "media_asset", data.id, { nome: input.name });
+  revalidatePath("/biblioteca");
+  return { ok: true as const, id: data.id as string };
 }
 
 /**

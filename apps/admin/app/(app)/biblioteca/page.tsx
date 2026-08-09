@@ -2,11 +2,12 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
-import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
+import { emOperacao, getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_HINTS, type ContentFit } from "@linka/shared";
 import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
 import { VariantPicker } from "./variant-picker";
+import { UploadForm } from "./upload-form";
 import { data } from "@/lib/datas";
 import { tamanho } from "@/lib/numeros";
 
@@ -66,6 +67,9 @@ export default async function BibliotecaPage() {
 
   const t = getMessages();
   const podeOperar = await podeOperarAgora();
+  // O caminho do arquivo no armazenamento começa pelo cliente, e é disso que a
+  // política de escrita do storage depende para saber quem pode enviar.
+  const tenantAtivo = (await getActiveTenant())?.id ?? null;
   const media = (mediaData ?? []) as MediaRow[];
   const devices = (deviceData ?? []) as {
     id: string;
@@ -125,6 +129,15 @@ export default async function BibliotecaPage() {
     <div className="mx-auto max-w-4xl">
       <h1 className="text-xl font-semibold">{t.library.title}</h1>
       <p className="mt-1 text-sm text-muted">{t.library.subtitle}</p>
+
+      {/* Sem isto, o único caminho para abastecer a biblioteca era a tela de um
+          aparelho — que aplica o vídeo nele junto. Subir uma campanha de catorze
+          formatos significava aplicar catorze vídeos num aparelho ao acaso. */}
+      {podeOperar && tenantAtivo && (
+        <div className="mt-6">
+          <UploadForm tenantId={tenantAtivo} />
+        </div>
+      )}
 
       {media.length === 0 ? (
         <p className="mt-8 rounded-xl border border-line bg-surface p-6 text-sm text-muted">
