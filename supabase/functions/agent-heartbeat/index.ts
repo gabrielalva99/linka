@@ -131,6 +131,22 @@ Deno.serve(async (req) => {
     if (Number.isFinite(n) && n > -200 && n < 0) update.signal_dbm = Math.round(n);
   }
 
+  // TAMANHO DA TELA ATUAL. Em dobrável isto MUDA quando o aparelho abre, e é por
+  // isso que chega na batida em vez de no provisionamento: um Razr medido aberto
+  // e exposto fechado receberia o criativo da tela interna, que corta 47% na
+  // externa. Opcional — agente que não reporta cai na resolução do modelo.
+  if (payload.screen_width != null && payload.screen_height != null) {
+    const w = Number(payload.screen_width);
+    const h = Number(payload.screen_height);
+    if (
+      Number.isFinite(w) && Number.isFinite(h) &&
+      w > 0 && h > 0 && w < 20000 && h < 20000
+    ) {
+      update.screen_width = Math.round(w);
+      update.screen_height = Math.round(h);
+    }
+  }
+
   if (typeof payload.is_device_owner === "boolean") {
     update.is_device_owner = payload.is_device_owner;
   }

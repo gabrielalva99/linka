@@ -27,6 +27,8 @@ alter table media_assets
   add column if not exists variant_of uuid references media_assets(id) on delete cascade;
 
 alter table media_assets
+  drop constraint if exists media_assets_dimensoes_positivas;
+alter table media_assets
   add constraint media_assets_dimensoes_positivas
     check ((width is null or width > 0) and (height is null or height > 0));
 
@@ -59,6 +61,8 @@ alter table device_models
   add column if not exists screen_height integer;
 
 alter table device_models
+  drop constraint if exists device_models_tela_positiva;
+alter table device_models
   add constraint device_models_tela_positiva
     check ((screen_width is null or screen_width > 0) and (screen_height is null or screen_height > 0));
 
@@ -66,6 +70,8 @@ alter table devices
   add column if not exists screen_width  integer,
   add column if not exists screen_height integer;
 
+alter table devices
+  drop constraint if exists devices_tela_positiva;
 alter table devices
   add constraint devices_tela_positiva
     check ((screen_width is null or screen_width > 0) and (screen_height is null or screen_height > 0));
