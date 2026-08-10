@@ -102,7 +102,41 @@ Deno.serve(async (req) => {
       const kind = String(e.kind ?? "");
       const startedAt = String(e.started_at ?? "");
       if (!eventId || !KINDS.has(kind) || !startedAt) return null;
-      const dur = Number(e.duration_seconds);
+      // TETO DE SANIDADE: RECUSA A DURAÇÃO **E** O FIM.
+      //
+      // Um trecho não passa de uma hora por construção — o agente fecha na virada
+      // da hora. Acima disso é sempre defeito, e o mais comum foi medido em
+      // 09/08: o aparelho fica dias sem rodar (desligado, sem rede, app morto),
+      // volta, e grava um único trecho cobrindo todo o intervalo. Havia um de
+      // 43,7 HORAS de vitrine, num aparelho que exibe vídeo de 15 segundos.
+      //
+      // OS DOIS CAMPOS, e isso é o que importa. A primeira versão desta trava
+      // zerava só `duration_seconds` e não adiantou nada, porque quem monta o
+      // relatório lê o FIM primeiro:
+      //
+      //     coalesce(e.ended_at, e.started_at + interval(duration_seconds))
+      //
+      // Com o fim de dois dias depois ainda na linha, o rollup seguia
+      // distribuindo o tempo pelas horas da loja. Medido no histórico real: 170
+      // horas de vitrine no relatório, 107 delas inventadas — 63% do número.
+      //
+      // Vive no SERVIDOR, e não só no agente, porque a frota é heterogênea: a
+      // correção do aparelho só vale para quem atualizar, e o agente velho
+      // continuaria contaminando por meses.
+      //
+      // O evento fica; some só o que não dá para afirmar. Sem duração e sem fim
+      // ele vale zero segundo e o rollup o descarta — mas o fato de ter havido
+      // exibição, e a hora em que começou, continuam registrados.
+      const TETO_SEGUNDOS = 3600 + 300; // a hora cheia, com folga para atraso de fila
+      const bruto = Number(e.duration_seconds);
+      const fim = e.ended_at ? String(e.ended_at) : null;
+      const intervalo = fim
+        ? (Date.parse(fim) - Date.parse(startedAt)) / 1000
+        : Number.NaN;
+      const longoDemais =
+        (Number.isFinite(bruto) && bruto > TETO_SEGUNDOS) ||
+        (Number.isFinite(intervalo) && intervalo > TETO_SEGUNDOS);
+      const dur = longoDemais ? NaN : bruto;
       // Vídeo que já saiu da biblioteca ainda vira linha: o nome do arquivo é
       // menos do que o nome de cadastro, mas é infinitamente mais do que um
       // buraco no histórico de exibição.
@@ -115,7 +149,9 @@ Deno.serve(async (req) => {
         kind,
         package: e.package ? String(e.package).slice(0, 120) : null,
         started_at: startedAt,
-        ended_at: e.ended_at ? String(e.ended_at) : null,
+        // Fim também sai quando o trecho é longo demais: deixá-lo era manter
+        // exatamente o campo que o relatório lê primeiro.
+        ended_at: longoDemais ? null : fim,
         duration_seconds: Number.isFinite(dur) && dur >= 0 ? Math.round(dur) : null,
         media_id: asset?.id ?? null,
         media_name: asset?.name ?? (mediaUrl ? nomeDaUrl(mediaUrl) : null),

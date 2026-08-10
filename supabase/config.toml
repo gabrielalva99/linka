@@ -25,3 +25,11 @@ verify_jwt = false
 
 [functions.agent-content]
 verify_jwt = false
+
+# Faltava, e é a mesma armadilha que este arquivo existe para desarmar: a função
+# roda com verify_jwt = false em produção, mas isso só vivia no painel do
+# Supabase. Uma publicação pelo CLI assumiria o padrão (true) e a frota inteira
+# pararia de entregar medição — sem erro visível no painel, porque o aparelho
+# continua reportando estado normalmente pelo heartbeat. Só o relatório secaria.
+[functions.agent-events]
+verify_jwt = false

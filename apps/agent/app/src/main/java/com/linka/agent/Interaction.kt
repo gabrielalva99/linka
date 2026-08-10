@@ -164,7 +164,26 @@ object Interaction {
         if (atual != null) {
             val fronteira = inicioDaHora(agora)
             if (atualDesde < fronteira) {
-                gravados += enfileirar(queue, tipoDe(atual), atual, atualDesde, fronteira)
+                // UM TRECHO ABERTO NÃO VALE MAIS QUE A HORA EM QUE COMEÇOU.
+                //
+                // Fechar na virada da hora limitava a FREQUÊNCIA (no máximo um
+                // evento por hora), não a DURAÇÃO. O trecho em andamento sobrevive
+                // à morte do app — mora no Prefs — então aparelho desligado, sem
+                // rede, ou com o app morto por dois dias voltava e gravava UM
+                // evento de dois dias.
+                //
+                // Medido em 09/08, em produção: 23 de 280 trechos de vitrine acima
+                // de uma hora, o maior com 43,7 HORAS num aparelho que exibe vídeo
+                // de 15 segundos. E o pior não é o número solto: ele entra no
+                // relatório somado ao tempo real e ninguém desconfia, porque tempo
+                // de vitrine alto é exatamente o que se espera de um ponto bom.
+                //
+                // O buraco é DESCARTADO, não distribuído. Partir as 43 horas em 43
+                // eventos de uma hora seria inventar exibição que não houve: se o
+                // aparelho estava desligado, ninguém viu nada. O que sobrevive é o
+                // que dá para afirmar — a hora em que o trecho de fato começou.
+                val fimDoTrecho = minOf(fronteira, inicioDaHora(atualDesde) + 3_600_000L)
+                gravados += enfileirar(queue, tipoDe(atual), atual, atualDesde, fimDoTrecho)
                 atualDesde = fronteira
             }
             Prefs.setSessaoAberta(ctx, atual, atualDesde)
