@@ -260,7 +260,8 @@
     "errDuplicate": "Este arquivo já está na biblioteca.",
     "errNetwork": "A conexão caiu no meio do envio. Tente de novo.",
     "errGeneric": "Não foi possível enviar. Tente de novo.",
-    "noTenant": "Selecione um cliente no topo da página para enviar vídeos."
+    "noTenant": "Selecione um cliente no topo da página para enviar vídeos.",
+    "delHasVariants": "Esta peça tem {n} versão(ões) para outros formatos de tela. Desvincule as versões antes de excluir — senão elas seriam apagadas junto."
   },
   "chains": {
     "title": "Redes",

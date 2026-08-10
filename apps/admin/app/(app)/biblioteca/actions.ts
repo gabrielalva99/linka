@@ -146,6 +146,8 @@ export type DeleteState =
   | { ok: true }
   | { ok: false; reason: "in_use"; count: number }
   | { ok: false; reason: "in_campaign"; count: number }
+  // Peça que tem versões: apagar levaria todas junto, em cascata e em silêncio.
+  | { ok: false; reason: "has_variants"; count: number }
   // "denied" existe separado de "failed" porque as duas exigem coisas
   // diferentes de quem está na tela: uma é trocar de conta, a outra é tentar de
   // novo. Juntar as duas num "não deu" manda a pessoa insistir num caminho que
@@ -193,6 +195,28 @@ export async function deleteMedia(id: string): Promise<DeleteState> {
     .eq("media_id", id);
   if ((emCampanha ?? 0) > 0) {
     return { ok: false, reason: "in_campaign", count: emCampanha ?? 0 };
+  }
+
+  // PEÇA COM VERSÕES NÃO SE APAGA DE UMA VEZ.
+  //
+  // `variant_of` cascateia: apagar a peça de cima levava as versões junto, em
+  // silêncio. Num pack real são catorze arquivos — sumiam treze registros com um
+  // único "vídeo excluído" na trilha, e treze arquivos pagos ficavam órfãos no
+  // armazenamento, sem linha apontando para eles (o próprio código diz querer
+  // evitar isso, algumas linhas abaixo).
+  //
+  // As duas travas acima também não enxergavam as versões: um aparelho fixado
+  // numa variante não segurava nada, e ficava com o conteúdo apontando para uma
+  // URL que já não existia na biblioteca.
+  //
+  // Decisão do Gabriel em 10/08: RECUSAR. Quem quer mesmo apagar desvincula
+  // primeiro — mais passos, e nenhum pack perdido por engano.
+  const { count: versoes } = await supabase
+    .from("media_assets")
+    .select("id", { count: "exact", head: true })
+    .eq("variant_of", id);
+  if ((versoes ?? 0) > 0) {
+    return { ok: false, reason: "has_variants", count: versoes ?? 0 };
   }
 
   // CONTA AS LINHAS, não confia na ausência de erro.
