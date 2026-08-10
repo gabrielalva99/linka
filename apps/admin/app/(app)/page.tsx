@@ -379,7 +379,7 @@ export default async function DashboardPage() {
 
       {/* O resumo aparece SEMPRE — com alarme ou sem. Era a tela mais visitada do
           painel entregando uma frase e 90% de tela preta nos dias bons. */}
-      <ResumoDoDia resumo={resumo} />
+      <ResumoDoDia resumo={resumo} ehOperadorDaPlataforma={ctx?.isSuperadmin ?? false} />
 
       {/* 60s e não 30s: a tela ganhou consultas. Todas leem o rollup (0,2 ms),
           mas dobrar o intervalo é de graça — ninguém opera loja em janela de

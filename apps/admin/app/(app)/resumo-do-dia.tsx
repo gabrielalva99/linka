@@ -51,7 +51,13 @@ function variacao(hoje: number, ontem: number): { texto: string; cor: string } |
   };
 }
 
-export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
+export function ResumoDoDia({
+  resumo,
+  ehOperadorDaPlataforma = false,
+}: {
+  resumo: ResumoDoDia;
+  ehOperadorDaPlataforma?: boolean;
+}) {
   const t = getMessages();
   const { hoje, ontem, horaCorte, campanha, pendencias } = resumo;
   const varVisitas = variacao(hoje.visitas, ontem.visitas);
@@ -76,7 +82,14 @@ export function ResumoDoDia({ resumo }: { resumo: ResumoDoDia }) {
       href: "/biblioteca",
     });
   }
-  if (pendencias.pacotesSemClasse > 0) {
+  // SÓ PARA QUEM PODE RESOLVER.
+  //
+  // Classificar aplicativo é do operador da plataforma — o catálogo é global e
+  // vale para todas as marcas. Mostrar a pendência para o cliente era mandá-lo a
+  // uma tela onde ele lê nomes de pacote Android e não tem botão nenhum. Aviso
+  // sem caminho é o que ensina a equipe a ignorar o bloco inteiro, que é
+  // exatamente o que este bloco existe para evitar.
+  if (ehOperadorDaPlataforma && pendencias.pacotesSemClasse > 0) {
     listaPendencias.push({
       texto: (pendencias.pacotesSemClasse === 1
         ? t.home.pendUnclassified

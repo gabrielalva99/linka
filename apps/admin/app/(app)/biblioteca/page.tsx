@@ -138,6 +138,14 @@ export default async function BibliotecaPage() {
           <UploadForm tenantId={tenantAtivo} />
         </div>
       )}
+      {/* Sem cliente selecionado o envio não tem para onde ir — o caminho do
+          arquivo começa pelo cliente. Dizer isso é melhor que sumir com o
+          formulário e deixar a pessoa procurando onde envia. */}
+      {podeOperar && !tenantAtivo && (
+        <p className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+          {t.library.noTenant}
+        </p>
+      )}
 
       {media.length === 0 ? (
         <p className="mt-8 rounded-xl border border-line bg-surface p-6 text-sm text-muted">
@@ -175,7 +183,7 @@ export default async function BibliotecaPage() {
                         o que está no ar na loja. */}
                     {campanhas.length > 0 && (
                       <p className="mt-2 text-xs text-success">
-                        Em campanha: {campanhas.join(", ")}
+                        {t.library.inCampaign}: {campanhas.join(", ")}
                       </p>
                     )}
                     {users.length > 0 ? (
@@ -213,7 +221,7 @@ export default async function BibliotecaPage() {
                 {variantes.length > 0 && (
                   <div className="mt-4 border-t border-line pt-4">
                     <p className="text-xs font-medium text-muted">
-                      Outros formatos desta peça ({variantes.length})
+                      {t.library.otherFormats.replace("{n}", String(variantes.length))}
                     </p>
                     <ul className="mt-2 flex flex-col gap-1.5">
                       {variantes.map((v) => (
@@ -229,7 +237,7 @@ export default async function BibliotecaPage() {
                               </span>
                             ) : (
                               <span className="text-xs text-warning">
-                                sem resolução
+                                {t.library.noSize}
                               </span>
                             )}
                             {podeOperar && (

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { getMessages } from "@/lib/i18n";
 import { setVariantOf } from "./actions";
 
 export type PecaPrincipal = { id: string; name: string };
@@ -24,13 +25,14 @@ export function VariantPicker({
   opcoes: PecaPrincipal[];
   temDimensao: boolean;
 }) {
+  const t = getMessages();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-muted">Versão de</span>
+      <span className="text-xs text-muted">{t.library.variantOf}</span>
       <select
         value={atual ?? ""}
         disabled={pending}
@@ -43,9 +45,10 @@ export function VariantPicker({
             router.refresh();
           });
         }}
-        className="max-w-56 rounded-md border border-line bg-surface px-2 py-1 text-xs outline-none focus:border-primary disabled:opacity-40"
+        aria-label={t.library.variantOf}
+        className="max-w-56 rounded-md border border-line bg-surface px-2 py-2 text-xs outline-none focus:border-primary disabled:opacity-40"
       >
-        <option value="">— peça própria —</option>
+        <option value="">{t.library.variantNone}</option>
         {opcoes.map((o) => (
           <option key={o.id} value={o.id}>
             {o.name}
@@ -57,11 +60,9 @@ export function VariantPicker({
           arquivos com resolução conhecida. Dizer isso aqui evita o operador
           montar o conjunto todo e não entender por que a vitrine ignorou. */}
       {atual && !temDimensao && (
-        <span className="text-xs text-warning">
-          sem resolução — este arquivo não será escolhido
-        </span>
+        <span className="text-xs text-warning">{t.library.variantNoSize}</span>
       )}
-      {erro && <span className="text-xs text-danger">{erro}</span>}
+      {erro && <span className="text-xs text-danger" role="alert">{erro}</span>}
     </div>
   );
 }

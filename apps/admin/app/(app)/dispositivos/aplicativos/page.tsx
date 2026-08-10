@@ -35,7 +35,20 @@ export default async function AplicativosPage() {
         .from("device_events")
         .select("package, duration_seconds, device_id, created_at")
         .eq("kind", "app_usage")
-        .not("package", "is", null),
+        .not("package", "is", null)
+        // JANELA E TETO EXPLÍCITOS.
+        //
+        // Sem eles a API corta em 1000 linhas por padrão, em silêncio: com 250
+        // aparelhos medindo uso, o teto é batido em horas, os números da tela
+        // ficam errados sem aviso, e um pacote que só apareceu fora das mil
+        // primeiras SOME da lista — o buraco que esta tela existe para fechar
+        // continua aberto, agora invisível.
+        //
+        // 30 dias é a janela que importa: aplicativo que ninguém abre há um mês
+        // não é pendência de classificação, é histórico.
+        .gte("created_at", new Date(Date.now() - 30 * 24 * 3600_000).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(5000),
       filtro,
     ),
     supabase.from("app_catalog").select("package, label, is_noise"),
