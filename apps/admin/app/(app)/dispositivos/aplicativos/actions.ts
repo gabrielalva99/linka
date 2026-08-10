@@ -95,3 +95,50 @@ export async function classificarPacote(
   revalidatePath("/relatorios");
   return { ok: true as const };
 }
+
+/**
+ * Devolve um aplicativo à fila de indecisos.
+ *
+ * POR QUE ISTO PRECISA EXISTIR. Classificar era um clique e não tinha volta: a
+ * lista de já classificados era só leitura, e corrigir exigia mexer no banco.
+ * Errar ficava mais barato que consertar, o que é o inverso do que deveria ser.
+ *
+ * E o erro é silencioso do pior jeito. Marcar a câmera como ruído por engano faz
+ * o recurso mais testado de uma loja de celular SUMIR do relatório — e relatório
+ * sem câmera não parece quebrado, parece que ninguém usou a câmera. Ninguém
+ * desconfia de um número que apenas não está lá.
+ *
+ * Remover em vez de "desfazer": o aplicativo volta a aparecer como pendente, que
+ * é a verdade — alguém precisa decidir de novo.
+ */
+export async function removerClassificacao(pacote: string) {
+  const pkg = pacote.trim();
+  if (!pkg) return { ok: false as const, error: "Pacote vazio." };
+
+  if (!(await ehOperadorDaPlataformaAgora())) {
+    return {
+      ok: false as const,
+      error: "Só o operador da plataforma classifica aplicativos.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  // Conta as linhas: DELETE barrado por RLS apaga zero em silêncio.
+  const { error, count } = await supabase
+    .from("app_catalog")
+    .delete({ count: "exact" })
+    .eq("package", pkg);
+  if (error) return { ok: false as const, error: "Não foi possível remover." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para remover." };
+  }
+
+  await logAction("classificar_pacote", "app_catalog", undefined, {
+    pacote: pkg,
+    removida: true,
+  });
+  revalidatePath("/dispositivos/aplicativos");
+  revalidatePath("/");
+  revalidatePath("/relatorios");
+  return { ok: true as const };
+}

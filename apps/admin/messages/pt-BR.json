@@ -564,5 +564,27 @@
     "mismatch": "As duas senhas não são iguais.",
     "noSession": "Este link não vale mais. Peça outro em “Esqueci minha senha”.",
     "failed": "Não conseguimos salvar a senha. Peça um link novo."
+  },
+  "apps": {
+    "title": "Aplicativos medidos",
+    "subtitle": "O aparelho mede tudo que aparece na tela. Enquanto um aplicativo não é identificado, ele conta no relatório como recurso que o cliente experimentou — mesmo quando abriu sozinho.",
+    "pendingNone": "Nada esperando decisão.",
+    "pendingNoneHint": "{n} aplicativo(s) já identificados, {r} marcados como algo que abriu sozinho. Quando um aplicativo novo aparecer num aparelho, ele surge aqui.",
+    "waiting": "{n} esperando decisão",
+    "measured": "{n} vez(es) · {t} · {d} aparelho(s)",
+    "lastSeen": "visto {q}",
+    "nameLabel": "Nome que a operação reconhece",
+    "markFeature": "É um recurso",
+    "markNoise": "Abriu sozinho",
+    "isFeature": "recurso",
+    "isNoise": "abriu sozinho",
+    "consequence": "Recurso entra no relatório de \"o que o cliente testou\". O que abriu sozinho fica de fora. Dá para mudar depois.",
+    "classified": "Já identificados ({n})",
+    "remove": "tirar da lista",
+    "removeConfirm": "Volta a esperar decisão?",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "errGeneric": "Não foi possível salvar.",
+    "readOnly": "Quem identifica aplicativos é a equipe da plataforma. Esta lista é só para acompanhamento."
   }
 }
