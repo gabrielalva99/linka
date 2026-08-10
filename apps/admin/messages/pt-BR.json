@@ -358,7 +358,16 @@
     "screen": "Tela",
     "screenWidth": "Largura da tela em pixels",
     "screenHeight": "Altura da tela em pixels",
-    "noScreen": "não informada"
+    "noScreen": "não informada",
+    "screenWhy": "Decide qual versão do vídeo cada aparelho recebe, quando a campanha tem versões por formato.",
+    "screenFromDevices": "Os aparelhos informam",
+    "screenUse": "usar",
+    "screenOneDevice": "1 aparelho",
+    "screenNDevices": "{n} aparelhos",
+    "screenBlankOk": "Pode ficar em branco: nesse caso o aparelho recebe a peça principal da campanha, como sempre recebeu.",
+    "screenNoReport": "Nenhum aparelho deste modelo informou a tela ainda.",
+    "colName": "Modelo",
+    "colLine": "Linha"
   },
   "deviceForm": {
     "new": "Novo dispositivo",

@@ -13,12 +13,15 @@ import Link from "next/link";
  * que só diz "não foi possível" faz a pessoa tentar de novo achando que foi
  * falha de rede.
  */
+export type TelaReportada = { largura: number; altura: number; aparelhos: number };
+
 export function ModelRow({
   id,
   nome,
   linha,
   telaLargura,
   telaAltura,
+  sugestoes = [],
   aparelhos,
   podeEditar,
 }: {
@@ -27,6 +30,8 @@ export function ModelRow({
   linha: string | null;
   telaLargura: number | null;
   telaAltura: number | null;
+  /** O que os aparelhos deste modelo reportam, do formato mais comum ao menos. */
+  sugestoes?: TelaReportada[];
   aparelhos: number;
   podeEditar: boolean;
 }) {
@@ -73,6 +78,44 @@ export function ModelRow({
               aria-label={t.models.screenHeight}
             />
           </div>
+
+          {/* O NÚMERO VEM DO APARELHO, e não de uma busca na internet.
+              Antes, preencher isto exigia descobrir a resolução do modelo em
+              algum lugar e digitar — e a tela não dizia nem para que servia o
+              campo. Desde a 0.76.0 o próprio aparelho informa a tela em que a
+              vitrine aparece; a sugestão é só mostrar o que ele já disse.
+
+              Mostra TODOS os formatos reportados, e não só o mais comum: um
+              dobrável exposto aberto e outro fechado reportam telas diferentes, e
+              é uma escolha de operação decidir qual vale — não do painel. */}
+          {sugestoes.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-xs text-muted">{t.models.screenFromDevices}</span>
+              {sugestoes.map((s) => (
+                <button
+                  key={`${s.largura}x${s.altura}`}
+                  type="button"
+                  onClick={() => {
+                    setTw(String(s.largura));
+                    setTh(String(s.altura));
+                  }}
+                  disabled={pending}
+                  className="rounded-md border border-primary/40 px-2 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-40"
+                >
+                  {s.largura}×{s.altura}
+                  <span className="ml-1 text-muted">
+                    ({s.aparelhos === 1
+                      ? t.models.screenOneDevice
+                      : t.models.screenNDevices.replace("{n}", String(s.aparelhos))})
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted">{t.models.screenNoReport}</p>
+          )}
+          <p className="mt-1 text-xs text-muted">{t.models.screenWhy}</p>
+          <p className="text-xs text-muted">{t.models.screenBlankOk}</p>
         </td>
         <td className="px-4 py-2 text-right">
           <button
