@@ -38,7 +38,8 @@ export async function updateStore(
   if (abre >= fecha) return { status: "error" };
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  const { error, count } = await supabase
     .from("stores")
     .update({
       name,
@@ -51,10 +52,11 @@ export async function updateStore(
       timezone: String(formData.get("timezone") ?? "America/Sao_Paulo"),
       opens_at: abre,
       closes_at: fecha,
-    })
+    }, { count: "exact" })
     .eq("id", id);
 
   if (error) return { status: error.code === "23505" ? "dup" : "error" };
+  if ((count ?? 0) === 0) return { status: "error" as const };
 
   await logAction("editar_loja", "store", id, { abre, fecha });
   revalidatePath("/lojas");

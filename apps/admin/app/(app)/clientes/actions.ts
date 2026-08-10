@@ -111,11 +111,18 @@ export async function renameTenant(id: string, name: string) {
   // Se algum dia o slug entrar em caminho de arquivo, isto volta a ser errado e
   // precisa de renomeação de pasta junto.
   const slug = await slugLivre(supabase, slugify(limpo), id);
-  const { error } = await supabase
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  // O erro é checado ANTES da contagem — quando o UPDATE falha de verdade, a
+  // contagem também vem zero, e checá-la primeiro trocaria o motivo real por
+  // "sem permissão".
+  const { error, count } = await supabase
     .from("tenants")
-    .update({ name: limpo, slug })
+    .update({ name: limpo, slug }, { count: "exact" })
     .eq("id", id);
   if (error) return { ok: false as const, error: "Não consegui renomear." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para renomear este cliente." };
+  }
 
   await logAction("tenant.rename", "tenant", id, { name: limpo });
   revalidatePath("/clientes");
@@ -135,11 +142,18 @@ export async function resetEnrollmentCode(id: string) {
   }
   const supabase = await createSupabaseServerClient();
   const codigo = novoCodigo();
-  const { error } = await supabase
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  // O erro é checado ANTES da contagem — quando o UPDATE falha de verdade, a
+  // contagem também vem zero, e checá-la primeiro trocaria o motivo real por
+  // "sem permissão".
+  const { error, count } = await supabase
     .from("tenants")
-    .update({ enrollment_code: codigo })
+    .update({ enrollment_code: codigo }, { count: "exact" })
     .eq("id", id);
   if (error) return { ok: false as const, error: "Não consegui trocar o código." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para trocar o código deste cliente." };
+  }
 
   await logAction("tenant.reset_code", "tenant", id);
   revalidatePath("/clientes");
@@ -170,7 +184,10 @@ export async function setMaintenancePin(id: string, pin: string) {
   // a existir quando alguém define o primeiro PIN — cliente sem PIN é a ausência
   // da linha, e não uma linha vazia.
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // `upsert` tem dois caminhos: quando insere, o RLS estoura e o erro pega;
+  // quando atualiza uma linha que já existe, ele afeta zero linhas em silêncio.
+  // Só o erro não cobre os dois.
+  const { error, count } = await supabase
     .from("tenant_secrets")
     .upsert(
       {
@@ -178,9 +195,12 @@ export async function setMaintenancePin(id: string, pin: string) {
         maintenance_pin: limpo.length > 0 ? limpo : null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "tenant_id" },
+      { onConflict: "tenant_id", count: "exact" },
     );
   if (error) return { ok: false as const, error: "Não consegui salvar o PIN." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para definir o PIN deste cliente." };
+  }
 
   // O PIN NÃO vai para a auditoria — registrar o valor num log que outras pessoas
   // leem anularia o motivo de ele existir. Registra que mudou, e nada além.
@@ -214,12 +234,22 @@ export async function setTenantActive(id: string, ativo: boolean) {
     return { ok: false as const, error: "Sem permissão." };
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("tenants").update({ is_active: ativo }).eq("id", id);
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  // O erro é checado ANTES da contagem — quando o UPDATE falha de verdade, a
+  // contagem também vem zero, e checá-la primeiro trocaria o motivo real por
+  // "sem permissão".
+  const { error, count } = await supabase
+    .from("tenants")
+    .update({ is_active: ativo }, { count: "exact" })
+    .eq("id", id);
   if (error) {
     return {
       ok: false as const,
       error: ativo ? "Não consegui reativar." : "Não consegui desativar.",
     };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para alterar este cliente." };
   }
 
   // Sai do cliente desativado antes de recarregar: continuar "dentro" de um

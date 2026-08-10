@@ -16,12 +16,20 @@ export async function sendCommand(
   command: "deprovision" | "debug_off" | "debug_on" | "debug_probe" | "cleanup_now",
 ) {
   const supabase = await createSupabaseServerClient();
-  await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro. Sem isto, quem não pode recebe "feito" e a trilha grava um
+  // fato que não aconteceu — e a trilha é justamente a defesa contra "o aparelho
+  // já estava assim quando eu cheguei".
+  const { count } = await supabase
     .from("devices")
-    .update({ pending_command: command })
+    .update({ pending_command: command }, { count: "exact" })
     .eq("id", deviceId);
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para enviar comando." };
+  }
   await logAction("comando", "device", deviceId, { comando: command });
   revalidatePath(`/dispositivos/${deviceId}`);
+  return { ok: true as const };
 }
 
 /**
@@ -34,12 +42,20 @@ export async function sendCommand(
 export async function uninstallApp(deviceId: string, pkg: string) {
   if (!/^[a-zA-Z0-9._]+$/.test(pkg)) return;
   const supabase = await createSupabaseServerClient();
-  await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro. Sem isto, quem não pode recebe "feito" e a trilha grava um
+  // fato que não aconteceu — e a trilha é justamente a defesa contra "o aparelho
+  // já estava assim quando eu cheguei".
+  const { count } = await supabase
     .from("devices")
-    .update({ pending_command: `uninstall:${pkg}` })
+    .update({ pending_command: `uninstall:${pkg}` }, { count: "exact" })
     .eq("id", deviceId);
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para remover aplicativo." };
+  }
   await logAction("remover_app", "device", deviceId, { app: pkg });
   revalidatePath(`/dispositivos/${deviceId}`);
+  return { ok: true as const };
 }
 
 /** Pede a lista de apps agora, sem esperar a próxima hora. */
@@ -193,15 +209,25 @@ export async function arquivarAparelho(deviceId: string, motivo: string) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro. Sem isto, quem não pode recebe "feito" e a trilha grava um
+  // fato que não aconteceu — e a trilha é justamente a defesa contra "o aparelho
+  // já estava assim quando eu cheguei".
+  const { error, count } = await supabase
     .from("devices")
-    .update({
-      is_active: false,
-      archived_at: new Date().toISOString(),
-      archive_reason: limpo,
-    })
+    .update(
+      {
+        is_active: false,
+        archived_at: new Date().toISOString(),
+        archive_reason: limpo,
+      },
+      { count: "exact" },
+    )
     .eq("id", deviceId);
   if (error) return { ok: false as const, error: "Não consegui arquivar." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para arquivar este aparelho." };
+  }
 
   await logAction("device.archive", "device", deviceId, { motivo: limpo });
   revalidatePath("/dispositivos");
@@ -215,11 +241,21 @@ export async function desarquivarAparelho(deviceId: string) {
     return { ok: false as const, error: "Sem permissão." };
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro. Sem isto, quem não pode recebe "feito" e a trilha grava um
+  // fato que não aconteceu — e a trilha é justamente a defesa contra "o aparelho
+  // já estava assim quando eu cheguei".
+  const { error, count } = await supabase
     .from("devices")
-    .update({ is_active: true, archived_at: null, archive_reason: null })
+    .update(
+      { is_active: true, archived_at: null, archive_reason: null },
+      { count: "exact" },
+    )
     .eq("id", deviceId);
   if (error) return { ok: false as const, error: "Não consegui reativar." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para reativar este aparelho." };
+  }
 
   await logAction("device.unarchive", "device", deviceId);
   revalidatePath("/dispositivos");
@@ -244,11 +280,21 @@ export async function tentarAtualizarDeNovo(deviceId: string) {
     return { ok: false as const, error: "Sem permissão." };
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro. Sem isto, quem não pode recebe "feito" e a trilha grava um
+  // fato que não aconteceu — e a trilha é justamente a defesa contra "o aparelho
+  // já estava assim quando eu cheguei".
+  const { error, count } = await supabase
     .from("devices")
-    .update({ pending_command: "update_retry", update_error: null })
+    .update(
+      { pending_command: "update_retry", update_error: null },
+      { count: "exact" },
+    )
     .eq("id", deviceId);
   if (error) return { ok: false as const, error: "Não consegui enviar." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para enviar comando." };
+  }
 
   await logAction("atualizar_de_novo", "device", deviceId);
   revalidatePath(`/dispositivos/${deviceId}`);

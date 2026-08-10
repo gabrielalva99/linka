@@ -61,6 +61,13 @@ export async function definirEmMassa(
     .select("id");
 
   if (error) return { ok: false as const, error: "Não consegui salvar." };
+  // ZERO LINHAS É RECUSA, e o dado já estava aqui: o `.select("id")` acima
+  // devolve as linhas afetadas, e o log até usava `data.length` — sem nunca
+  // checar se era zero. Um papel de leitura recebia "salvo" e a trilha gravava
+  // uma alteração em massa que não tocou em nenhum aparelho.
+  if ((data?.length ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para alterar estes aparelhos." };
+  }
 
   // Uma linha de auditoria com a lista inteira, e não uma por aparelho: é UMA
   // decisão de quem operou, e 250 registros iguais escondem as outras ações do

@@ -53,7 +53,11 @@ export async function classificarPacote(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // Conta as linhas ALÉM do gate acima, e não em vez dele. `upsert` tem dois
+  // caminhos: inserindo, o RLS estoura e o erro pega; atualizando uma linha que
+  // já existe, ele afeta zero linhas em silêncio. Se um dia o gate mudar de
+  // lugar ou a política do banco for ajustada, esta contagem continua de pé.
+  const { error, count } = await supabase
     .from("app_catalog")
     .upsert(
       {
@@ -62,7 +66,7 @@ export async function classificarPacote(
         category: ehRuido ? "sistema" : "recurso",
         is_noise: ehRuido,
       },
-      { onConflict: "package" },
+      { onConflict: "package", count: "exact" },
     );
 
   // INSERT barrado por RLS ESTOURA (ao contrário de UPDATE e DELETE, que só
@@ -74,6 +78,9 @@ export async function classificarPacote(
       return { ok: false as const, error: "Sem permissão para classificar." };
     }
     return { ok: false as const, error: "Não foi possível classificar." };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para classificar." };
   }
 
   // Sem id de entidade: a chave do catálogo é o próprio pacote, e ele vai nos

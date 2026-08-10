@@ -35,8 +35,15 @@ export async function renamePosition(id: string, label: string, storeId: string)
   const limpo = label.trim();
   if (!limpo) return { ok: false as const, error: "Digite um nome." };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("positions").update({ label: limpo }).eq("id", id);
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  const { error, count } = await supabase
+    .from("positions")
+    .update({ label: limpo }, { count: "exact" })
+    .eq("id", id);
   if (error) return { ok: false as const, error: "Não foi possível salvar." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para renomear esta posição." };
+  }
   await logAction("renomear_posicao", "store", storeId, { posicao: limpo });
   revalidatePath(`/lojas/${storeId}`);
   return { ok: true as const };

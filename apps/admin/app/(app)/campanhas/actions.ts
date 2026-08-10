@@ -139,8 +139,24 @@ export async function toggleCampaign(id: string, active: boolean) {
 }
 
 export async function deleteCampaign(id: string) {
-  await logAction("excluir_campanha", "campaign", id);
   const supabase = await createSupabaseServerClient();
-  await supabase.from("campaigns").delete().eq("id", id);
+  // A TRILHA VEM DEPOIS DA EXCLUSÃO, e antes vinha antes.
+  //
+  // Registrar primeiro grava "campanha excluída" mesmo quando a exclusão não
+  // acontece — e o DELETE barrado por RLS não acontece em silêncio: afeta zero
+  // linhas e volta sem erro. Um papel de leitura chamando esta ação deixava na
+  // auditoria uma exclusão que nunca houve, com a campanha ainda no ar.
+  const { error, count } = await supabase
+    .from("campaigns")
+    .delete({ count: "exact" })
+    .eq("id", id);
+  if (error) {
+    return { ok: false as const, error: "Não foi possível excluir a campanha." };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para excluir esta campanha." };
+  }
+  await logAction("excluir_campanha", "campaign", id);
   revalidatePath("/campanhas");
+  return { ok: true as const };
 }

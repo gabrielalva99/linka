@@ -41,6 +41,11 @@ export async function publishRelease(
     .eq("is_current", true);
   if (offErr) return { ok: false, error: "Não foi possível publicar." };
 
+  // NÃO conta linhas de propósito, e aqui é seguro: INSERT barrado por RLS
+  // ESTOURA (ao contrário de UPDATE e DELETE, que afetam zero linhas em
+  // silêncio). Quem não pode publicar não passa daqui, então o UPDATE de
+  // is_current logo acima — que seria silencioso — nunca fica órfão: ou os dois
+  // acontecem, ou a função sai pelo erro antes de gravar a trilha.
   const { error } = await supabase.from("agent_releases").insert({
     version,
     url,

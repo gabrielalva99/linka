@@ -33,15 +33,25 @@ export async function renameChain(id: string, name: string) {
   const limpo = name.trim();
   if (!limpo) return { ok: false as const, error: "Digite um nome." };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // Conta as linhas: UPDATE barrado por RLS afeta zero linhas e volta sem erro.
+  // Sem isto, quem não pode recebe "salvo" e a trilha grava o que não houve.
+  //
+  // O ERRO É CHECADO ANTES DA CONTAGEM, e a ordem importa: quando o UPDATE falha
+  // de verdade (nome repetido, por exemplo) a contagem também vem zero, e checá-la
+  // primeiro trocaria "Já existe uma rede com esse nome" por "sem permissão" —
+  // mandando a pessoa procurar problema de acesso que não existe.
+  const { error, count } = await supabase
     .from("retail_chains")
-    .update({ name: limpo })
+    .update({ name: limpo }, { count: "exact" })
     .eq("id", id);
   if (error) {
     return {
       ok: false as const,
       error: error.code === "23505" ? "Já existe uma rede com esse nome." : "Não foi possível salvar.",
     };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para renomear esta rede." };
   }
   await logAction("renomear_rede", "chain", id, { nome: limpo });
   revalidatePath("/redes");
