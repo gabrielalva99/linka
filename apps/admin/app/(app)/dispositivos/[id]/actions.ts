@@ -128,7 +128,6 @@ export async function addMedia(input: {
   deviceId: string;
   name: string;
   path: string;
-  url: string;
   contentType: string;
   size: number;
   width?: number;
@@ -136,6 +135,11 @@ export async function addMedia(input: {
 }) {
   const tenant = await getActiveTenant();
   if (!tenant) return;
+
+  // Mesma trava do envio pela biblioteca: o caminho tem que ser da pasta deste
+  // cliente, e a URL é derivada dele no servidor. Aceitar a URL que o navegador
+  // manda era confiar em quem chama para dizer onde o arquivo mora.
+  if (!input.path.startsWith(`${tenant.id}/`)) return;
 
   // A resolução vem do navegador, então é entrada de fora e passa pela mesma
   // régua de qualquer entrada: número inteiro, positivo e dentro do razoável.
@@ -147,11 +151,12 @@ export async function addMedia(input: {
   const height = dimensao(input.height);
 
   const supabase = await createSupabaseServerClient();
+  const { data: publica } = supabase.storage.from("content").getPublicUrl(input.path);
   await supabase.from("media_assets").insert({
     tenant_id: tenant.id,
     name: input.name,
     storage_path: input.path,
-    url: input.url,
+    url: publica.publicUrl,
     content_type: input.contentType,
     size_bytes: input.size,
     // As duas juntas ou nenhuma: só a largura não decide formato nenhum.
@@ -160,7 +165,7 @@ export async function addMedia(input: {
   });
   await supabase
     .from("devices")
-    .update({ content_url: input.url })
+    .update({ content_url: publica.publicUrl })
     .eq("id", input.deviceId);
   revalidatePath(`/dispositivos/${input.deviceId}`);
 }

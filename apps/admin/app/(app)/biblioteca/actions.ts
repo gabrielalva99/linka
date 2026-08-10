@@ -6,12 +6,26 @@ import { getActiveTenant } from "@/lib/tenant";
 import { logAction } from "@/lib/audit";
 import type { ContentFit } from "@linka/shared";
 
-/** Define como o vídeo é enquadrado na tela (vale para todo aparelho que o exibir). */
+/**
+ * Define como o vídeo é enquadrado na tela (vale para todo aparelho que o exibir).
+ *
+ * Conta as linhas porque UPDATE barrado por RLS não estoura — afeta zero linhas
+ * e volta sem erro. Antes desta contagem, um papel de leitura clicava no botão,
+ * a tela recarregava igual, e ele concluía que o painel estava quebrado.
+ */
 export async function setMediaFit(id: string, fit: ContentFit, deviceId?: string) {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("media_assets").update({ fit_mode: fit }).eq("id", id);
+  const { error, count } = await supabase
+    .from("media_assets")
+    .update({ fit_mode: fit }, { count: "exact" })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: "Não foi possível salvar." };
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para alterar este arquivo." };
+  }
   revalidatePath("/biblioteca");
   if (deviceId) revalidatePath(`/dispositivos/${deviceId}`);
+  return { ok: true as const };
 }
 
 /**
@@ -25,7 +39,6 @@ export async function setMediaFit(id: string, fit: ContentFit, deviceId?: string
 export async function addToLibrary(input: {
   name: string;
   path: string;
-  url: string;
   contentType: string;
   size: number;
   width?: number;
@@ -34,6 +47,21 @@ export async function addToLibrary(input: {
   const tenant = await getActiveTenant();
   if (!tenant) return { ok: false as const, error: "Sem cliente ativo." };
 
+  // O CAMINHO TEM QUE SER DA PASTA DESTE CLIENTE.
+  //
+  // A varredura de 09/08 provou o furo: `url` e `path` vinham do navegador sem
+  // nenhuma checagem, e dava para registrar na própria biblioteca um arquivo da
+  // pasta de outro cliente. O RLS não pega isso — o `tenant_id` da linha está
+  // certo; o que está errado é para onde ela aponta.
+  //
+  // A `url` sumiu do contrato: ela agora é DERIVADA do caminho, aqui no
+  // servidor. Aceitar a URL que o navegador manda era confiar em quem chama para
+  // dizer onde o arquivo mora — e o índice único de URL, que protege contra
+  // sequestro de peça, virava algo que qualquer um podia ocupar de fora.
+  if (!input.path.startsWith(`${tenant.id}/`)) {
+    return { ok: false as const, error: "Caminho de arquivo inválido." };
+  }
+
   // A resolução vem do navegador: entrada de fora, mesma régua de sempre.
   const dim = (v: number | undefined) =>
     typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 20000 ? v : null;
@@ -41,13 +69,16 @@ export async function addToLibrary(input: {
   const h = dim(input.height);
 
   const supabase = await createSupabaseServerClient();
+  // A URL sai do caminho, no servidor — nunca do que o navegador mandou.
+  const { data: publica } = supabase.storage.from("content").getPublicUrl(input.path);
+
   const { data, error } = await supabase
     .from("media_assets")
     .insert({
       tenant_id: tenant.id,
       name: input.name,
       storage_path: input.path,
-      url: input.url,
+      url: publica.publicUrl,
       content_type: input.contentType,
       size_bytes: input.size,
       // As duas juntas ou nenhuma: só a largura não decide formato nenhum.

@@ -71,20 +71,31 @@ export async function renameModel(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // CONTA AS LINHAS. UPDATE barrado por RLS não estoura: afeta zero linhas e
+  // volta sem erro nenhum. Sem esta contagem, um papel de leitura chamando a
+  // action direto recebia "salvo", nada mudava, e — pior — a trilha registrava um
+  // `renomear_modelo` que nunca aconteceu. Auditoria que aceita fato inventado
+  // não serve de prova no dia em que alguém precisar dela.
+  const { error, count } = await supabase
     .from("device_models")
-    .update({
-      name: nome,
-      line: line.trim() || null,
-      screen_width: largura,
-      screen_height: altura,
-    })
+    .update(
+      {
+        name: nome,
+        line: line.trim() || null,
+        screen_width: largura,
+        screen_height: altura,
+      },
+      { count: "exact" },
+    )
     .eq("id", id);
   if (error) {
     return {
       ok: false as const,
       error: error.code === "23505" ? "Já existe um modelo com esse nome." : "Não foi possível salvar.",
     };
+  }
+  if ((count ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para alterar este modelo." };
   }
   await logAction("renomear_modelo", "device_model", id, {
     nome,
@@ -133,8 +144,16 @@ export async function deleteModel(id: string) {
       error: `${count} aparelho(s) usam este modelo${onde}. Troque o modelo deles antes.`,
     };
   }
-  const { error } = await supabase.from("device_models").delete().eq("id", id);
+  // Mesma razão do renameModel: DELETE barrado por RLS apaga zero linhas em
+  // silêncio, e sem contar isso a trilha registrava uma exclusão que não houve.
+  const { error, count: apagados } = await supabase
+    .from("device_models")
+    .delete({ count: "exact" })
+    .eq("id", id);
   if (error) return { ok: false as const, error: "Não foi possível excluir." };
+  if ((apagados ?? 0) === 0) {
+    return { ok: false as const, error: "Sem permissão para excluir este modelo." };
+  }
   await logAction("excluir_modelo", "device_model", id);
   revalidatePath("/dispositivos/modelos");
   return { ok: true as const };

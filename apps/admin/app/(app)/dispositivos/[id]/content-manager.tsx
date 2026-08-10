@@ -54,7 +54,6 @@ export function ContentManager({
         setUploading(false);
         return;
       }
-      const { data } = supabase.storage.from("content").getPublicUrl(path);
       // A resolução é lida do arquivo, no navegador. É ela que permite ao
       // servidor entregar a cada aparelho a versão feita para a tela dele.
       // Falhar aqui não impede o envio: sem dimensão, o vídeo só não participa
@@ -64,7 +63,6 @@ export function ContentManager({
         deviceId,
         name: file.name,
         path,
-        url: data.publicUrl,
         contentType: file.type,
         size: file.size,
         width: dim?.width,

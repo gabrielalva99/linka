@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ehOperadorDaPlataformaAgora } from "@/lib/perms";
 import { logAction } from "@/lib/audit";
 
 /**
@@ -34,8 +35,25 @@ export async function classificarPacote(
   if (!pkg) return { ok: false as const, error: "Pacote vazio." };
   if (!label) return { ok: false as const, error: "Dê um nome que a operação reconheça." };
 
+  // O CATÁLOGO É DA PLATAFORMA, não do cliente.
+  //
+  // `app_catalog` não tem dono: `com.android.chrome` é o navegador em qualquer
+  // marca, e quem classifica uma vez classifica para todo mundo. Por isso a
+  // política do banco só aceita superadmin — e a tela precisa concordar com ela.
+  //
+  // Na primeira versão desta tela eu liberei por `podeOperarAgora()` (agência),
+  // e a varredura de 09/08 mostrou o resultado: os botões apareciam para o
+  // operador, cada clique voltava recusado pelo banco, e a pendência nunca
+  // fechava. Tela que oferece o que o banco recusa é pior que tela sem o botão.
+  if (!(await ehOperadorDaPlataformaAgora())) {
+    return {
+      ok: false as const,
+      error: "Só o operador da plataforma classifica aplicativos.",
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { error, count } = await supabase
+  const { error } = await supabase
     .from("app_catalog")
     .upsert(
       {
@@ -44,15 +62,18 @@ export async function classificarPacote(
         category: ehRuido ? "sistema" : "recurso",
         is_noise: ehRuido,
       },
-      { onConflict: "package", count: "exact" },
+      { onConflict: "package" },
     );
 
-  // Conta as linhas: escrita barrada por RLS não estoura, afeta zero linhas e
-  // volta sem erro. Sem isto, quem não tem permissão via "classificado" numa
-  // tela que não classificou nada.
-  if (error) return { ok: false as const, error: error.message };
-  if ((count ?? 0) === 0) {
-    return { ok: false as const, error: "Sem permissão para classificar." };
+  // INSERT barrado por RLS ESTOURA (ao contrário de UPDATE e DELETE, que só
+  // afetam zero linhas em silêncio). Então aqui a checagem é o erro — e o texto
+  // do Postgres nunca chega à tela: "new row violates row-level security policy
+  // for table app_catalog" não é frase que se mostre a quem usa o painel.
+  if (error) {
+    if (error.code === "42501") {
+      return { ok: false as const, error: "Sem permissão para classificar." };
+    }
+    return { ok: false as const, error: "Não foi possível classificar." };
   }
 
   // Sem id de entidade: a chave do catálogo é o próprio pacote, e ele vai nos

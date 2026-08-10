@@ -26,3 +26,8 @@ export function ehOperadorDaPlataforma(ctx: SessionContext | null): boolean {
 export async function podeOperarAgora(): Promise<boolean> {
   return podeOperar(await getSessionContext());
 }
+
+/** O mesmo, para telas de plataforma. */
+export async function ehOperadorDaPlataformaAgora(): Promise<boolean> {
+  return ehOperadorDaPlataforma(await getSessionContext());
+}

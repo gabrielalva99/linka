@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
-import { podeOperarAgora } from "@/lib/perms";
+import { ehOperadorDaPlataformaAgora } from "@/lib/perms";
 import { porCliente, tenantFilter } from "@/lib/tenant";
 import { dataHora } from "@/lib/datas";
 import { LinhaPacote } from "./linha";
@@ -24,7 +24,10 @@ export default async function AplicativosPage() {
   const supabase = await createSupabaseServerClient();
   const filtro = await tenantFilter();
   const t = getMessages();
-  const podeEditar = await podeOperarAgora();
+  // Quem classifica é o operador da plataforma, porque o catálogo é global e
+  // vale para todas as marcas. A tela precisa concordar com a política do
+  // banco — oferecer o botão a quem o banco recusa não é generosidade.
+  const podeEditar = await ehOperadorDaPlataformaAgora();
 
   const [{ data: eventos }, { data: catalogo }] = await Promise.all([
     porCliente(
@@ -128,11 +131,14 @@ export default async function AplicativosPage() {
         </>
       )}
 
-      {/* O catálogo inteiro fica visível de propósito: quando o relatório mostrar
-          um recurso com número estranho, o primeiro lugar a conferir é se ele foi
-          classificado certo — e uma classificação errada é invisível sem esta
-          lista. */}
-      {jaClassificados > 0 && (
+      {/* O catálogo inteiro serve para conferência: quando o relatório mostrar um
+          recurso com número estranho, o primeiro lugar a olhar é se ele foi
+          classificado certo, e classificação errada é invisível sem esta lista.
+          Só que o catálogo é GLOBAL — os pacotes vieram dos aparelhos de todas as
+          marcas. Mostrá-lo a qualquer pessoa entrega a uma marca quais
+          aplicativos a concorrente expõe na vitrine dela. Fica com quem opera a
+          plataforma, que já enxerga todos os clientes de qualquer forma. */}
+      {podeEditar && jaClassificados > 0 && (
         <details className="mt-8">
           <summary className="cursor-pointer text-sm text-muted hover:text-foreground">
             Já classificados ({jaClassificados})

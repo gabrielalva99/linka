@@ -95,11 +95,11 @@ export function UploadForm({ tenantId }: { tenantId: string }) {
           .upload(path, f, { contentType: f.type, upsert: false });
         if (upErr) throw new Error(upErr.message);
 
-        const { data } = supabase.storage.from("content").getPublicUrl(path);
+        // A URL não vai daqui: o servidor a deriva do caminho. Mandar a URL do
+        // navegador era deixar quem chama decidir onde o arquivo mora.
         const r = await addToLibrary({
           name: f.name,
           path,
-          url: data.publicUrl,
           contentType: f.type,
           size: f.size,
           width: atual[i].width ?? undefined,
