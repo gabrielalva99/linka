@@ -7,6 +7,13 @@ import { logAction } from "@/lib/audit";
 import type { ContentFit } from "@linka/shared";
 
 /**
+ * O que a biblioteca aceita. Tem que ser igual ao `allowed_mime_types` do balde
+ * `content` — se as duas listas discordarem, uma delas recusa algo que a outra
+ * já deixou passar, e o envio quebra no meio sem explicação na tela.
+ */
+const TIPOS_ACEITOS = ["video/mp4", "video/webm"];
+
+/**
  * Define como o vídeo é enquadrado na tela (vale para todo aparelho que o exibir).
  *
  * Conta as linhas porque UPDATE barrado por RLS não estoura — afeta zero linhas
@@ -60,6 +67,18 @@ export async function addToLibrary(input: {
   // sequestro de peça, virava algo que qualquer um podia ocupar de fora.
   if (!input.path.startsWith(`${tenant.id}/`)) {
     return { ok: false as const, error: "Caminho de arquivo inválido." };
+  }
+
+  // O tipo também vem do navegador, então também é conferido aqui.
+  //
+  // O armazenamento já recusa arquivo que não seja vídeo (migration de 10/08), e
+  // aquela é a trava que vale. Esta segunda existe porque o REGISTRO é uma porta
+  // separada do ENVIO: dá para chamar esta função apontando para um arquivo que
+  // já está lá e declarar outro tipo. Sozinho isso não abre nada, mas deixaria a
+  // biblioteca dizendo uma coisa e o arquivo sendo outra — e catálogo que mente
+  // é o começo de toda investigação longa.
+  if (!TIPOS_ACEITOS.includes(input.contentType)) {
+    return { ok: false as const, error: "Formato não aceito. Envie um vídeo MP4." };
   }
 
   // A resolução vem do navegador: entrada de fora, mesma régua de sempre.

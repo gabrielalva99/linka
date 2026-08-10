@@ -181,6 +181,9 @@ export function UploadForm({ tenantId }: { tenantId: string }) {
     }
     if (m.includes("already exists") || m.includes("duplicate")) return t.library.errDuplicate;
     if (m.includes("network") || m.includes("failed to fetch")) return t.library.errNetwork;
+    // O armazenamento recusa o que não é vídeo. Sem esta linha, quem arrastasse
+    // um PDF para a janela veria "não foi possível enviar" e tentaria de novo.
+    if (m.includes("mime type") || m.includes("not supported")) return t.library.errFormat;
     return t.library.errGeneric;
   }
 
