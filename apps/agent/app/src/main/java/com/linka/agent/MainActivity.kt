@@ -148,6 +148,10 @@ const val PASSADAS_DA_NUVEM = 3
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // PRIMEIRA COISA DEPOIS DO super: daqui para a frente, qualquer queda vira
+        // relato. Instalado antes de tudo porque o trecho mais provável de quebrar
+        // é justamente a subida — e é a queda na subida que deixa a vitrine preta.
+        CrashLog.instalar(applicationContext)
         Api.init(this)
         pegarEnderecoDePush()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

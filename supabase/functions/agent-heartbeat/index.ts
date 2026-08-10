@@ -262,6 +262,45 @@ Deno.serve(async (req) => {
     });
   }
 
+  // QUEDAS DO APLICATIVO, relatadas pelo próprio aparelho.
+  //
+  // Chegam pela batida em vez de por canal próprio: a batida já vai e volta, e um
+  // aparelho que acabou de travar é o último lugar de onde se quer abrir mais
+  // conexão. O aparelho só apaga o arquivo local depois desta resposta — se a
+  // gravação falhar aqui, o relato volta na próxima.
+  //
+  // Sem `upsert` por chave: duas quedas iguais em momentos diferentes são dois
+  // fatos, e é a repetição que diz que o defeito é sistemático. O agrupamento
+  // acontece na leitura, pelo fingerprint.
+  if (Array.isArray(payload.quedas) && payload.quedas.length > 0) {
+    const linhas = (payload.quedas as Record<string, unknown>[])
+      .slice(0, 20)
+      .map((q) => {
+        const quando = Number(q.ocorreu_em);
+        // Relógio do aparelho pode estar errado; data impossível vira o agora do
+        // servidor em vez de descartar o relato — a queda aconteceu de qualquer
+        // forma, e é ela que importa.
+        const valida =
+          Number.isFinite(quando) && quando > 1_600_000_000_000 && quando < Date.now() + 86_400_000;
+        return {
+          tenant_id: device.tenant_id,
+          device_id: device.id,
+          fingerprint: String(q.fingerprint ?? "desconhecido").slice(0, 200),
+          tipo: String(q.tipo ?? "desconhecido").slice(0, 200),
+          mensagem: q.mensagem ? String(q.mensagem).slice(0, 500) : null,
+          pilha: q.pilha ? String(q.pilha).slice(0, 4000) : null,
+          agent_version: q.agent_version ? String(q.agent_version).slice(0, 40) : null,
+          os_version: q.os_version ? String(q.os_version).slice(0, 40) : null,
+          ocorreu_em: new Date(valida ? quando : Date.now()).toISOString(),
+        };
+      })
+      .filter((l) => l.fingerprint.length > 0);
+
+    if (linhas.length > 0) {
+      await supabase.from("device_errors").insert(linhas);
+    }
+  }
+
   // Inventário de apps: chega de hora em hora, não a cada batida.
   if (Array.isArray(payload.apps)) {
     const linhas = (payload.apps as Record<string, unknown>[])

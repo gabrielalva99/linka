@@ -15,6 +15,7 @@ import { AutoRefresh } from "../../auto-refresh";
 import { ContentManager } from "./content-manager";
 import { DeviceFit } from "./device-fit";
 import { CleanupPanel } from "./cleanup-panel";
+import { Quedas, type Queda } from "./quedas";
 import { KioskPanel } from "./kiosk-panel";
 import { JourneyPanel, type Journey } from "./journey-panel";
 import { AppsPanel, type DeviceApp } from "./apps-panel";
@@ -79,6 +80,7 @@ export default async function DeviceDetailPage({
     { data: journeyData },
     { data: appsData },
     { data: saidasData },
+    { data: quedasData },
   ] =
     await Promise.all([
       // Biblioteca do cliente ativo: oferecer o vídeo de outra marca na lista de
@@ -112,6 +114,18 @@ export default async function DeviceDetailPage({
         .eq("action", "saida_de_manutencao")
         .order("created_at", { ascending: false })
         .limit(5),
+      // QUEDAS DO APLICATIVO, as recentes.
+      //
+      // Janela de 7 dias e teto explícito: queda de mês passado não ajuda a
+      // resolver a de hoje, e sem limite uma sequência de falhas encheria a
+      // ficha do aparelho — justamente na hora em que ela precisa estar legível.
+      supabase
+        .from("device_errors")
+        .select("fingerprint, tipo, mensagem, pilha, agent_version, ocorreu_em")
+        .eq("device_id", id)
+        .gte("ocorreu_em", new Date(Date.now() - 7 * 24 * 3600_000).toISOString())
+        .order("ocorreu_em", { ascending: false })
+        .limit(50),
     ]);
 
   const t = getMessages();
@@ -347,6 +361,8 @@ export default async function DeviceDetailPage({
           blockSettings={d.block_settings}
           blockedApps={d.blocked_apps}
         />
+        <Quedas quedas={(quedasData ?? []) as Queda[]} fuso={fusoDaLoja} />
+
         <CleanupPanel
           deviceId={d.id}
           enabled={d.cleanup_enabled}

@@ -111,6 +111,9 @@ object Telemetry {
         Prefs.setPendingCleanupReport(ctx, null)
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.
         Prefs.setSaidaPendente(ctx, null)
+        // E as quedas: apagar ao enviar perderia o relato numa falha de rede, que
+        // é justamente o que costuma acompanhar aparelho com problema.
+        CrashLog.limpar(ctx)
 
         val resposta = try { JSONObject(result.body) } catch (_: Exception) { null }
 
@@ -257,6 +260,13 @@ object Telemetry {
             body.put("screen_width", w)
             body.put("screen_height", h)
         }
+        // AS QUEDAS PEGAM CARONA NA BATIDA.
+        //
+        // Sem canal próprio de propósito: a batida já vai e volta, então relatar
+        // uma queda custa zero chamada a mais — e um aparelho que acabou de
+        // travar é o último lugar de onde se quer abrir mais conexão. Vão só
+        // quando existem.
+        CrashLog.pendentes(ctx)?.let { body.put("quedas", it) }
         // "Está atualizado?" não é mais respondido aqui. O aparelho só sabia a
         // versão publicada por um valor em cache, então respondia com atraso e o
         // painel contava errado. Quem compara agora é o servidor, que tem as duas
