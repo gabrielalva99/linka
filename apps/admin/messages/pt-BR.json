@@ -261,7 +261,15 @@
     "errNetwork": "A conexão caiu no meio do envio. Tente de novo.",
     "errGeneric": "Não foi possível enviar. Tente de novo.",
     "noTenant": "Selecione um cliente no topo da página para enviar vídeos.",
-    "delHasVariants": "Esta peça tem {n} versão(ões) para outros formatos de tela. Desvincule as versões antes de excluir — senão elas seriam apagadas junto."
+    "delHasVariants": "Esta peça tem {n} versão(ões) para outros formatos de tela. Desvincule as versões antes de excluir — senão elas seriam apagadas junto.",
+    "search": "Buscar por nome",
+    "searchClear": "limpar",
+    "found": "{n} peça(s) encontrada(s)",
+    "noResults": "Nenhuma peça com esse nome.",
+    "pageOf": "Página {p} de {t}",
+    "prev": "Anterior",
+    "next": "Próxima",
+    "tooMany": "Mostrando as {n} mais recentes. Use a busca para achar uma peça específica."
   },
   "chains": {
     "title": "Redes",

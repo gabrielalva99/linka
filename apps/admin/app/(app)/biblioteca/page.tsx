@@ -8,6 +8,8 @@ import { FitToggle } from "./fit-toggle";
 import { DeleteButton } from "./delete-button";
 import { VariantPicker } from "./variant-picker";
 import { UploadForm } from "./upload-form";
+import { Busca } from "./busca";
+import { Paginacao } from "./paginacao";
 import { data } from "@/lib/datas";
 import { tamanho } from "@/lib/numeros";
 
@@ -27,19 +29,62 @@ type MediaRow = {
 
 
 
-export default async function BibliotecaPage() {
+/** Peças por página. As versões de cada uma acompanham, sem contar no limite. */
+const POR_PAGINA = 20;
+
+export default async function BibliotecaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; p?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const filtro = await tenantFilter();
+  const sp = await searchParams;
+  const busca = (sp.q ?? "").trim();
+  const paginaPedida = Math.max(1, Number(sp.p ?? 1) || 1);
+
   const [{ data: mediaData }, { data: deviceData }, { data: emCampanha }] =
     await Promise.all([
+    // TETO EXPLÍCITO, e a busca acontece no BANCO.
+    //
+    // Sem limite a API corta em 1000 linhas por padrão, em silêncio — o mesmo
+    // teto que já mordeu na tela de lojas. Peça além disso não aparecia, e
+    // ninguém percebe a ausência de algo que nunca foi mostrado.
+    //
+    // O limite é alto de propósito: a lista é montada em CONJUNTOS (peça +
+    // versões), e paginar no banco cortaria uma peça no meio das versões dela.
+    // Com um pack real de 14 arquivos, 2000 linhas comportam ~140 campanhas —
+    // e quando isso apertar, o aviso na tela diz que está apertando, em vez de
+    // sumir com material em silêncio.
     porCliente(
-      supabase
-        .from("media_assets")
-        .select(
-          "id, name, url, size_bytes, created_at, fit_mode, width, height, variant_of",
-        ),
+      (() => {
+        const q = supabase
+          .from("media_assets")
+          .select(
+            "id, name, url, size_bytes, created_at, fit_mode, width, height, variant_of",
+          );
+        if (!busca) return q;
+
+        // BUSCAR UM FORMATO PROCURA PELA RESOLUÇÃO, e não pelo nome do arquivo.
+        //
+        // Digitar "1080x1272" é o jeito natural de procurar um formato — e por
+        // nome não achava nada, porque o arquivo real se chama
+        // "..._1080 x 1272.mp4", com espaços. O primeiro pack da agência veio com
+        // as duas grafias no mesmo lote, então nome é justamente o campo em que
+        // não dá para confiar.
+        //
+        // A resolução está em colunas próprias, lida do arquivo no envio. Quando
+        // a busca tem cara de formato, é por elas que se procura.
+        const formato = busca.match(/^(\d{3,5})\s*[x×]\s*(\d{3,5})$/i);
+        if (formato) {
+          return q.eq("width", Number(formato[1])).eq("height", Number(formato[2]));
+        }
+        return q.ilike("name", `%${busca}%`);
+      })(),
       filtro,
-    ).order("created_at", { ascending: false }),
+    )
+      .order("created_at", { ascending: false })
+      .limit(2000),
     // Quem está exibindo cada vídeo AGORA. Arquivado não exibe nada: contá-lo
     // fazia o vídeo parecer no ar em mais aparelhos do que a realidade.
     emOperacao(
@@ -97,15 +142,73 @@ export default async function BibliotecaPage() {
   // ninguém acha nada e todos parecem campanhas diferentes. Aninhados sob a peça
   // a que pertencem, catorze linhas viram uma — e fica evidente quais formatos
   // aquela campanha já cobre.
-  const principais = media.filter((m) => !m.variant_of);
   const variantesPor = new Map<string, MediaRow[]>();
   for (const m of media) {
     if (!m.variant_of) continue;
     variantesPor.set(m.variant_of, [...(variantesPor.get(m.variant_of) ?? []), m]);
   }
+
+  // A BUSCA PODE ACHAR SÓ A VERSÃO.
+  //
+  // Procurar "1080x1272" casa com o nome do arquivo daquele formato, e não com o
+  // da peça a que ele pertence. Como a tela só desenha peças principais, o
+  // resultado sumia: a busca encontrava algo e mostrava lista vazia — o pior
+  // resultado possível, porque parece que a peça não existe.
+  //
+  // Busca os pais que faltam, numa consulta só. Sem busca ativa isso nem roda,
+  // porque a lista completa já traz todo mundo.
+  let principaisNaLista = media.filter((m) => !m.variant_of);
+  if (busca) {
+    const idsNaLista = new Set(principaisNaLista.map((m) => m.id));
+    const paisFaltando = [
+      ...new Set(
+        media
+          .filter((m) => m.variant_of && !idsNaLista.has(m.variant_of))
+          .map((m) => m.variant_of as string),
+      ),
+    ];
+    if (paisFaltando.length > 0) {
+      const { data: pais } = await porCliente(
+        supabase
+          .from("media_assets")
+          .select(
+            "id, name, url, size_bytes, created_at, fit_mode, width, height, variant_of",
+          )
+          .in("id", paisFaltando),
+        filtro,
+      );
+      principaisNaLista = [...principaisNaLista, ...((pais ?? []) as MediaRow[])].sort(
+        (a, b) => (a.created_at < b.created_at ? 1 : -1),
+      );
+    }
+  }
+  const todasPrincipais = principaisNaLista;
+
+  // A PÁGINA CONTA PEÇAS, NÃO LINHAS.
+  //
+  // Um pack do Dia dos Pais é uma peça e treze versões. Paginar por linha
+  // cortaria o conjunto ao meio — a peça numa página, metade das versões na
+  // seguinte — e o que a tela promete é justamente mostrar o conjunto inteiro
+  // junto. Vinte peças por página valem vinte cartões, cada um com as versões
+  // dele dentro.
+  const totalPaginas = Math.max(1, Math.ceil(todasPrincipais.length / POR_PAGINA));
+  const pagina = Math.min(paginaPedida, totalPaginas);
+  const principais = todasPrincipais.slice(
+    (pagina - 1) * POR_PAGINA,
+    pagina * POR_PAGINA,
+  );
+  // Bateu no teto da consulta: material pode estar faltando da lista, e isso
+  // precisa ser dito. Silêncio aqui é a tela mentindo por omissão.
+  const truncou = media.length >= 2000;
   // Só peça principal pode receber variantes, e uma peça que já tem variantes não
   // pode virar variante de outra (o banco recusa os dois casos). Oferecer na tela
   // o que o banco vai recusar é ensinar a desconfiar do painel.
+  // AS OPÇÕES SAEM DA PÁGINA, e não da biblioteca inteira.
+  //
+  // Antes, cada linha recebia a lista de todas as peças: com 200 vídeos eram 200
+  // seletores de 200 opções, e escolher num menu de 200 nomes truncados é
+  // impraticável de qualquer forma. Com a busca acima, achar a peça certa é
+  // filtrar por nome — aí ela e a candidata aparecem na mesma página.
   const opcoesPara = (id: string) =>
     variantesPor.get(id)?.length
       ? []
@@ -147,9 +250,24 @@ export default async function BibliotecaPage() {
         </p>
       )}
 
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Busca inicial={busca} />
+        {todasPrincipais.length > 0 && (
+          <span className="text-xs text-muted">
+            {t.library.found.replace("{n}", String(todasPrincipais.length))}
+          </span>
+        )}
+      </div>
+
+      {truncou && (
+        <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+          {t.library.tooMany.replace("{n}", "2000")}
+        </p>
+      )}
+
       {media.length === 0 ? (
         <p className="mt-8 rounded-xl border border-line bg-surface p-6 text-sm text-muted">
-          {t.library.empty}
+          {busca ? t.library.noResults : t.library.empty}
         </p>
       ) : (
         <ul className="mt-6 flex flex-col gap-3">
@@ -274,6 +392,8 @@ export default async function BibliotecaPage() {
           })}
         </ul>
       )}
+
+      <Paginacao pagina={pagina} total={totalPaginas} busca={busca} />
     </div>
   );
 }
