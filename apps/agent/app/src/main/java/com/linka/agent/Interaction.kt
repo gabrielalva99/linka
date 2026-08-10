@@ -68,9 +68,30 @@ object Interaction {
     fun collect(ctx: Context, queue: EventQueue): Int {
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val agora = System.currentTimeMillis()
-        // Na primeira vez olha 1h para trás; depois, só o que é novo.
-        val desde = Prefs.lastEventScan(ctx).takeIf { it > 0 } ?: (agora - 3_600_000)
-        if (agora <= desde) return 0
+        // A MEDIÇÃO COMEÇA AGORA, e não uma hora atrás.
+        //
+        // Antes a primeira leitura olhava 60 minutos para trás, e isso importava
+        // uso que não é de vitrine nenhuma: o técnico removendo contas nos
+        // Ajustes, o aparelho ligando pela primeira vez, o que a loja fez com ele
+        // antes de virar demonstração. Tudo entrava no relatório como recurso que
+        // o cliente experimentou.
+        //
+        // Foi assim que `com.motorola.batterycare` apareceu num aparelho de teste
+        // e ficou pendente de identificação: veio do preparo, antes do LINKA
+        // existir ali. Com 250 aparelhos no rollout, é uma hora de uso alheio por
+        // aparelho, tudo no mesmo dia, no dia em que ninguém ainda desconfia dos
+        // números.
+        //
+        // Não se perde nada real: na primeira leitura o aparelho acabou de ser
+        // provisionado e a vitrine ainda nem subiu. Não existe medição legítima
+        // atrás desse ponto.
+        val desde = Prefs.lastEventScan(ctx).takeIf { it > 0 } ?: agora
+        if (agora <= desde) {
+            // Marca o ponto de partida, senão a próxima passada olharia para trás
+            // de novo e o problema voltaria pela porta do "ainda não tem marcador".
+            Prefs.setLastEventScan(ctx, agora)
+            return 0
+        }
 
         // UM app em primeiro plano por vez, não um mapa de pares.
         // Um app tem várias telas internas (o Chrome abre ChromeLauncherActivity e
