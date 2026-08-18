@@ -17,6 +17,14 @@ O QUE VAI NESTA PASTA (montada pelo suporte antes da visita):
   codigo-de-inscricao.txt  (o codigo do cliente, ja preenchido)
   loja-atual.txt           (o codigo da loja da visita)
 
+ESTA PASTA ESTA PREPARADA PARA:
+  Cliente: Motorola                 (codigo MOTOBR01)
+  Loja:    Casas Bahia - Shopping Interlagos   (codigo SPC7613)
+
+ATENCAO: existem TRES lojas chamadas "Shopping Interlagos" no painel, uma por
+rede. SPC7612 e Ponto Frio e SPC7614 e Lojas Americanas. Conferir a rede na
+tela do aparelho depois do provisionamento (ela aparece por 5 segundos).
+
 
 ANTES DE SAIR DO ESCRITORIO
 ---------------------------
@@ -29,7 +37,7 @@ Sem a loja cadastrada, o aparelho entra na frota SEM LOJA e alguem tem que
 corrigir depois, aparelho por aparelho.
 
 
-PREPARAR O APARELHO (5 passos, no proprio aparelho)
+PREPARAR O APARELHO (6 passos, no proprio aparelho)
 ---------------------------------------------------
 
 1. LIGAR A DEPURACAO USB
@@ -49,30 +57,44 @@ PREPARAR O APARELHO (5 passos, no proprio aparelho)
    Ajustes > Sistema > Varios usuarios: remover os extras.
    Remover tambem "app clonado" e "espaco seguro", se existirem.
 
-5. CONECTAR NO WI-FI DA LOJA
+5. DESATIVAR O APLICATIVO ANTERIOR DA VITRINE
+   Ajustes > Seguranca > Apps de administracao do dispositivo
+   (em alguns aparelhos: Seguranca > Mais configuracoes de seguranca)
+   -> DESATIVAR o app da vitrine antiga.
+
+   Se ele for a tela inicial do aparelho, troque antes:
+   Ajustes > Apps > Aplicativos padrao > Tela inicial.
+
+   O Android nao deixa dois aplicativos controlarem o aparelho. Enquanto o
+   anterior estiver ligado como administrador, o LINKA nao consegue assumir.
+
+   NAO DESINSTALE o app anterior sem combinar com o suporte: desinstalar
+   apaga o historico de medicao daquele aparelho.
+
+6. CONECTAR NO WI-FI DA LOJA
    O aparelho precisa de internet para entrar na frota.
 
 
 NA HORA
 -------
 
-6. Conectar o cabo USB no aparelho e no computador.
+7. Conectar o cabo USB no aparelho e no computador.
    Na tela do aparelho aparece "Permitir depuracao USB?"
    -> marcar "Sempre permitir" e tocar em PERMITIR
 
-7. No computador: clicar duas vezes em PROVISIONAR.bat
+8. No computador: clicar duas vezes em PROVISIONAR.bat
 
-8. Ele pergunta o CODIGO DA LOJA.
+9. Ele pergunta o CODIGO DA LOJA.
    Se ja aparecer o codigo certo entre colchetes, so apertar ENTER.
    Se for outra loja, digitar o codigo dela.
    (Ele guarda a resposta: nos proximos aparelhos da mesma loja, e so ENTER.)
 
-9. FIQUE DE OLHO NA TELA DO APARELHO.
+10. FIQUE DE OLHO NA TELA DO APARELHO.
    Se o programa escrever ">>> OLHE A TELA DO APARELHO <<<", o aparelho esta
    pedindo uma permissao e parou esperando. Toque em PERMITIR e o programa
    segue sozinho.
 
-10. Esperar a mensagem APARELHO PRONTO.
+11. Esperar a mensagem APARELHO PRONTO.
 
 
 CONFERIR ANTES DE DEVOLVER O APARELHO A VITRINE
@@ -98,6 +120,8 @@ Os tres casos mais comuns e o que significam:
 
   "ainda tem N conta(s) cadastrada(s)"     -> voltar ao passo 2
   "tem SENHA na tela de bloqueio"          -> voltar ao passo 3
+  "Outro aplicativo esta registrado como
+   ADMINISTRADOR do aparelho"              -> voltar ao passo 5
   "O aparelho NAO entrou na frota"         -> olhar a tela do aparelho AGORA
                                               e dizer ao suporte o que aparece
 

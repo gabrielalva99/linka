@@ -112,6 +112,48 @@ Nao da para provisionar por cima. Separe este aparelho e avise o suporte.
 }
 Ok "Nenhum outro aplicativo controlando o aparelho"
 
+# ADMINISTRADORES DE DISPOSITIVO ATIVOS.
+#
+# `list-owners` NAO enxerga isto. Ele lista dono do aparelho e dono de perfil; um
+# app registrado como "administrador de dispositivo" comum nao aparece la — e o
+# Android recusa `set-device-owner` quando existe QUALQUER admin ativo.
+#
+# Isto e exatamente o caso da frota atual: o Product.Me nao e dono do aparelho, e
+# administrador + tela inicial. Sem esta checagem, o script passava por todas as
+# pre-condicoes dizendo OK e sO quebrava no passo 4, com uma mensagem que mandava
+# "conferir contas e usuarios" — que estao certos — e depois "separe o aparelho".
+# Numa loja, com dez aparelhos iguais, isso e a viagem inteira perdida no mesmo
+# ponto sem ninguem entender por que.
+$saidaAdmins = (& $adb shell dumpsys device_policy 2>&1) -join "`n"
+$admins = @()
+foreach ($m in [regex]::Matches($saidaAdmins, 'ComponentInfo\{([^/]+)/')) {
+  $pacote = $m.Groups[1].Value
+  if ($pacote -ne "com.linka.agent" -and $admins -notcontains $pacote) { $admins += $pacote }
+}
+if ($admins.Count -gt 0) {
+  $lista = ($admins | ForEach-Object { "   - $_" }) -join "`n"
+  Fim $false @"
+Outro aplicativo esta registrado como ADMINISTRADOR do aparelho:
+$lista
+
+O Android nao deixa o LINKA assumir o controle enquanto isso existir. Nao e
+conta, nao e senha, nao e usuario extra: e o app anterior da vitrine.
+
+O QUE FAZER:
+ 1. No aparelho: Ajustes > Seguranca > Mais configuracoes de seguranca >
+    Apps de administracao do dispositivo.
+    (Em alguns aparelhos: Ajustes > Seguranca > Apps de administracao.)
+ 2. DESATIVAR o aplicativo da lista acima.
+ 3. Se ele for a tela inicial do aparelho, troque a tela inicial antes:
+    Ajustes > Apps > Aplicativos padrao > Tela inicial.
+ 4. Rode este programa de novo.
+
+NAO desinstale o aplicativo anterior sem combinar: em shadow ele continua
+medindo, e desinstalar apaga o historico do aparelho.
+"@
+}
+Ok "Nenhum administrador de dispositivo concorrente"
+
 $contas = (& $adb shell dumpsys account | Select-String -Pattern "Accounts:\s*(\d+)" | Select-Object -First 1)
 $qtdContas = 0
 if ($contas -and $contas.Matches.Count -gt 0) { $qtdContas = [int]$contas.Matches[0].Groups[1].Value }
@@ -239,16 +281,46 @@ else { Fim $false "Falha ao instalar o aplicativo:`n$saidaInstall" }
 Titulo "Assumindo o controle do aparelho"
 $saidaOwner = (& $adb shell cmd device_policy set-device-owner $admin 2>&1) -join " "
 if ($saidaOwner -notmatch "Success") {
+  # A recusa do Android vem em texto, e cada motivo tem conserto diferente. Sem
+  # traduzir, todos viram "avise o suporte" — e o promotor na loja fica sem saber
+  # que bastava desativar um app no menu de seguranca.
+  $comoResolver = if ($saidaOwner -match "already some device admins|device admin") {
+@"
+MOTIVO: ainda existe um administrador de dispositivo ativo (o app anterior
+da vitrine). Ele pode ter sido reativado desde a conferencia.
+
+ 1. Ajustes > Seguranca > Apps de administracao do dispositivo.
+ 2. Desativar o aplicativo anterior.
+ 3. Rodar este programa de novo.
+"@
+  } elseif ($saidaOwner -match "already set|already provisioned") {
+@"
+MOTIVO: o aparelho ja passou pela configuracao inicial com um dono definido.
+Este caminho nao resolve. Separe o aparelho e avise o suporte.
+"@
+  } elseif ($saidaOwner -match "accounts|account") {
+@"
+MOTIVO: sobrou conta cadastrada no aparelho.
+
+ 1. Ajustes > Contas (ou Senhas e contas): remover TODAS.
+ 2. Rodar este programa de novo.
+"@
+  } else {
+@"
+O QUE FAZER: confira contas e usuarios (passos anteriores) e tente de novo.
+Se insistir, separe o aparelho e avise o suporte.
+"@
+  }
   Fim $false @"
 Nao foi possivel assumir o controle do aparelho.
 
 Resposta do aparelho:
 $saidaOwner
 
-O QUE FAZER: confira contas e usuarios (passos anteriores) e tente de novo.
-Se insistir, separe o aparelho e avise o suporte.
+$comoResolver
 "@
 }
+
 Ok "Controle assumido"
 
 # Permissoes que so existem por aqui. CONFERIR e obrigatorio: o comando de
