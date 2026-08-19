@@ -556,9 +556,35 @@ object PainelDeRecursos {
             }
         }
 
-        // Guarda o "nao tem" também: sem isso, aparelho sem o recurso pagaria a
-        // varredura inteira a cada abertura do painel.
-        Prefs.setTelaDeRam(ctx, "")
+        // NAO ACHEI NADA ABRIVEL. Em vez de guardar so o silencio, guarda o que
+        // EXISTE por perto: telas com nome parecido que nao podem ser abertas de
+        // fora (exported=false).
+        //
+        // Isto e diagnostico, e existe por um motivo concreto: nos Moto G o
+        // promotor abriu a Otimizacao de RAM navegando dentro dos Ajustes, e o
+        // uso registrou "com.android.settings" — o pacote, nao a tela. Sem saber
+        // o nome da tela, so restava chutar. Com esta lista, o painel recebe os
+        // nomes reais e a busca passa a mirar no que existe.
+        val pistasLargas = listOf("ram", "memory", "zram", "boost")
+        val candidatas = mutableListOf<String>()
+        for (pacote in PACOTES_COM_RAM + candidatos) {
+            try {
+                pm.getPackageInfo(pacote, android.content.pm.PackageManager.GET_ACTIVITIES)
+                    .activities
+                    ?.forEach { a ->
+                        val curto = a.name.substringAfterLast('.').lowercase()
+                        if (pistasLargas.any { curto.contains(it) }) {
+                            candidatas.add(a.name.substringAfterLast('.') + (if (a.exported) "" else "!"))
+                        }
+                    }
+            } catch (_: Exception) {
+            }
+            if (candidatas.size >= 6) break
+        }
+        Prefs.setTelaDeRam(
+            ctx,
+            if (candidatas.isEmpty()) "" else ("? " + candidatas.joinToString(",")).take(190),
+        )
         return null
     }
 
