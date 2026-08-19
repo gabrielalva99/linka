@@ -5,15 +5,16 @@ import { podeOperarAgora } from "@/lib/perms";
 import { porCliente, tenantFilter } from "@/lib/tenant";
 import { CONTENT_FIT_LABELS, type ContentFit } from "@linka/shared";
 import { CampaignActions } from "./campaign-row";
-import { diaMes } from "@/lib/datas";
+import { diaMes, nomeDaLoja } from "@/lib/datas";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
 const relName = (rel: Rel) => (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "—";
 
 type Target = {
-  scope: "tenant" | "chain" | "store" | "device";
+  scope: "tenant" | "chain" | "store" | "model" | "device";
   retail_chains: Rel;
   stores: Rel;
+  device_models: Rel;
   devices: Rel;
 };
 
@@ -39,7 +40,7 @@ export default async function CampanhasPage() {
     supabase
       .from("campaigns")
       .select(
-        "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name, retail_chains(name)), devices(name))",
+        "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name, retail_chains(name)), device_models(name, line), devices(name))",
       ),
     await tenantFilter(),
   ).order("created_at", { ascending: false });
@@ -64,7 +65,14 @@ export default async function CampanhasPage() {
     if (!target) return "—";
     if (target.scope === "tenant") return t.campaigns.scopeTenant;
     if (target.scope === "chain") return `${t.campaigns.scopeChain}: ${relName(target.retail_chains)}`;
-    if (target.scope === "store") return `${t.campaigns.scopeStore}: ${relName(target.stores)}`;
+    // Loja com a identidade inteira: "Shopping Interlagos" sozinho não diz qual
+    // das três lojas com esse nome é.
+    if (target.scope === "store") {
+      return `${t.campaigns.scopeStore}: ${nomeDaLoja(target.stores as never) ?? relName(target.stores)}`;
+    }
+    if (target.scope === "model") {
+      return `${t.campaigns.scopeModel}: ${relName(target.device_models)}`;
+    }
     return `${t.campaigns.scopeDevice}: ${relName(target.devices)}`;
   }
 

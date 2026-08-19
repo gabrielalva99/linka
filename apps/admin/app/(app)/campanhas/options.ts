@@ -11,7 +11,13 @@ import { emOperacao, porCliente, tenantFilter } from "@/lib/tenant";
 export async function loadCampaignOptions() {
   const supabase = await createSupabaseServerClient();
   const filtro = await tenantFilter();
-  const [{ data: media }, { data: chains }, { data: stores }, { data: devices }] =
+  const [
+    { data: media },
+    { data: chains },
+    { data: stores },
+    { data: models },
+    { data: devices },
+  ] =
     await Promise.all([
       porCliente(supabase.from("media_assets").select("id, name"), filtro).order(
         "created_at",
@@ -22,6 +28,10 @@ export async function loadCampaignOptions() {
       // que não existe mais faz a pessoa montar uma campanha que nunca vai ao ar
       // e nunca avisa por quê — some no meio da lista e ninguém confere depois.
       emOperacao(supabase.from("stores").select("id, name, code"), filtro).order("name"),
+      // Modelos NÃO passam por emOperacao: modelo é cadastro, não tem estado
+      // de operação. Filtrar por algo que não existe na tabela devolveria lista
+      // vazia e o alvo novo nasceria sem opção nenhuma.
+      porCliente(supabase.from("device_models").select("id, name, line"), filtro).order("name"),
       emOperacao(supabase.from("devices").select("id, name, code"), filtro).order("code"),
     ]);
 
@@ -37,6 +47,10 @@ export async function loadCampaignOptions() {
     stores: (stores ?? []).map((s) => ({
       id: s.id as string,
       label: s.code ? `${s.name} · ${s.code}` : (s.name as string),
+    })),
+    models: (models ?? []).map((m) => ({
+      id: m.id as string,
+      label: m.line ? `${m.name} · ${m.line}` : (m.name as string),
     })),
     devices: (devices ?? []).map((d) => ({
       id: d.id as string,

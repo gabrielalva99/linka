@@ -87,6 +87,7 @@ async function salvar(
     p_chain_id: parsed.scope === "chain" ? parsed.targetId : null,
     p_store_id: parsed.scope === "store" ? parsed.targetId : null,
     p_device_id: parsed.scope === "device" ? parsed.targetId : null,
+    p_model_id: parsed.scope === "model" ? parsed.targetId : null,
   });
 }
 

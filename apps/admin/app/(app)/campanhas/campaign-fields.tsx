@@ -28,12 +28,14 @@ export function CampaignFields({
   media,
   chains,
   stores,
+  models,
   devices,
   defaults,
 }: {
   media: Option[];
   chains: Option[];
   stores: Option[];
+  models: Option[];
   devices: Option[];
   defaults?: CampaignDefaults;
 }) {
@@ -44,11 +46,19 @@ export function CampaignFields({
     defaults?.items?.length ? defaults.items : [{ mediaId: "", fitMode: "" }],
   );
 
-  const targets: Record<string, Option[]> = { chain: chains, store: stores, device: devices };
+  const targets: Record<string, Option[]> = {
+    chain: chains,
+    store: stores,
+    model: models,
+    device: devices,
+  };
   const scopeOptions = [
     { key: "tenant", label: t.campaigns.scopeTenant },
     { key: "chain", label: t.campaigns.scopeChain },
     { key: "store", label: t.campaigns.scopeStore },
+    // Modelo entra ANTES de aparelho: a lista vai do mais amplo ao mais
+    // específico, e "todos os Razr 60 Ultra" é mais amplo que "este Razr".
+    { key: "model", label: t.campaigns.scopeModel },
     { key: "device", label: t.campaigns.scopeDevice },
   ];
 

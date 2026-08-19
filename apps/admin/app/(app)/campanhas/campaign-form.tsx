@@ -18,6 +18,7 @@ export function CampaignForm({
   media,
   chains,
   stores,
+  models,
   devices,
   defaults,
 }: {
@@ -25,6 +26,7 @@ export function CampaignForm({
   media: Option[];
   chains: Option[];
   stores: Option[];
+  models: Option[];
   devices: Option[];
   defaults?: CampaignDefaults;
 }) {
@@ -41,6 +43,7 @@ export function CampaignForm({
         media={media}
         chains={chains}
         stores={stores}
+        models={models}
         devices={devices}
         defaults={defaults}
       />

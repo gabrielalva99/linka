@@ -204,6 +204,7 @@
     "scopeTenant": "Todos os aparelhos",
     "scopeChain": "Rede",
     "scopeStore": "Loja",
+    "scopeModel": "Modelo",
     "scopeDevice": "Aparelho",
     "fit": "Enquadramento",
     "fitDefault": "Padrão do vídeo",
