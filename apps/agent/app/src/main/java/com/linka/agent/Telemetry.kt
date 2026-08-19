@@ -146,7 +146,7 @@ object Telemetry {
     /** Devolve o relato do comando, ou null se não soubermos executá-lo. */
     private fun execute(ctx: Context, command: String): String? = when (command) {
         "deprovision" ->
-            if (Kiosk.deprovision(ctx)) "controle devolvido" else "falhou: não era dono"
+            Kiosk.deprovision(ctx)
         "debug_probe" -> Kiosk.probeDebug(ctx)
         "debug_off" ->
             if (Kiosk.setAdbEnabled(ctx, false)) "depuração desligada" else "recusado"

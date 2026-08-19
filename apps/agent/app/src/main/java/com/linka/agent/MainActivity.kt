@@ -1360,8 +1360,69 @@ const val PASSADAS_DA_NUVEM = 3
             setTextColor(getColor(R.color.marca_preto))
             setOnClickListener { voltarParaVitrine() }
         }
+        // PREPARAR PARA VENDA: o aparelho de exposição sai da vitrine e vai para
+        // as mãos de um cliente.
+        //
+        // ── Por que aqui, e não no painel (levantado pelo Gabriel, 18/08) ──────
+        // A loja VENDE os aparelhos de exposição, e quem vende é o vendedor, com
+        // o cliente na frente. Ele não tem acesso ao painel do LINKA e não vai
+        // esperar alguém remoto liberar para fechar a venda — vai resolver na
+        // marra, e "na marra" é entregar o aparelho ainda travado.
+        //
+        // Esta tela já está atrás do PIN da loja, que é exatamente a autorização
+        // certa: quem trabalha ali tem, e o cliente que está mexendo na vitrine
+        // não tem.
+        //
+        // ── Dois toques, de propósito ─────────────────────────────────────────
+        // É irreversível: o aparelho sai da frota e só volta pelo cabo. Um toque
+        // sem querer no meio de uma manutenção de rotina não pode desmontar um
+        // aparelho que ia continuar na vitrine.
+        val venda = Button(this).apply {
+            text = "Preparar para venda"
+            var confirmando = false
+            setOnClickListener {
+                if (!confirmando) {
+                    confirmando = true
+                    text = "Confirmar: remover o LINKA deste aparelho"
+                    aviso.text = "O aparelho sai da vitrine e da frota, e as travas " +
+                        "são removidas para o cliente usar normalmente." +
+                        System.lineSeparator() + System.lineSeparator() +
+                        "Só volta a ser vitrine pelo cabo, no escritório. " +
+                        "Toque de novo para confirmar."
+                    return@setOnClickListener
+                }
+                isEnabled = false
+                text = "Removendo…"
+                val resultado = Kiosk.deprovision(this@MainActivity)
+                val deuCerto = resultado.startsWith("controle devolvido")
+                // Registra ANTES de abrir a desinstalação: depois que o app sair,
+                // não há mais quem conte ao painel o que aconteceu com o aparelho.
+                Prefs.setSaidaPendente(this@MainActivity, "preparado para venda: " + resultado)
+                Telemetry.beatAsync(this@MainActivity)
+                aviso.text = resultado
+                if (deuCerto) {
+                    text = "Agora desinstale o LINKA"
+                    // Abre a desinstalação pelo próprio Android: sem isto o
+                    // vendedor teria de achar o app nos Ajustes, e o passo mais
+                    // fácil de esquecer é o que deixa a vitrine voltando na mão
+                    // do cliente.
+                    try {
+                        startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_DELETE,
+                                android.net.Uri.parse("package:" + packageName),
+                            ),
+                        )
+                    } catch (_: Exception) {
+                    }
+                } else {
+                    text = "Não foi possível — avise o suporte"
+                }
+            }
+        }
+
         root.addView(titulo); root.addView(conta); root.addView(aviso)
-        root.addView(wifi); root.addView(agora)
+        root.addView(wifi); root.addView(venda); root.addView(agora)
         setContentView(root)
 
         relogioDaManutencao?.cancel()

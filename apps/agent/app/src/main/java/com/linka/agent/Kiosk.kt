@@ -1121,25 +1121,84 @@ object Kiosk {
      * A chave de saída. Solta as travas, devolve a tela inicial ao sistema e
      * abre mão do cargo. Sem isto, "dono do aparelho" só sai com factory reset.
      */
-    fun deprovision(ctx: Context): Boolean {
-        if (!isDeviceOwner(ctx)) return false
+    /**
+     * Devolve o aparelho ao estado de fábrica de POLÍTICA — o passo obrigatório
+     * antes de um aparelho de exposição ser VENDIDO.
+     *
+     * ── O defeito que isto conserta (perguntado pelo Gabriel, 18/08) ──────────
+     * A loja vende os aparelhos de exposição. A versão anterior limpava apenas
+     * as restrições de rede (wi-fi e modo avião) e em seguida chamava
+     * `clearDeviceOwnerApp` — que é justamente o que TIRA o poder de limpar o
+     * resto. As sete restrições de vitrine ficavam no aparelho, e ficavam para
+     * sempre: sem dono, ninguém mais pode removê-las.
+     *
+     * Quem comprasse o aparelho não conseguiria adicionar conta Google, pôr
+     * senha na tela, desinstalar aplicativo, trocar idioma — nem restaurar o
+     * aparelho, porque DISALLOW_FACTORY_RESET estava entre as que ficavam. Ou
+     * seja: aparelho novo, caro, permanentemente quebrado por nossa causa, e sem
+     * caminho de volta nem para a assistência.
+     *
+     * ── A ordem aqui é a coisa mais importante deste arquivo ──────────────────
+     * Primeiro TODAS as restrições, depois o cargo de dono. Invertido, o segundo
+     * passo torna o primeiro impossível. É irreversível no aparelho: não existe
+     * segunda chance depois que o dono sai.
+     *
+     * ── Falha fechada ─────────────────────────────────────────────────────────
+     * Se alguma restrição resistir, o cargo de dono NÃO é abandonado e a função
+     * devolve `false`. Aparelho que continua na vitrine é um problema pequeno e
+     * reversível; aparelho vendido travado não tem conserto.
+     */
+    fun deprovision(ctx: Context): String {
+        if (!isDeviceOwner(ctx)) return "falhou: não era dono do aparelho"
         val dpm = dpm(ctx)
         val admin = admin(ctx)
-        for (r in RESTRICTIONS(ctx)) {
+
+        // TODAS: as de rede, as de vitrine e as que já vieram de outra versão.
+        // A união evita o defeito de origem — uma lista que cresce num lugar e
+        // não cresce aqui volta a deixar trava presa no aparelho vendido.
+        val todas = (RESTRICTIONS(ctx) + RESTRICOES_DE_VITRINE + RESTRICTIONS_DE_REDE).distinct()
+        for (r in todas) {
             try {
                 dpm.clearUserRestriction(admin, r)
             } catch (_: Exception) {
             }
         }
+
+        // Confere no aparelho em vez de confiar no comando: `clearUserRestriction`
+        // não estoura quando não surte efeito, e é o mesmo engano que já deixou
+        // permissões "concedidas" que nunca valeram.
+        val presas = try {
+            val um = ctx.getSystemService(Context.USER_SERVICE) as android.os.UserManager
+            val bundle = um.userRestrictions
+            todas.filter { bundle.getBoolean(it, false) }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        if (presas.isNotEmpty()) {
+            // Não abre mão do cargo: com ele ainda em mãos, dá para tentar de novo.
+            // A mensagem sai nomeando as travas — quem está na loja com o aparelho
+            // na mão precisa saber que ele NÃO está pronto para ser vendido.
+            return "NÃO REMOVIDO: travas presas (" +
+                presas.joinToString(", ") { it.removePrefix("no_") } +
+                "). O aparelho continua protegido; avise o suporte antes de vender."
+        }
+
+        // Some com a vitrine da tela também: aparelho vendido não pode voltar a
+        // abrir o LINKA sozinho no primeiro reinício.
         try {
             dpm.clearPackagePersistentPreferredActivities(admin, ctx.packageName)
         } catch (_: Exception) {
         }
+        try {
+            dpm.setLockTaskPackages(admin, emptyArray())
+        } catch (_: Exception) {
+        }
+
         return try {
             dpm.clearDeviceOwnerApp(ctx.packageName)
-            true
-        } catch (_: Exception) {
-            false
+            "controle devolvido: pode desinstalar e vender"
+        } catch (e: Exception) {
+            "falhou ao devolver o controle: " + (e.message ?: "erro desconhecido")
         }
     }
 }
