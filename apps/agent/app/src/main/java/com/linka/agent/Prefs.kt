@@ -194,6 +194,16 @@ object Prefs {
         return ate
     }
 
+    /**
+     * Apaga SO a mensagem de desistencia, preservando o contador da versao atual.
+     *
+     * Serve para o caso "versao nova publicada": o fracasso da anterior deixou de
+     * valer, mas as tentativas desta aqui, se houver, continuam contando.
+     */
+    fun limparSoOErro(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().remove(KEY_UPD_ERROR).apply()
+
     /** Atualizou com sucesso: some o histórico de falha e o aviso do painel. */
     fun clearUpdateFailure(ctx: Context) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()

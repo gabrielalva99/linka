@@ -148,6 +148,18 @@ object SelfUpdate {
         // Cada aparelho sorteia um atraso e o GUARDA: sorteio novo a cada batida
         // faria o aparelho adiar para sempre, sem nunca chegar a hora. O atraso
         // vale por versao, entao versao nova recomeca a fila.
+        // VERSAO NOVA APAGA O FRACASSO DA ANTERIOR.
+        //
+        // O contador de tentativas ja era por versao, mas a MENSAGEM de
+        // desistencia ficava gravada. Resultado visto no painel (19/08): um Moto
+        // G max exibindo "Instalacao da versao 0.98.0 recusada 3 vezes, precisa
+        // de passagem por cabo" enquanto baixava a 0.99.0 sem nenhum problema.
+        // Alerta que sobrevive ao proprio assunto vira alerta que ninguem le.
+        if (Prefs.updateAttempts(ctx, version) == 0 && Prefs.updateError(ctx) != null) {
+            Prefs.setUpdateState(ctx, null)
+            Prefs.limparSoOErro(ctx)
+        }
+
         val espera = Prefs.esperaDaAtualizacao(ctx, version)
         if (System.currentTimeMillis() < espera) {
             val faltam = (espera - System.currentTimeMillis()) / 1000
