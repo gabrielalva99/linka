@@ -162,6 +162,35 @@ object Telemetry {
         // contador de tentativas é por versão e nada no painel o zerava. Com 250
         // na rua, isso é um técnico dirigindo até a loja porque um download
         // falhou três vezes.
+        // REINICIAR O APLICATIVO. Existe porque estado em memoria pode travar o
+        // aparelho de um jeito que nenhum comando alcanca: foi o caso da flag de
+        // "ja estou baixando", que ficou presa e deixou dois aparelhos sem
+        // atualizar em silencio (19/08). Sem isto, o unico jeito seria alguem ir
+        // ate a loja ou esperar a energia cair a noite.
+        //
+        // Agenda a volta ANTES de morrer: com o quiosque ligado o Android
+        // costuma restaurar a tarefa sozinho, mas o alarme cobre o caso em que
+        // ele nao restaura, e uma vitrine apagada e pior que o problema original.
+        "restart_app" -> {
+            val intent = android.content.Intent(ctx, MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            val pi = android.app.PendingIntent.getActivity(
+                ctx, 1, intent,
+                android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            try {
+                (ctx.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
+                    .set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 2_000, pi)
+            } catch (_: Exception) {
+            }
+            // Morre DEPOIS de a resposta subir: matar agora perderia o relato, e
+            // o painel ficaria sem saber se o comando chegou a rodar.
+            Thread {
+                try { Thread.sleep(6_000) } catch (_: InterruptedException) {}
+                kotlin.system.exitProcess(0)
+            }.start()
+            "reiniciando o aplicativo"
+        }
         "update_retry" -> {
             Prefs.clearUpdateFailure(ctx)
             "vai tentar atualizar de novo"

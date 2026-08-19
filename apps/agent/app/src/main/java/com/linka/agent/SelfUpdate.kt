@@ -19,7 +19,25 @@ import java.net.URL
  */
 object SelfUpdate {
 
-    private var running = false
+    /**
+     * QUANDO a tentativa em curso comecou (0 = nenhuma).
+     *
+     * Era um booleano, e isso prendia o aparelho para sempre: a flag pertence ao
+     * objeto e vive enquanto o processo viver, entao uma thread de download
+     * pendurada deixava `running` em true e TODA chamada seguinte voltava na
+     * primeira linha — sem baixar, sem gravar estado, sem erro. Um aparelho
+     * parado numa versao velha, calado, ate alguem reiniciar o app.
+     *
+     * Rede que entrega bytes bem devagar nao dispara o tempo-limite de leitura:
+     * cada pedaco chega dentro do prazo, e a copia inteira nunca termina. Foi o
+     * que aconteceu com um Moto G06 e um Moto G17 na Casas Bahia (19/08): a
+     * frota subiu para a 0.90.0 e os dois ficaram na 0.88.0, sem nada no painel.
+     */
+    @Volatile
+    private var rodandoDesde = 0L
+
+    /** Tentativa mais velha que isto e considerada morta, e outra pode comecar. */
+    private const val TENTATIVA_EXPIRA_MS = 10 * 60_000L
 
     /**
      * Só instala versão MAIS NOVA. Comparar por "diferente" fazia um aparelho que
@@ -103,9 +121,20 @@ object SelfUpdate {
         // ANTES do download (e não depois): se o processo morrer no meio da
         // instalação, ela tem que contar, senão um APK que derruba o app na
         // instalação viraria laço infinito.
+        val agora = System.currentTimeMillis()
         synchronized(this) {
-            if (running) return
-            running = true
+            val emCurso = rodandoDesde
+            if (emCurso != 0L && agora - emCurso < TENTATIVA_EXPIRA_MS) {
+                // Ja tem uma tentativa viva. Grava o estado ANTES de sair: era
+                // exatamente aqui que o aparelho sumia do radar, voltando sem
+                // deixar rastro nenhum.
+                Prefs.setUpdateState(
+                    ctx,
+                    "baixando $version há ${(agora - emCurso) / 1000}s",
+                )
+                return
+            }
+            rodandoDesde = agora
         }
         Prefs.setUpdateAttempt(ctx, version, tentativas + 1)
         // CONTA O QUE ESTA FAZENDO. Sem isto o painel so fica sabendo quando o
@@ -137,7 +166,7 @@ object SelfUpdate {
                     "falha ao instalar $version: " + (e.message ?: "erro desconhecido"),
                 )
             } finally {
-                running = false
+                rodandoDesde = 0L
             }
         }.start()
     }
@@ -160,8 +189,25 @@ object SelfUpdate {
                 return null
             }
             val expected = conn.contentLengthLong
+            // COPIA COM PRAZO. `readTimeout` cobre cada leitura, nao a soma
+            // delas: uma rede que entrega alguns bytes por vez atende todos os
+            // prazos individuais e nunca termina. Sem um limite do conjunto, a
+            // thread fica pendurada e trava as proximas tentativas.
+            val limite = System.currentTimeMillis() + TENTATIVA_EXPIRA_MS
             temp.outputStream().use { out ->
-                conn.inputStream.use { it.copyTo(out, 64 * 1024) }
+                conn.inputStream.use { entrada ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val lidos = entrada.read(buffer)
+                        if (lidos < 0) break
+                        out.write(buffer, 0, lidos)
+                        if (System.currentTimeMillis() > limite) {
+                            ultimoMotivo = "download passou de 10 minutos e foi interrompido"
+                            temp.delete()
+                            return null
+                        }
+                    }
+                }
             }
             // APK pela metade instalado é aparelho quebrado em loja.
             if (expected > 0 && temp.length() != expected) {

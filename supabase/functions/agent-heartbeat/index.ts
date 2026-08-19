@@ -44,6 +44,9 @@ const COMMANDS = new Set([
   // caminho até ele é que estava cortado. Toda entrada nova aqui é obrigatória —
   // esta lista é o que decide o que chega ao aparelho.
   "update_retry",
+  // Reinicia o aplicativo. Ultimo recurso para estado preso em memoria — o
+  // tipo de travamento que nenhum outro comando alcanca.
+  "restart_app",
 ]);
 
 /** Mesma normalização do agent-provision: "motorola edge 30 ultra" ≡ "Moto Edge 30 Ultra". */
