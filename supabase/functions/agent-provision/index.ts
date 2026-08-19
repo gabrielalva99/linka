@@ -246,6 +246,21 @@ Deno.serve(async (req) => {
     device_token: token,
     status: "online",
     last_seen_at: new Date().toISOString(),
+    // VOLTOU PARA A VITRINE: a retirada para venda deixa de valer.
+    //
+    // Aparelho retirado sai da lista de pendências de propósito (aparelho
+    // vendido não é aparelho com defeito). Mas venda desfeita, aparelho
+    // reaproveitado ou retirada feita por engano trazem o aparelho de volta — e
+    // sem limpar aqui ele voltaria a operar INVISÍVEL: sem alerta de fora do ar,
+    // sem aparecer em pendência nenhuma, para sempre. Um aparelho mudo numa loja
+    // é pior que um aparelho com problema, porque ninguém vai procurar.
+    //
+    // Visto no Razr em 19/08: reprovisionado, tocando vídeo, e ainda marcado
+    // como retirado.
+    retirado_em: null,
+    retirado_por: null,
+    retirado_cargo: null,
+    retirado_loja: null,
   };
   // Aparelho que já existia e foi reprovisionado com código de loja mudou de
   // lugar de verdade — quem está com ele na mão sabe melhor que o cadastro.
