@@ -56,6 +56,31 @@ const CONNECTION_LABELS: Record<string, string> = {
   none: "Sem rede",
 };
 
+/**
+ * O relato do aparelho em português.
+ *
+ * O agente escreve o motivo com o nome que o Android dá ao erro
+ * ("SocketTimeoutException"), porque é o que ele tem na mão e é o que serve
+ * para investigar. Esta tela, porém, é lida por quem opera a loja: "a rede não
+ * respondeu a tempo" diz a mesma coisa e permite agir.
+ *
+ * O que não estiver mapeado passa direto — texto técnico é ruim, mas esconder
+ * o motivo seria pior.
+ */
+function emPortugues(relato: string): string {
+  const mapa: [RegExp, string][] = [
+    [/SocketTimeoutException:?\s*\w*/i, "a rede da loja não respondeu a tempo"],
+    [/UnknownHostException:?\s*\S*/i, "o aparelho não achou o endereço do servidor"],
+    [/ConnectException:?\s*\S*/i, "não foi possível conectar ao servidor"],
+    [/SSLException:?\s*\S*/i, "a conexão segura falhou"],
+    [/FileNotFoundException:?\s*\S*/i, "o arquivo da versão não foi encontrado"],
+    [/IOException:?\s*\S*/i, "a transferência foi interrompida"],
+  ];
+  let saida = relato;
+  for (const [de, para] of mapa) saida = saida.replace(de, para);
+  return saida;
+}
+
 export default async function DeviceDetailPage({
   params,
 }: {
@@ -332,15 +357,16 @@ export default async function DeviceDetailPage({
           em dia. Foi assim que o Moto G06 passou horas atrás sem nada acusar, e
           só apareceu quando o Gabriel comparou versões na lista de frota. */}
       {!d.update_error && d.update_state && (
+        /* SEM BOTÃO AQUI, de propósito. Enquanto a tentativa está em curso,
+           "tentar de novo" não acelera nada: o aparelho já vai repetir sozinho,
+           e o botão só convida a apertar sem efeito — que é como um painel
+           ensina a não confiar nos próprios botões. Ele existe no bloco de
+           baixo, que é o caso em que o aparelho DESISTIU e alguém precisa
+           liberar uma nova rodada. */
         <div className="mt-6 rounded-lg border border-line bg-surface px-4 py-3">
           <p className="text-xs text-muted">
-            {t.device.updateProgress}: {d.update_state}
+            {t.device.updateProgress}: {emPortugues(d.update_state)}
           </p>
-          {podeOperar && (
-            <div className="mt-2">
-              <UpdateRetry deviceId={d.id} />
-            </div>
-          )}
         </div>
       )}
 
