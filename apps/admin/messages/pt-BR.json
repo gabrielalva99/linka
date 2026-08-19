@@ -426,6 +426,7 @@
     "lowBattery": "bateria baixa",
     "hot": "quente",
     "noStoreSet": "sem loja",
+    "noModelSet": "sem modelo cadastrado; fica fora dos relatórios por modelo e da cobertura por linha",
     "readFailed": "Não consegui ler a situação dos aparelhos",
     "readFailedHint": "Isso não quer dizer que está tudo bem nem que está tudo mal: quer dizer que o painel não conseguiu consultar agora. Recarregue a página; se continuar, saia e entre de novo.",
     "producing": "A operação está produzindo?",

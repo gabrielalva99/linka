@@ -271,6 +271,9 @@ export default async function DashboardPage() {
     bateria_baixa: t.home.lowBattery,
     quente: t.home.hot,
     sem_loja: t.home.noStoreSet,
+    // Sem modelo o aparelho some dos relatórios por modelo E da cobertura por
+    // linha — a marca deixa de ver que a linha dela está instalada na loja.
+    sem_modelo: t.home.noModelSet,
   };
 
   return (
