@@ -29,6 +29,12 @@
          depender de uma lista escrita à mão.
          É permissão ampla e existe de propósito: somos dono do aparelho e o app
          não é distribuído pela Play Store. -->
+    <!-- Sem isto o pedido de desinstalação é ENGOLIDO pelo Android: sem
+         exceção, sem log, sem nada na tela. Foi o que fez o botão "Desinstalar
+         o LINKA" não fazer nada depois da retirada para venda (visto pelo
+         Gabriel no aparelho, 19/08) — o controle voltava, o app dizia que
+         estava pronto, e o passo final simplesmente não acontecia. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
