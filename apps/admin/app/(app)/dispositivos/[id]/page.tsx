@@ -67,7 +67,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, device_models(name), stores(name, timezone), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -187,6 +187,10 @@ export default async function DeviceDetailPage({
     is_active: boolean;
     archived_at: string | null;
     archive_reason: string | null;
+    retirado_em: string | null;
+    retirado_por: string | null;
+    retirado_cargo: string | null;
+    retirado_loja: string | null;
     device_models: Rel;
     stores:
       | { name: string | null; timezone: string | null }
@@ -343,6 +347,25 @@ export default async function DeviceDetailPage({
         deviceId={d.id}
         podeOperar={podeOperar}
       />
+
+      {d.retirado_em && (
+        /* RETIRADO PARA VENDA. Vem antes de tudo porque muda a leitura da página
+           inteira: sem isto, um aparelho vendido parece um aparelho com defeito
+           — offline, sem vídeo, sem bateria — e alguém sai atrás de um problema
+           que não existe. */
+        <section className="mt-8 rounded-xl border border-line bg-surface p-5">
+          <h2 className="text-sm font-semibold">Retirado da vitrine para venda</h2>
+          <p className="mt-2 text-sm">
+            {d.retirado_por}
+            {d.retirado_cargo ? ` · ${d.retirado_cargo}` : ""}
+            {d.retirado_loja ? ` · ${d.retirado_loja}` : ""}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {dataHora(d.retirado_em, fusoDaLoja)} · informado no próprio aparelho,
+            com o PIN de manutenção da loja
+          </p>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t.device.kiosk}</h2>

@@ -1293,6 +1293,146 @@ const val PASSADAS_DA_NUVEM = 3
         mostrarManutencao()
     }
 
+    /**
+     * QUEM ESTÁ RETIRANDO ESTE APARELHO.
+     *
+     * ── Por que perguntar (pedido do Gabriel, 18/08) ──────────────────────────
+     * Desmontar uma vitrine é uma ação cara e, do jeito anterior, anônima: o
+     * aparelho sumia da frota e não sobrava rastro de quem fez. "Foi só um teste"
+     * é uma resposta barata quando ninguém precisa assinar embaixo.
+     *
+     * O dado é DECLARATÓRIO, e vale dizer isso em voz alta: ninguém confere a
+     * identidade aqui. O que sustenta o registro é o PIN da loja, que só quem
+     * trabalha ali tem, mais a hora exata gravada pelo servidor. Não é prova
+     * judicial; é o suficiente para uma conversa com nome e data.
+     *
+     * ── A ordem importa ───────────────────────────────────────────────────────
+     * O registro sobe ANTES de o aparelho perder o controle. Depois do
+     * desprovisionamento o app é desinstalado, e não existe segunda chance de
+     * contar quem foi. Por isso a tela espera a confirmação do servidor em vez de
+     * mandar e seguir em frente.
+     *
+     * ── Sem rede ──────────────────────────────────────────────────────────────
+     * Não trava a venda: avisa que o registro não subiu e deixa a pessoa decidir.
+     * Loja parada com cliente na frente é um custo real, e o remédio não pode
+     * doer mais que a doença.
+     */
+    private fun telaDeRetirada() {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(56, 120, 56, 56)
+            setBackgroundColor(getColor(R.color.marca_preto))
+        }
+        val titulo = TextView(this).apply {
+            text = "Retirar da vitrine"
+            textSize = 22f
+            setTextColor(getColor(R.color.marca_verde))
+        }
+        val explica = TextView(this).apply {
+            text = "Este aparelho vai sair da vitrine e as proteções serão " +
+                "removidas para o cliente usar normalmente." +
+                System.lineSeparator() + System.lineSeparator() +
+                "Identifique quem está fazendo a retirada. A informação fica " +
+                "registrada com a data e a hora."
+            textSize = 14f
+            setPadding(0, 24, 0, 24)
+            setTextColor(getColor(R.color.marca_cinza))
+        }
+        fun campo(dica: String) = EditText(this).apply {
+            hint = dica
+            setTextColor(getColor(R.color.marca_claro))
+            setHintTextColor(getColor(R.color.marca_cinza))
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val nome = campo("Nome completo")
+        val cargo = campo("Cargo")
+        val loja = campo("Loja")
+        val status = TextView(this).apply {
+            textSize = 14f
+            setPadding(0, 24, 0, 8)
+            setTextColor(getColor(R.color.marca_claro))
+        }
+
+        val confirmar = Button(this).apply {
+            text = "Confirmar retirada"
+            setBackgroundColor(getColor(R.color.marca_verde))
+            setTextColor(getColor(R.color.marca_preto))
+        }
+        val voltar = Button(this).apply {
+            text = "Cancelar"
+            setOnClickListener { mostrarManutencao() }
+        }
+
+        confirmar.setOnClickListener {
+            val n = nome.text.toString().trim()
+            // Nome de uma letra não identifica ninguém, e registro que não
+            // identifica é pior que registro nenhum: parece resposta e não é.
+            if (n.length < 3) {
+                status.text = "Escreva o nome de quem está retirando o aparelho."
+                return@setOnClickListener
+            }
+            confirmar.isEnabled = false
+            confirmar.text = "Registrando…"
+            status.text = "Enviando o registro…"
+
+            val dados = org.json.JSONObject()
+                .put("nome", n)
+                .put("cargo", cargo.text.toString().trim())
+                .put("loja", loja.text.toString().trim())
+            Prefs.setRetiradaPendente(this, dados.toString())
+
+            Thread {
+                Telemetry.beat(this)
+                // Pendência limpa = o servidor confirmou. É o mesmo sinal que o
+                // app já usa para a faxina e a saída de manutenção.
+                val registrou = Prefs.retiradaPendente(this) == null
+                runOnUiThread {
+                    if (registrou) {
+                        status.text = "Registrado. Removendo as proteções…"
+                        concluirRetirada(status, confirmar)
+                    } else {
+                        status.text = "Sem conexão: o registro NÃO foi enviado." +
+                            System.lineSeparator() + System.lineSeparator() +
+                            "Se continuar, não vai existir registro de quem retirou " +
+                            "este aparelho."
+                        confirmar.isEnabled = true
+                        confirmar.text = "Continuar mesmo assim"
+                        confirmar.setOnClickListener {
+                            confirmar.isEnabled = false
+                            concluirRetirada(status, confirmar)
+                        }
+                    }
+                }
+            }.start()
+        }
+
+        root.addView(titulo); root.addView(explica)
+        root.addView(nome); root.addView(cargo); root.addView(loja)
+        root.addView(status); root.addView(confirmar); root.addView(voltar)
+        setContentView(root)
+    }
+
+    /** Tira as proteções e oferece a desinstalação. Ponto sem volta. */
+    private fun concluirRetirada(status: TextView, botao: Button) {
+        val resultado = Kiosk.deprovision(this)
+        status.text = resultado
+        if (resultado.startsWith("controle devolvido")) {
+            botao.text = "Agora desinstale o LINKA"
+            try {
+                startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_DELETE,
+                        android.net.Uri.parse("package:" + packageName),
+                    ),
+                )
+            } catch (_: Exception) {
+            }
+        } else {
+            botao.text = "Não foi possível — avise o suporte"
+        }
+    }
+
     private fun mostrarManutencao() {
         telaDeManutencaoAberta = true
         val root = LinearLayout(this).apply {
@@ -1379,46 +1519,7 @@ const val PASSADAS_DA_NUVEM = 3
         // aparelho que ia continuar na vitrine.
         val venda = Button(this).apply {
             text = "Preparar para venda"
-            var confirmando = false
-            setOnClickListener {
-                if (!confirmando) {
-                    confirmando = true
-                    text = "Confirmar: remover o LINKA deste aparelho"
-                    aviso.text = "O aparelho sai da vitrine e da frota, e as travas " +
-                        "são removidas para o cliente usar normalmente." +
-                        System.lineSeparator() + System.lineSeparator() +
-                        "Só volta a ser vitrine pelo cabo, no escritório. " +
-                        "Toque de novo para confirmar."
-                    return@setOnClickListener
-                }
-                isEnabled = false
-                text = "Removendo…"
-                val resultado = Kiosk.deprovision(this@MainActivity)
-                val deuCerto = resultado.startsWith("controle devolvido")
-                // Registra ANTES de abrir a desinstalação: depois que o app sair,
-                // não há mais quem conte ao painel o que aconteceu com o aparelho.
-                Prefs.setSaidaPendente(this@MainActivity, "preparado para venda: " + resultado)
-                Telemetry.beatAsync(this@MainActivity)
-                aviso.text = resultado
-                if (deuCerto) {
-                    text = "Agora desinstale o LINKA"
-                    // Abre a desinstalação pelo próprio Android: sem isto o
-                    // vendedor teria de achar o app nos Ajustes, e o passo mais
-                    // fácil de esquecer é o que deixa a vitrine voltando na mão
-                    // do cliente.
-                    try {
-                        startActivity(
-                            android.content.Intent(
-                                android.content.Intent.ACTION_DELETE,
-                                android.net.Uri.parse("package:" + packageName),
-                            ),
-                        )
-                    } catch (_: Exception) {
-                    }
-                } else {
-                    text = "Não foi possível — avise o suporte"
-                }
-            }
+            setOnClickListener { telaDeRetirada() }
         }
 
         root.addView(titulo); root.addView(conta); root.addView(aviso)

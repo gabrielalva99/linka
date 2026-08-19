@@ -556,6 +556,23 @@ object Prefs {
      * ruim: sem isso, destravar sem internet viraria destravar sem registro —
      * exatamente o caso em que a trilha mais importa.
      */
+    /**
+     * Quem retirou o aparelho para venda, esperando confirmacao do servidor.
+     *
+     * Mesmo padrao das outras pendencias: so apaga depois que o servidor
+     * respondeu. Aqui isso pesa mais que nos outros casos — este e o ultimo
+     * recado que o aparelho manda antes de perder o controle, e quem sumiu com
+     * uma vitrine e justamente quem nao quer ser identificado.
+     */
+    fun retiradaPendente(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getString("retirada_pendente", null)
+
+    fun setRetiradaPendente(ctx: Context, value: String?) {
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString("retirada_pendente", value).apply()
+    }
+
     fun saidaPendente(ctx: Context): String? =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_SAIDA_PENDENTE, null)
 

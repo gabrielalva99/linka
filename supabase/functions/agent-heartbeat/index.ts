@@ -262,6 +262,40 @@ Deno.serve(async (req) => {
     });
   }
 
+  // RETIRADA PARA VENDA: quem tirou este aparelho da vitrine.
+  //
+  // A loja vende os aparelhos de exposição, e a remoção é feita na própria loja,
+  // atrás do PIN. Sem nome não sobra rastro nenhum de quem desmontou uma vitrine
+  // — e "foi só um teste" é uma resposta cara quando a vitrine some no sábado.
+  //
+  // O dado é DECLARATÓRIO, e é honesto dizer isso: o que o sustenta é o PIN da
+  // loja, que só quem trabalha ali tem, mais a hora exata gravada aqui.
+  //
+  // Grava ANTES de o aparelho perder o controle — este é o último recado que ele
+  // consegue mandar. Depois disso o app é desinstalado e não existe segunda
+  // chance de contar quem foi.
+  if (payload.retirada && typeof payload.retirada === "object") {
+    const r = payload.retirada as Record<string, unknown>;
+    const texto = (v: unknown, max: number) => {
+      const s = String(v ?? "").trim();
+      return s.length > 0 ? s.slice(0, max) : null;
+    };
+    const nome = texto(r.nome, 120);
+    // Sem nome não registra: linha com "quem: (vazio)" é pior que linha nenhuma,
+    // porque parece resposta e não é.
+    if (nome) {
+      await supabase
+        .from("devices")
+        .update({
+          retirado_em: new Date().toISOString(),
+          retirado_por: nome,
+          retirado_cargo: texto(r.cargo, 120),
+          retirado_loja: texto(r.loja, 160),
+        })
+        .eq("id", device.id);
+    }
+  }
+
   // QUEDAS DO APLICATIVO, relatadas pelo próprio aparelho.
   //
   // Chegam pela batida em vez de por canal próprio: a batida já vai e volta, e um

@@ -111,6 +111,9 @@ object Telemetry {
         Prefs.setPendingCleanupReport(ctx, null)
         // Idem para a saída de manutenção: só esquece com confirmação do servidor.
         Prefs.setSaidaPendente(ctx, null)
+        // E quem retirou o aparelho para venda. É por esta linha que a tela sabe
+        // que pode seguir: pendência limpa quer dizer registro no servidor.
+        Prefs.setRetiradaPendente(ctx, null)
         // E as quedas: apagar ao enviar perderia o relato numa falha de rede, que
         // é justamente o que costuma acompanhar aparelho com problema.
         CrashLog.limpar(ctx)
@@ -288,6 +291,9 @@ object Telemetry {
         // pegar rede. Só limpa depois de o servidor confirmar (abaixo), senão uma
         // queda de rede apagaria o registro justamente de quem destravou offline.
         Prefs.saidaPendente(ctx)?.let { body.put("maintenance_exit", it) }
+        Prefs.retiradaPendente(ctx)?.let {
+            body.put("retirada", try { JSONObject(it) } catch (_: Exception) { JSONObject() })
+        }
 
         return try {
             Api.heartbeat(token, body)
