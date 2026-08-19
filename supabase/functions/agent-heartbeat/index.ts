@@ -241,6 +241,12 @@ Deno.serve(async (req) => {
   // longe: a tela nao tem icone, entao o pacote dela nao entra no inventario, e
   // "o botao nao apareceu neste modelo" so se investigava com o aparelho na
   // mao. String vazia quer dizer "procurei e este modelo nao tem".
+  // O video que nao tocou. Vem para o painel porque e aqui que ele serve: na
+  // tela do aparelho, um codigo de erro so ocupa a vitrine que devia estar
+  // vendendo.
+  if (typeof payload.erro_de_video === "string") {
+    update.erro_de_video = payload.erro_de_video.slice(0, 300);
+  }
   if (typeof payload.tela_de_ram === "string") {
     update.tela_de_ram = payload.tela_de_ram.slice(0, 200);
   }

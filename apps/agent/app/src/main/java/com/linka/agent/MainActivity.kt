@@ -1771,16 +1771,48 @@ const val PASSADAS_DA_NUVEM = 3
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
-                    // Zera para o próximo ciclo tentar de novo (falha pode ser transitória).
+                    // ── VITRINE MORTA COM CODIGO DE ERRO NA CARA DO CLIENTE ──────
+                    //
+                    // Foi o que aconteceu no Moto G max da Casas Bahia (19/08): um
+                    // video que o aparelho nao conseguiu decodificar deixou a tela
+                    // parada em "ERROR_CODE_DECODING_FAILED", em loja aberta, ate
+                    // alguem reparar. O arquivo ruim e um problema; a vitrine
+                    // apagada por causa dele e um problema MAIOR, e este e nosso.
+                    //
+                    // Agora a falha de um arquivo nao derruba a vitrine:
+                    //   1. com outros videos na campanha, pula para o proximo —
+                    //      um arquivo quebrado tira uma peca do ar, nao a loja;
+                    //   2. sozinho, tenta de novo em 30s, porque falha de leitura
+                    //      costuma ser passageira;
+                    //   3. a tela nunca mostra codigo de erro: quem esta na frente
+                    //      dela e cliente de loja, nao quem vai consertar.
+                    //
+                    // O motivo tecnico continua indo para o painel na batida, que e
+                    // onde ele serve para alguma coisa.
+                    val quebrado = currentUrl
                     currentUrl = null
                     playerView = null
                     Prefs.setPlayingUrl(this@MainActivity, null)
                     Prefs.setPlayingFit(this@MainActivity, null)
                     Prefs.setMode(this@MainActivity, MODE_STOPPED)
-                    setContentView(
-                        waitingView("Não foi possível tocar o conteúdo: ${error.errorCodeName}"),
+                    Prefs.setUltimoErroDeVideo(
+                        this@MainActivity,
+                        error.errorCodeName + " · " + (quebrado?.substringAfterLast('/') ?: ""),
                     )
-                    waitingShown = true
+
+                    val outros = playlist.filter { it.first != quebrado }
+                    if (outros.isNotEmpty()) {
+                        val (url, fit) = outros.first()
+                        playVideo(url, fit)
+                    } else {
+                        setContentView(comSaidaEscondida(waitingView("Preparando a vitrine…")))
+                        waitingShown = true
+                        rodizio.postDelayed({
+                            if (currentUrl == null && quebrado != null) {
+                                playVideo(quebrado, currentFit ?: FIT_ZOOM)
+                            }
+                        }, 30_000)
+                    }
                     Telemetry.beatAsync(this@MainActivity)
                 }
             })

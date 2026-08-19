@@ -185,6 +185,22 @@ object Prefs {
      * cada abertura do painel, e a varredura acontece com o cliente esperando a
      * tela abrir.
      */
+    /**
+     * O ultimo video que o aparelho nao conseguiu tocar, e por que.
+     *
+     * Vai para o painel na batida. A TELA nunca mostra isso: quem esta na frente
+     * dela e cliente de loja. Quem precisa do codigo do erro e quem conserta, e
+     * essa pessoa esta olhando o painel.
+     */
+    private const val KEY_ERRO_VIDEO = "ultimo_erro_video"
+
+    fun ultimoErroDeVideo(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_ERRO_VIDEO, null)
+
+    fun setUltimoErroDeVideo(ctx: Context, valor: String) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_ERRO_VIDEO, valor).apply()
+
     private const val KEY_TELA_RAM = "tela_de_ram"
 
     /**
