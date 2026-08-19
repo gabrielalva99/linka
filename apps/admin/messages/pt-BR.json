@@ -50,6 +50,8 @@
     "colName": "Aparelho",
     "colModel": "Modelo",
     "colStore": "Loja",
+    "colCampaign": "Campanha",
+    "noCampaign": "sem campanha",
     "colMode": "Modo",
     "colBattery": "Bateria",
     "colVersion": "Versão",

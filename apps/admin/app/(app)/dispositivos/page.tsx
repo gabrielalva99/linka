@@ -163,6 +163,23 @@ export default async function FrotaPage({
   )
     .eq("is_active", !soArquivados)
     .order("code", { ascending: true });
+  // A CAMPANHA DE CADA APARELHO, em uma consulta só.
+  //
+  // Vem da view que reusa a mesma regra que o aparelho obedece (prioridade do
+  // alvo, janela de datas, horário da loja). Consultar aqui, e não dentro do
+  // laço, evita uma ida ao banco por linha — com 250 aparelhos isso seria a
+  // diferença entre a lista abrir e a lista travar.
+  const { data: campanhas } = await porCliente(
+    supabase.from("v_campanha_do_aparelho").select("device_id, campanha"),
+    filtro,
+  );
+  const campanhaPorAparelho = new Map(
+    ((campanhas ?? []) as { device_id: string; campanha: string | null }[]).map((c) => [
+      c.device_id,
+      c.campanha,
+    ]),
+  );
+
   const t = getMessages();
   const ctx = await getSessionContext();
   const podeMexer = podeOperar(ctx);
@@ -377,6 +394,7 @@ export default async function FrotaPage({
             ),
             lojaId: d.store_id,
             lojaNome: nomeDaLoja(d.stores as never) ?? "",
+            campanha: campanhaPorAparelho.get(d.id as string) ?? null,
             modo: d.mode ? DEVICE_MODE_LABELS[d.mode] : "—",
             bateria:
               (d.battery_level != null ? `${d.battery_level}%` : "—") +

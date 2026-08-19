@@ -16,6 +16,7 @@ export type Linha = {
   modelo: string;
   lojaId: string | null;
   lojaNome: string;
+  campanha: string | null;
   modo: string;
   bateria: string;
   versao: string;
@@ -194,6 +195,9 @@ export function FleetTable({
               <th className="px-4 py-2 font-medium">{t.fleet.colName}</th>
               <th className="px-4 py-2 font-medium">{t.fleet.colModel}</th>
               <th className="px-4 py-2 font-medium">{t.fleet.colStore}</th>
+              {/* A pergunta que a operação faz primeiro ao olhar a frota: o que
+                  está no ar em cada aparelho. Antes só se via abrindo um a um. */}
+              <th className="px-4 py-2 font-medium">{t.fleet.colCampaign}</th>
               <th className="px-4 py-2 font-medium">{t.fleet.colMode}</th>
               <th className="px-4 py-2 font-medium">{t.fleet.colBattery}</th>
               <th className="px-4 py-2 font-medium">{t.fleet.colVersion}</th>
@@ -240,6 +244,14 @@ export function FleetTable({
                     </Link>
                   ) : (
                     d.lojaNome
+                  )}
+                </td>
+                <td className="px-4 py-3 text-muted">
+                  {/* "sem campanha" é informação, não vazio: aparelho que não é
+                      alcançado por campanha nenhuma fica com a tela parada, e
+                      isso precisa saltar aos olhos na lista. */}
+                  {d.campanha ?? (
+                    <span className="text-warning">{t.fleet.noCampaign}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-muted">{d.modo}</td>
