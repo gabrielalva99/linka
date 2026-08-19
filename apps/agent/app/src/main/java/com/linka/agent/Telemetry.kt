@@ -287,6 +287,7 @@ object Telemetry {
         Prefs.pendingCleanupReport(ctx)?.let { body.put("cleanup_result", it) }
         // Aparelho que desistiu de atualizar não pode ficar em silêncio.
         body.put("update_error", Prefs.updateError(ctx) ?: JSONObject.NULL)
+        body.put("update_state", Prefs.updateState(ctx) ?: JSONObject.NULL)
         // Saída de manutenção que aconteceu na loja: sobe na primeira batida que
         // pegar rede. Só limpa depois de o servidor confirmar (abaixo), senão uma
         // queda de rede apagaria o registro justamente de quem destravou offline.

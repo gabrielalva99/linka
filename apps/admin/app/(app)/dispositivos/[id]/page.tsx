@@ -67,7 +67,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, update_state, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -180,6 +180,7 @@ export default async function DeviceDetailPage({
     last_cleanup_at: string | null;
     last_cleanup_result: string | null;
     update_error: string | null;
+    update_state: string | null;
     block_settings: boolean;
     blocked_apps: string | null;
     screen_lock_set: boolean | null;
@@ -324,6 +325,23 @@ export default async function DeviceDetailPage({
         <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
           {t.device.screenLockWarning}
         </p>
+      )}
+
+      {/* O MEIO DO CAMINHO. `update_error` só aparece depois de o aparelho
+          DESISTIR; até lá, um aparelho parado na versão velha era idêntico a um
+          em dia. Foi assim que o Moto G06 passou horas atrás sem nada acusar, e
+          só apareceu quando o Gabriel comparou versões na lista de frota. */}
+      {!d.update_error && d.update_state && (
+        <div className="mt-6 rounded-lg border border-line bg-surface px-4 py-3">
+          <p className="text-xs text-muted">
+            {t.device.updateProgress}: {d.update_state}
+          </p>
+          {podeOperar && (
+            <div className="mt-2">
+              <UpdateRetry deviceId={d.id} />
+            </div>
+          )}
+        </div>
       )}
 
       {d.update_error && (

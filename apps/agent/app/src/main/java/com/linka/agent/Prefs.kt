@@ -152,10 +152,30 @@ object Prefs {
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_UPD_ERROR, value).apply()
 
+    /**
+     * O que esta acontecendo com a atualizacao AGORA — baixando, ou por que
+     * falhou na ultima vez.
+     *
+     * Existe porque `update_error` so e escrito quando o agente DESISTE, depois
+     * de tres tentativas. Enquanto isso, um aparelho parado na versao velha era
+     * indistinguivel de um aparelho em dia (visto no Moto G06 em 19/08, que
+     * ficou horas atras sem nada no painel).
+     */
+    private const val KEY_UPD_STATE = "update_state"
+
+    fun updateState(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_UPD_STATE, null)
+
+    fun setUpdateState(ctx: Context, value: String?) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit().apply {
+            if (value == null) remove(KEY_UPD_STATE) else putString(KEY_UPD_STATE, value)
+        }.apply()
+
     /** Atualizou com sucesso: some o histórico de falha e o aviso do painel. */
     fun clearUpdateFailure(ctx: Context) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR).apply()
+            .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR)
+            .remove(KEY_UPD_STATE).apply()
 
     private const val KEY_LAST_SCAN = "last_event_scan"
 

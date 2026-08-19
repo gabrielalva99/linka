@@ -229,6 +229,17 @@ Deno.serve(async (req) => {
     update.last_command_result = String(payload.command_result).slice(0, 500);
   }
   // Desistiu de atualizar: o painel precisa dizer por quê, não só "desatualizado".
+  // O QUE O APARELHO ESTA TENTANDO na atualizacao. Diferente de update_error,
+  // que so aparece depois de o agente DESISTIR: este conta o meio do caminho
+  // ("baixando", "veio incompleto, tentativa 2 de 3"). Sem ele, aparelho parado
+  // na versao velha e indistinguivel de aparelho em dia — foi o caso do Moto
+  // G06 em 19/08.
+  if ("update_state" in payload) {
+    update.update_state =
+      typeof payload.update_state === "string" && payload.update_state.length > 0
+        ? payload.update_state.slice(0, 300)
+        : null;
+  }
   if ("update_error" in payload) {
     update.update_error =
       typeof payload.update_error === "string" && payload.update_error.length > 0

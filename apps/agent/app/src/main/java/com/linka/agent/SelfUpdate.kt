@@ -108,18 +108,46 @@ object SelfUpdate {
             running = true
         }
         Prefs.setUpdateAttempt(ctx, version, tentativas + 1)
+        // CONTA O QUE ESTA FAZENDO. Sem isto o painel so fica sabendo quando o
+        // agente DESISTE, e ate la um aparelho parado na versao velha e igual a
+        // um aparelho em dia — foi assim que o Moto G06 passou horas atras sem
+        // ninguem notar (19/08).
+        Prefs.setUpdateState(
+            ctx,
+            "baixando $version (tentativa ${tentativas + 1} de $MAX_TENTATIVAS)",
+        )
         Thread {
             try {
                 val apk = download(ctx, url)
-                if (apk != null) install(ctx, apk)
-            } catch (_: Exception) {
+                if (apk != null) {
+                    Prefs.setUpdateState(ctx, "instalando $version")
+                    install(ctx, apk)
+                } else {
+                    // O motivo vem de dentro do download: so ele sabe se foi rede,
+                    // arquivo pela metade ou disco cheio.
+                    Prefs.setUpdateState(
+                        ctx,
+                        (ultimoMotivo ?: "não consegui baixar") +
+                            " — versão $version, tentativa ${tentativas + 1} de $MAX_TENTATIVAS",
+                    )
+                }
+            } catch (e: Exception) {
+                Prefs.setUpdateState(
+                    ctx,
+                    "falha ao instalar $version: " + (e.message ?: "erro desconhecido"),
+                )
             } finally {
                 running = false
             }
         }.start()
     }
 
+    /** Por que o ultimo download nao deu certo. Lido logo apos a chamada. */
+    @Volatile
+    private var ultimoMotivo: String? = null
+
     private fun download(ctx: Context, url: String): File? {
+        ultimoMotivo = null
         val temp = File(ctx.cacheDir, "update.apk.part")
         val target = File(ctx.cacheDir, "update.apk")
         var conn: HttpURLConnection? = null
@@ -127,19 +155,25 @@ object SelfUpdate {
             conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 20000
             conn.readTimeout = 120000
-            if (conn.responseCode !in 200..299) return null
+            if (conn.responseCode !in 200..299) {
+                ultimoMotivo = "servidor respondeu ${conn.responseCode}"
+                return null
+            }
             val expected = conn.contentLengthLong
             temp.outputStream().use { out ->
                 conn.inputStream.use { it.copyTo(out, 64 * 1024) }
             }
             // APK pela metade instalado é aparelho quebrado em loja.
             if (expected > 0 && temp.length() != expected) {
+                // Arquivo pela metade: quase sempre rede da loja caindo no meio.
+                ultimoMotivo = "download veio incompleto (${temp.length()} de $expected bytes)"
                 temp.delete()
                 return null
             }
             if (target.exists()) target.delete()
             return if (temp.renameTo(target)) target else null
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            ultimoMotivo = e.javaClass.simpleName + (e.message?.let { ": $it" } ?: "")
             temp.delete()
             return null
         } finally {

@@ -286,6 +286,10 @@ export default async function DashboardPage() {
     // Sem modelo o aparelho some dos relatórios por modelo E da cobertura por
     // linha — a marca deixa de ver que a linha dela está instalada na loja.
     sem_modelo: t.home.noModelSet,
+    // Aparelho que ficou para trás na versão. Antes disso, o único jeito de
+    // notar era comparar versões na lista de frota — foi assim que o G06 passou
+    // horas na versão velha sem nada acusar.
+    versao_atrasada: t.home.behindVersion,
   };
 
   return (
