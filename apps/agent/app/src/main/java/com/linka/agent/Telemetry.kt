@@ -288,6 +288,11 @@ object Telemetry {
         // Aparelho que desistiu de atualizar não pode ficar em silêncio.
         body.put("update_error", Prefs.updateError(ctx) ?: JSONObject.NULL)
         body.put("update_state", Prefs.updateState(ctx) ?: JSONObject.NULL)
+        // ONDE ESTA A TELA DE RAM NESTE APARELHO. Vai para o painel porque de
+        // fora nao da para descobrir: a tela nao tem icone, entao nao aparece no
+        // inventario. Sem isto, "o botao nao apareceu no Moto G" so se
+        // investigava com o aparelho na mao — e ele esta na loja.
+        Prefs.telaDeRam(ctx)?.let { body.put("tela_de_ram", it) }
         // Saída de manutenção que aconteceu na loja: sobe na primeira batida que
         // pegar rede. Só limpa depois de o servidor confirmar (abaixo), senão uma
         // queda de rede apagaria o registro justamente de quem destravou offline.

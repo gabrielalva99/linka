@@ -177,6 +177,23 @@ object Prefs {
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR)
             .remove(KEY_UPD_STATE).apply()
 
+    /**
+     * Onde mora a tela de Otimizacao de RAM neste aparelho ("pacote/classe"),
+     * ou "" quando ja procuramos e ele nao tem.
+     *
+     * O "" e importante: sem ele, aparelho sem o recurso refaz a varredura a
+     * cada abertura do painel, e a varredura acontece com o cliente esperando a
+     * tela abrir.
+     */
+    private const val KEY_TELA_RAM = "tela_de_ram"
+
+    fun telaDeRam(ctx: Context): String? =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_TELA_RAM, null)
+
+    fun setTelaDeRam(ctx: Context, valor: String) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_TELA_RAM, valor).apply()
+
     private const val KEY_LAST_SCAN = "last_event_scan"
 
     /** Até onde já lemos o uso do aparelho — evita recontar e evita pular. */

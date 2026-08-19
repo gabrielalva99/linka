@@ -456,6 +456,10 @@ object PainelDeRecursos {
      * Os Ajustes ficam na lista mesmo assim: outra linha da Motorola pode
      * hospedar a tela lá, e procurar nos dois custa nada.
      */
+    /**
+     * Onde procurar primeiro. Sao os que ja vimos hospedando a tela; o resto da
+     * busca cobre o que ainda nao vimos.
+     */
     private val PACOTES_COM_RAM = listOf(
         "com.motorola.appforecast",
         "com.android.settings",
@@ -489,20 +493,72 @@ object PainelDeRecursos {
      * oferece o recurso simplesmente não mostra a opção.
      */
     fun telaDeOtimizacaoDeRam(ctx: android.content.Context): Intent? {
+        val achado = ondeMoraARam(ctx) ?: return null
+        val corte = achado.lastIndexOf('/')
+        if (corte <= 0) return null
+        return Intent().setClassName(achado.substring(0, corte), achado.substring(corte + 1))
+    }
+
+    /**
+     * "pacote/classe" da tela de RAM, ou null se este aparelho nao tem.
+     *
+     * ── Por que varre em vez de conferir uma lista ────────────────────────────
+     * A lista fixa funcionou no Razr (com.motorola.appforecast) e NAO funcionou
+     * nos Moto G: o botao simplesmente nao aparecia, e nem dava para descobrir o
+     * pacote de longe — a tela nao tem icone, entao ela nao entra no inventario
+     * que o aparelho manda ao painel. Sem o aparelho na mao, era chute.
+     *
+     * Agora a busca comeca pelos conhecidos e, se nao achar, varre os pacotes da
+     * PROPRIA fabricante mais os Ajustes. Sao algumas dezenas, nao o aparelho
+     * inteiro: pedir a lista de activities de 200 pacotes estoura o limite de
+     * transacao do Android.
+     *
+     * ── Guardado depois de resolvido ──────────────────────────────────────────
+     * O resultado nao muda enquanto o aparelho for o mesmo, e o painel abre a
+     * cada primeiro toque do cliente. Varrer toda vez seria pagar a busca em
+     * cima de alguem esperando a tela aparecer.
+     */
+    fun ondeMoraARam(ctx: android.content.Context): String? {
+        Prefs.telaDeRam(ctx)?.let { return it.ifEmpty { null } }
+
         val pm = ctx.packageManager
-        for (pacote in PACOTES_COM_RAM) {
-            val alvo = try {
-                pm.getPackageInfo(pacote, android.content.pm.PackageManager.GET_ACTIVITIES)
-                    .activities
-                    ?.firstOrNull { a ->
-                        val nome = a.name.lowercase()
-                        a.exported && PISTAS_DE_RAM.any { nome.contains(it) }
-                    }
-            } catch (_: Exception) {
-                null
-            }
-            if (alvo != null) return Intent().setClassName(pacote, alvo.name)
+        fun procurar(pacote: String): String? = try {
+            pm.getPackageInfo(pacote, android.content.pm.PackageManager.GET_ACTIVITIES)
+                .activities
+                ?.firstOrNull { a ->
+                    val nome = a.name.lowercase()
+                    a.exported && PISTAS_DE_RAM.any { nome.contains(it) }
+                }
+                ?.let { "$pacote/${it.name}" }
+        } catch (_: Exception) {
+            null
         }
+
+        for (pacote in PACOTES_COM_RAM) {
+            procurar(pacote)?.let {
+                Prefs.setTelaDeRam(ctx, it)
+                return it
+            }
+        }
+
+        val candidatos = try {
+            pm.getInstalledPackages(0)
+                .map { it.packageName }
+                .filter { it.startsWith("com.motorola") || it.startsWith("com.android.settings") }
+                .filter { it !in PACOTES_COM_RAM }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        for (pacote in candidatos) {
+            procurar(pacote)?.let {
+                Prefs.setTelaDeRam(ctx, it)
+                return it
+            }
+        }
+
+        // Guarda o "nao tem" também: sem isso, aparelho sem o recurso pagaria a
+        // varredura inteira a cada abertura do painel.
+        Prefs.setTelaDeRam(ctx, "")
         return null
     }
 

@@ -234,6 +234,13 @@ Deno.serve(async (req) => {
   // ("baixando", "veio incompleto, tentativa 2 de 3"). Sem ele, aparelho parado
   // na versao velha e indistinguivel de aparelho em dia — foi o caso do Moto
   // G06 em 19/08.
+  // ONDE MORA A TELA DE RAM neste aparelho. Guardado para diagnosticar de
+  // longe: a tela nao tem icone, entao o pacote dela nao entra no inventario, e
+  // "o botao nao apareceu neste modelo" so se investigava com o aparelho na
+  // mao. String vazia quer dizer "procurei e este modelo nao tem".
+  if (typeof payload.tela_de_ram === "string") {
+    update.tela_de_ram = payload.tela_de_ram.slice(0, 200);
+  }
   if ("update_state" in payload) {
     update.update_state =
       typeof payload.update_state === "string" && payload.update_state.length > 0

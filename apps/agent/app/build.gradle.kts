@@ -25,8 +25,8 @@ android {
         // Fonte única da versão: o agente reporta BuildConfig.VERSION_NAME, então
         // a versão do pacote e a versão reportada não podem mais divergir (elas
         // divergiram: o painel dizia 0.10.1 e o Android ainda via 0.1.0).
-        versionCode = 1090
-        versionName = "0.88.0"
+        versionCode = 1091
+        versionName = "0.89.0"
     }
 
 
