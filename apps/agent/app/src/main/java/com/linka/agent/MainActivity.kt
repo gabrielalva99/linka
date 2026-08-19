@@ -1417,19 +1417,47 @@ const val PASSADAS_DA_NUVEM = 3
     private fun concluirRetirada(status: TextView, botao: Button) {
         val resultado = Kiosk.deprovision(this)
         status.text = resultado
-        if (resultado.startsWith("controle devolvido")) {
-            botao.text = "Agora desinstale o LINKA"
-            try {
-                startActivity(
-                    android.content.Intent(
-                        android.content.Intent.ACTION_DELETE,
-                        android.net.Uri.parse("package:" + packageName),
-                    ),
-                )
-            } catch (_: Exception) {
-            }
-        } else {
+        if (!resultado.startsWith("controle devolvido")) {
             botao.text = "Não foi possível — avise o suporte"
+            return
+        }
+
+        // SAI DO QUIOSQUE ANTES DE PEDIR A DESINSTALAÇÃO.
+        //
+        // Sem isto o botão não fazia nada, e "nada" é literal: o instalador de
+        // pacotes está FORA_DO_QUIOSQUE de propósito, e o Android recusa abrir
+        // app não autorizado durante o modo quiosque SEM erro, sem aviso, sem
+        // exceção para capturar. Na loja isso aparece como uma tela que travou —
+        // visto na primeira tentativa em 19/08, e eu só descobri porque o Gabriel
+        // estava olhando o aparelho: pelo banco e pelo sistema estava tudo certo.
+        Kiosk.destrancar(this)
+
+        botao.text = "Desinstalar o LINKA"
+        botao.isEnabled = true
+        // O botão continua servindo: se a tela do Android não vier (fabricante
+        // que recusa, ou o quiosque demorando para soltar), a pessoa toca de
+        // novo em vez de ficar sem saída.
+        botao.setOnClickListener { pedirDesinstalacao(status) }
+        pedirDesinstalacao(status)
+    }
+
+    private fun pedirDesinstalacao(status: TextView) {
+        val abriu = try {
+            startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_DELETE,
+                    android.net.Uri.parse("package:" + packageName),
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+        if (!abriu) {
+            status.text = "As proteções já foram removidas e o aparelho está " +
+                "liberado." +
+                System.lineSeparator() + System.lineSeparator() +
+                "Para tirar o aplicativo: Ajustes > Apps > LINKA > Desinstalar."
         }
     }
 
