@@ -187,12 +187,27 @@ object Prefs {
      */
     private const val KEY_TELA_RAM = "tela_de_ram"
 
-    fun telaDeRam(ctx: Context): String? =
-        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_TELA_RAM, null)
+    /**
+     * O valor guardado, mas SO se veio da versao atual do app.
+     *
+     * A busca melhora de versao para versao — ja mudou tres vezes hoje. Sem
+     * amarrar o resultado a versao que o produziu, um "nao achei" antigo
+     * congelava o aparelho na resposta errada para sempre: exatamente o caso dos
+     * Moto G, que tinham "nao achei" guardado de uma busca que nem procurava
+     * pelas palavras certas.
+     */
+    fun telaDeRam(ctx: Context): String? {
+        val bruto = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getString(KEY_TELA_RAM, null) ?: return null
+        val corte = bruto.indexOf('|')
+        if (corte < 0) return null                       // formato antigo: refaz
+        if (bruto.substring(0, corte) != Api.AGENT_VERSION) return null
+        return bruto.substring(corte + 1)
+    }
 
     fun setTelaDeRam(ctx: Context, valor: String) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
-            .edit().putString(KEY_TELA_RAM, valor).apply()
+            .edit().putString(KEY_TELA_RAM, Api.AGENT_VERSION + "|" + valor).apply()
 
     private const val KEY_LAST_SCAN = "last_event_scan"
 

@@ -152,6 +152,10 @@ const val PASSADAS_DA_NUVEM = 3
         // relato. Instalado antes de tudo porque o trecho mais provável de quebrar
         // é justamente a subida — e é a queda na subida que deixa a vitrine preta.
         CrashLog.instalar(applicationContext)
+        // Descobre onde mora a tela de Otimizacao de RAM enquanto ninguem esta
+        // esperando. A busca varre o aparelho inteiro e leva segundos; no toque
+        // do cliente, esses segundos sao a demonstracao que nao acontece.
+        PainelDeRecursos.aquecerBuscaDaRam(applicationContext)
         Api.init(this)
         pegarEnderecoDePush()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

@@ -462,6 +462,17 @@ object PainelDeRecursos {
      */
     private val PACOTES_COM_RAM = listOf(
         "com.motorola.appforecast",
+        // Onde mora nos Moto G (G06, G17): pacote de desempenho da base de
+        // sistema desses aparelhos, que nao se chama "motorola". Achado pelo
+        // Gabriel no proprio aparelho (19/08) — eu tinha varrido so
+        // `com.motorola.*` e concluido que o recurso nao existia neles. Nao
+        // existia era o palpite sobre como a fabricante batiza pacote.
+        // O nome real, tirado do USO registrado nos aparelhos da loja: o promotor
+        // abriu a Otimizacao da RAM no G06 e no G17 e o pacote apareceu no
+        // relatorio. "com.ape.perf" foi o palpite inicial e estava perto, mas
+        // perto nao abre tela nenhuma.
+        "com.ape.performances",
+        "com.ape.perf",
         "com.android.settings",
     )
 
@@ -525,6 +536,28 @@ object PainelDeRecursos {
      * cada primeiro toque do cliente. Varrer toda vez seria pagar a busca em
      * cima de alguem esperando a tela aparecer.
      */
+    /**
+     * Faz a busca ANTES de alguem precisar dela.
+     *
+     * Varrer o aparelho inteiro leva segundos. No caminho do painel, esses
+     * segundos acontecem com o cliente parado na frente da vitrine esperando a
+     * tela abrir — que e exatamente o momento em que a demonstracao se perde.
+     *
+     * Aqui a conta e paga uma vez, em segundo plano, e o resultado fica
+     * guardado. Se o cliente tocar antes de terminar, o botao so nao aparece
+     * naquela abertura.
+     */
+    fun aquecerBuscaDaRam(ctx: android.content.Context) {
+        if (Prefs.telaDeRam(ctx) != null) return
+        Thread {
+            try {
+                ondeMoraARam(ctx)
+            } catch (_: Throwable) {
+                // Busca e conforto, nao operacao: se falhar, a vitrine segue.
+            }
+        }.start()
+    }
+
     fun ondeMoraARam(ctx: android.content.Context): String? {
         Prefs.telaDeRam(ctx)?.let { return it.ifEmpty { null } }
 
@@ -541,18 +574,62 @@ object PainelDeRecursos {
             null
         }
 
+        /**
+         * A tela principal de um pacote DEDICADO a desempenho.
+         *
+         * Vale so para os pacotes conhecidos (PACOTES_COM_RAM), e existe porque
+         * casar nome de classe e fragil: `com.ape.perf` e inteiro sobre
+         * desempenho, entao a tela de entrada dele serve mesmo que a classe se
+         * chame algo que nenhuma pista minha adivinharia. Fora dessa lista o
+         * criterio continua sendo o nome — abrir a tela principal de um pacote
+         * qualquer seria pior que nao ter botao.
+         */
+        fun principalDe(pacote: String): String? = try {
+            pm.getLaunchIntentForPackage(pacote)?.component
+                ?.let { "${it.packageName}/${it.className}" }
+        } catch (_: Exception) {
+            null
+        }
+
         for (pacote in PACOTES_COM_RAM) {
             procurar(pacote)?.let {
                 Prefs.setTelaDeRam(ctx, it)
                 return it
             }
         }
+        // Segunda passada nos conhecidos: entrada do pacote, quando o nome da
+        // classe nao entrega nada. Depois da busca por nome, nunca antes — tela
+        // com nome certo e sempre melhor que a porta da frente do pacote.
+        for (pacote in PACOTES_COM_RAM) {
+            if (pacote == "com.android.settings") continue  // a porta dos Ajustes e generica demais
+            principalDe(pacote)?.let {
+                Prefs.setTelaDeRam(ctx, it)
+                return it
+            }
+        }
 
+        // O APARELHO INTEIRO, e nao um prefixo escolhido a dedo.
+        //
+        // A versao anterior varria so `com.motorola.*` e os Ajustes. Funcionou no
+        // Razr e falhou nos Moto G — e a pista de por que estava no inventario
+        // deles o tempo todo: esses aparelhos trazem `com.myos.camera`, ou seja,
+        // a base de sistema e outra e os pacotes nao se chamam "motorola".
+        //
+        // Escolher prefixo e apostar em como a fabricante batiza pacote, e eu ja
+        // errei essa aposta duas vezes hoje. Varrer todos custa mais, e por isso
+        // isto roda FORA do caminho do cliente (ver aquecerBuscaDaRam).
+        //
+        // Os de sistema primeiro: a tela e do sistema, e achar cedo evita
+        // percorrer o resto.
         val candidatos = try {
             pm.getInstalledPackages(0)
+                .filter { it.packageName !in PACOTES_COM_RAM }
+                .sortedByDescending {
+                    val ehSistema = (it.applicationInfo?.flags ?: 0) and
+                        android.content.pm.ApplicationInfo.FLAG_SYSTEM
+                    ehSistema
+                }
                 .map { it.packageName }
-                .filter { it.startsWith("com.motorola") || it.startsWith("com.android.settings") }
-                .filter { it !in PACOTES_COM_RAM }
         } catch (_: Exception) {
             emptyList()
         }
