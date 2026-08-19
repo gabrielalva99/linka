@@ -40,7 +40,8 @@ export default async function AplicativosPage() {
   // oferecer o botão a quem o banco recusa não é generosidade.
   const podeEditar = await ehOperadorDaPlataformaAgora();
 
-  const [{ data: eventos }, { data: catalogo }] = await Promise.all([
+  const [{ data: eventos }, { data: catalogo }, { data: rotulosDoAparelho }] =
+    await Promise.all([
     porCliente(
       supabase
         .from("device_events")
@@ -63,6 +64,9 @@ export default async function AplicativosPage() {
       filtro,
     ),
     supabase.from("app_catalog").select("package, label, is_noise"),
+    // O NOME QUE O PRÓPRIO APARELHO DÁ ao pacote. É a melhor sugestão que
+    // existe: o Android já mostra esse texto para o cliente na loja.
+    porCliente(supabase.from("device_apps").select("package, label"), filtro),
   ]);
 
   const classificados = new Set((catalogo ?? []).map((c) => c.package as string));
@@ -95,6 +99,23 @@ export default async function AplicativosPage() {
     if (e.created_at > atual.ultima) atual.ultima = e.created_at;
     porPacote.set(e.package, atual);
   }
+  // O rótulo que os APARELHOS reportam, por pacote. Quando vários discordam
+  // (idioma, versão do sistema), vale o mais comum — mesma regra do relatório,
+  // para a tela de classificação e o relatório nunca sugerirem nomes diferentes
+  // para a mesma coisa.
+  const votos = new Map<string, Map<string, number>>();
+  for (const r of (rotulosDoAparelho ?? []) as { package: string; label: string }[]) {
+    if (!r.label || r.label === r.package) continue;
+    const m = votos.get(r.package) ?? new Map<string, number>();
+    m.set(r.label, (m.get(r.label) ?? 0) + 1);
+    votos.set(r.package, m);
+  }
+  const rotuloDoAparelho = new Map<string, string>();
+  for (const [pacote, m] of votos) {
+    const melhor = [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    if (melhor) rotuloDoAparelho.set(pacote, melhor[0]);
+  }
+
   const pendentes = [...porPacote.values()].sort((a, b) => b.vezes - a.vezes);
 
   const lista = (catalogo ?? []) as { package: string; label: string; is_noise: boolean }[];
@@ -137,6 +158,7 @@ export default async function AplicativosPage() {
                 <LinhaPacote
                   key={p.pacote}
                   pacote={p.pacote}
+                  sugestaoDoAparelho={rotuloDoAparelho.get(p.pacote)}
                   vezes={p.vezes}
                   segundos={p.segundos}
                   aparelhos={p.aparelhos.size}

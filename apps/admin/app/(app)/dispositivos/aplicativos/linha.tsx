@@ -22,17 +22,27 @@ function tempo(segundos: number): string {
  * campo — a pessoa decidia olhando texto de programador. Agora o nome é o título
  * e o pacote é a referência pequena embaixo, para conferência.
  *
- * A sugestão sai do próprio pacote porque digitar do zero em dezenas de linhas é
- * o que faz ninguém classificar. É sugestão: quem decide troca.
+ * A SUGESTÃO SAI DO APARELHO, e cai no nome do pacote só quando ele não informa.
+ *
+ * Antes saía sempre do pacote, e o resultado apareceu no relatório: a mesma
+ * câmera virou três recursos diferentes — "Câmera", "Camera" (de
+ * com.myos.camera) e "Camera2" (de com.android.camera2) — cada um contando suas
+ * aberturas separado. O recurso mais usado da loja aparecia com 31 aberturas
+ * quando tinha 42.
+ *
+ * O aparelho sabe o nome certo: é o texto que o próprio Android mostra ao
+ * cliente. Continua sendo sugestão, e quem decide troca.
  */
 export function LinhaPacote({
   pacote,
+  sugestaoDoAparelho,
   vezes,
   segundos,
   aparelhos,
   ultimaVez,
 }: {
   pacote: string;
+  sugestaoDoAparelho?: string;
   vezes: number;
   segundos: number;
   aparelhos: number;
@@ -44,6 +54,7 @@ export function LinhaPacote({
   const [erro, setErro] = useState<string | null>(null);
 
   const sugestao = (() => {
+    if (sugestaoDoAparelho) return sugestaoDoAparelho;
     const ultimo = pacote.split(".").pop() ?? pacote;
     return ultimo.charAt(0).toUpperCase() + ultimo.slice(1);
   })();
