@@ -1550,10 +1550,28 @@ const val PASSADAS_DA_NUVEM = 3
                     if (state == Player.STATE_ENDED && daNuvem) {
                         val n = Prefs.contarPassadaDaNuvem(this@MainActivity, url)
                         currentUrl = null
-                        if (n < PASSADAS_DA_NUVEM && MediaCache.isCached(this@MainActivity, url)) {
-                            playVideo(url, fit)  // ja desceu: segue local, sem custo
-                        } else {
-                            applyContent(null, fit)
+                        when {
+                            // JA DESCEU: toca do arquivo, e o contador nao vale mais
+                            // nada. Antes o teste era `n < PASSADAS && isCached`, e o
+                            // `n` derrubava o caso bom: arquivo pronto no disco, mas
+                            // como o video ja tinha passado tres vezes pela nuvem, a
+                            // vitrine ia para a tela de espera assim mesmo.
+                            MediaCache.isCached(this@MainActivity, url) -> {
+                                Prefs.limparPassadasDaNuvem(this@MainActivity, url)
+                                playVideo(url, fit)
+                            }
+                            // AINDA BAIXANDO: repete da nuvem, dentro do orcamento.
+                            // Este era o caminho que NAO existia — sem cache o codigo
+                            // caia direto na tela de espera, entao todo video pesado
+                            // piscava "Aguardando conteudo" ao fim de CADA passada
+                            // enquanto o arquivo descia. Visto em campo na Casas Bahia
+                            // Interlagos (18/08): tres videos de 13 a 15 Mbps, e a
+                            // vitrine piscando entre uma volta e outra.
+                            n < PASSADAS_DA_NUVEM -> playVideo(url, fit)
+                            // Orcamento estourado: para de puxar da nuvem e espera o
+                            // download. Rede de loja saturada custa mais caro que
+                            // alguns minutos sem video na instalacao.
+                            else -> applyContent(null, fit)
                         }
                     }
                 }
