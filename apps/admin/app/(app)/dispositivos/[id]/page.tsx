@@ -23,7 +23,7 @@ import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
 import { UpdateRetry } from "./update-retry";
-import { FUSO_PADRAO, dataHora } from "@/lib/datas";
+import { FUSO_PADRAO, dataHora, nomeDaLoja } from "@/lib/datas";
 import { decimal } from "@/lib/numeros";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
@@ -67,7 +67,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone), positions(label)",
+      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -207,7 +207,7 @@ export default async function DeviceDetailPage({
   const info: [string, string][] = [
     [t.device.code, d.code ?? "—"],
     [t.device.model, model],
-    [t.device.store, relName(d.stores)],
+    [t.device.store, nomeDaLoja(d.stores as never) ?? relName(d.stores)],
     [t.device.position, positionLabel],
     [t.device.mode, d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"],
     [

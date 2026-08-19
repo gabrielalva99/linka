@@ -236,7 +236,15 @@ export default async function RelatoriosPage({
       // "0 aparelhos" no topo e "340 visitas" embaixo. Os dois números estão
       // certos e a tela fica absurda — que é exatamente o defeito que esta
       // varredura foi consertar.
-      emOperacao(supabase.from("stores").select("name"), filtro).order("name"),
+      // A lista do filtro tem que oferecer a MESMA identidade que o relatório
+      // mostra e compara: "Casas Bahia - Shopping Interlagos". Existem três
+      // lojas chamadas só "Shopping Interlagos" no cadastro, de redes
+      // diferentes — oferecer o nome curto no filtro somava as três num número
+      // só, e ainda por cima parecia certo.
+      emOperacao(
+        supabase.from("stores").select("name, retail_chains(name)"),
+        filtro,
+      ).order("name"),
       emOperacao(supabase.from("devices").select("code, name"), filtro)
         .eq("exclude_from_reports", false)
         .order("code"),
@@ -394,7 +402,16 @@ export default async function RelatoriosPage({
 
       <ReportFilters
         redes={(redesData ?? []).map((r) => r.name as string)}
-        lojas={(lojasData ?? []).map((l) => l.name as string)}
+        lojas={(
+          (lojasData ?? []) as {
+            name: string;
+            retail_chains: { name: string | null } | { name: string | null }[] | null;
+          }[]
+        ).map((l) => {
+          const rel = Array.isArray(l.retail_chains) ? l.retail_chains[0] : l.retail_chains;
+          const rede = rel?.name;
+          return rede ? `${rede} - ${l.name}` : l.name;
+        })}
         aparelhos={(aparelhosData ?? []).map((a) => ({
           codigo: (a.code as string) ?? "",
           nome: a.name as string,

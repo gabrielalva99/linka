@@ -1,3 +1,4 @@
+import { nomeDaLoja } from "@/lib/datas";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
@@ -156,7 +157,7 @@ export default async function FrotaPage({
     supabase
       .from("devices")
       .select(
-        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, is_active, archive_reason, device_models(name), stores(name)",
+        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, is_active, archive_reason, device_models(name), stores(name, retail_chains(name))",
       ),
     filtro,
   )
@@ -186,7 +187,7 @@ export default async function FrotaPage({
       // Sem isso, buscar "Razr 60 Ultra" (o nome comercial que a tela de Modelos
       // mostra) só funcionava por coincidência, quando o texto do hardware era
       // parecido. É também o que faz o link vindo de Modelos cair na lista certa.
-      const alvo = `${d.code ?? ""} ${d.name} ${relName(d.stores)} ${
+      const alvo = `${d.code ?? ""} ${d.name} ${nomeDaLoja(d.stores as never) ?? ""} ${
         d.hardware_model ?? ""
       } ${relName(d.device_models)}`.toLowerCase();
       if (!alvo.includes(busca)) return false;
@@ -375,7 +376,7 @@ export default async function FrotaPage({
               t.device.detected,
             ),
             lojaId: d.store_id,
-            lojaNome: relName(d.stores),
+            lojaNome: nomeDaLoja(d.stores as never) ?? "",
             modo: d.mode ? DEVICE_MODE_LABELS[d.mode] : "—",
             bateria:
               (d.battery_level != null ? `${d.battery_level}%` : "—") +

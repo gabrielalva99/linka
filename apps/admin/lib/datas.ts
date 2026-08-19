@@ -72,3 +72,33 @@ export function hora(v: Entrada, fuso: string = FUSO_PADRAO): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * O nome da loja como ela se identifica: rede e local juntos.
+ *
+ * "Shopping Interlagos" não é a loja — é o shopping onde a loja está. E o nome
+ * do local sozinho nem identifica: há TRÊS lojas chamadas "Shopping Interlagos"
+ * no cadastro, de redes diferentes (Casas Bahia, Ponto Frio, Americanas).
+ *
+ * Fica aqui, e não repetido em cada tela, porque este texto também é o que o
+ * relatório usa para FILTRAR: se as duas pontas escreverem a identidade de
+ * formas diferentes, o filtro deixa de casar e ninguém entende por quê.
+ *
+ * Aceita o formato que o Supabase devolve para relação — objeto ou lista.
+ */
+export function nomeDaLoja(
+  loja:
+    | {
+        name?: string | null;
+        retail_chains?: { name?: string | null } | { name?: string | null }[] | null;
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!loja?.name) return null;
+  const rel = Array.isArray(loja.retail_chains) ? loja.retail_chains[0] : loja.retail_chains;
+  const rede = rel?.name?.trim();
+  // Rede com o mesmo nome do local viraria "X - X": mostra uma vez só.
+  if (!rede || rede === loja.name.trim()) return loja.name;
+  return `${rede} - ${loja.name}`;
+}

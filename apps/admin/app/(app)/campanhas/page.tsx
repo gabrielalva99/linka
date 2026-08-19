@@ -39,7 +39,7 @@ export default async function CampanhasPage() {
     supabase
       .from("campaigns")
       .select(
-        "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name), devices(name))",
+        "id, name, is_active, starts_on, ends_on, start_time, end_time, rotation_seconds, campaign_items(position, fit_mode, media_assets(name)), campaign_targets(scope, retail_chains(name), stores(name, retail_chains(name)), devices(name))",
       ),
     await tenantFilter(),
   ).order("created_at", { ascending: false });
