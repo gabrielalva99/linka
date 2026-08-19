@@ -71,11 +71,13 @@ object MediaCache {
             if (conn.responseCode !in 200..299) return false
             val expected = conn.contentLengthLong
 
-            temp.outputStream().use { out ->
+            val escrito = temp.outputStream().use { out ->
                 conn.inputStream.use { input -> input.copyTo(out, 64 * 1024) }
             }
-            // Arquivo incompleto é pior que arquivo ausente: descarta.
-            if (expected > 0 && temp.length() != expected) {
+            // Arquivo incompleto é pior que arquivo ausente: descarta. Confere o que
+            // foi ESCRITO, não o tamanho no disco: se o parcial sumir no meio do
+            // caminho, o disco responde "zero byte" e o motivo real do descarte some.
+            if (expected > 0 && escrito != expected) {
                 temp.delete()
                 return false
             }
@@ -89,13 +91,28 @@ object MediaCache {
         }
     }
 
-    /** Apaga o que saiu de cena (campanha trocou) para não lotar o aparelho. */
+    /**
+     * Apaga o que saiu de cena (campanha trocou) para não lotar o aparelho.
+     *
+     * O DEFEITO QUE ISTO CONSERTA. O arquivo em andamento se chama
+     * "<nome>.mp4.part", e a checagem de "está baixando agora" comparava o nome
+     * no disco com o nome do ALVO ("<nome>.mp4") — que nunca casa com o do
+     * parcial. Resultado: toda faxina matava o download em curso, o arquivo
+     * nunca fechava, e o ciclo seguinte recomeçava do zero. Um Edge 70 da Casas
+     * Bahia baixou o MESMO vídeo sete vezes sem um único erro de rede: 40 MB de
+     * tráfego para uma campanha de 12,7 MB, com a vitrine presa na nuvem o tempo
+     * todo. Escapava só quem tinha rede rápida o bastante para o arquivo caber
+     * inteiro entre duas faxinas — por isso parecia problema de aparelho.
+     */
     fun prune(ctx: Context, keep: List<String>) {
         val keepNames = keep.map { nameFor(it) }.toSet()
+        val baixando = synchronized(inFlight) { inFlight.map { nameFor(it) }.toSet() }
         dir(ctx).listFiles()?.forEach { f ->
-            val busy = synchronized(inFlight) { inFlight.any { nameFor(it) == f.name } }
-            if (!busy && f.name.endsWith(".mp4") && f.name !in keepNames) f.delete()
-            if (f.name.endsWith(".part") && !busy) f.delete()
+            // Sempre pelo nome do alvo: parcial e pronto viram a mesma chave.
+            val alvo = f.name.removeSuffix(".part")
+            if (alvo in baixando) return@forEach
+            if (f.name.endsWith(".part")) f.delete()
+            else if (f.name.endsWith(".mp4") && alvo !in keepNames) f.delete()
         }
     }
 
