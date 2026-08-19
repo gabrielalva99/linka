@@ -148,9 +148,21 @@ object SelfUpdate {
         // agente DESISTE, e ate la um aparelho parado na versao velha e igual a
         // um aparelho em dia — foi assim que o Moto G06 passou horas atras sem
         // ninguem notar (19/08).
+        // COM A HORA DE INICIO, sempre.
+        //
+        // "baixando" sozinho nao distingue um download que comecou agora de um
+        // pendurado ha uma hora — e os dois aparecem identicos na tela. Foi o
+        // Gabriel olhando a ficha do G47 as 15:03 que apontou isso: o painel
+        // dizia "baixando (tentativa 1 de 3)" e nao havia como saber se aquilo
+        // era normal ou travado.
+        //
+        // Quem le a tela precisa dessa diferenca para decidir se espera ou se
+        // age. Vai a hora local do aparelho, que e a hora da loja.
+        val relogio = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
         Prefs.setUpdateState(
             ctx,
-            "baixando $version (tentativa ${tentativas + 1} de $MAX_TENTATIVAS)",
+            "baixando $version desde ${relogio.format(java.util.Date(agora))} " +
+                "(tentativa ${tentativas + 1} de $MAX_TENTATIVAS)",
         )
         Thread {
             try {
