@@ -473,6 +473,13 @@ object PainelDeRecursos {
     private val PISTAS_DE_RAM = listOf(
         "zram", "ramboost", "rambooster", "ramopt", "ramexpan", "ramplus",
         "memoryopt", "memoryexpan", "memoryextens", "virtualram", "extendedram",
+        // DESEMPENHO. Nos Moto G o caminho e Ajustes > Sistema > Desempenho >
+        // Otimizacao da RAM (informado pelo Gabriel, 19/08, com o aparelho na
+        // mao). Ou seja: o recurso EXISTE nesses modelos — eu tinha concluido
+        // que nao existia, e a conclusao veio de procurar so por nomes com
+        // "ram" e "memory". A tela que hospeda o recurso se chama pelo pai, nao
+        // pelo filho.
+        "performance", "desempenho",
     )
 
     /**
@@ -565,7 +572,10 @@ object PainelDeRecursos {
         // uso registrou "com.android.settings" — o pacote, nao a tela. Sem saber
         // o nome da tela, so restava chutar. Com esta lista, o painel recebe os
         // nomes reais e a busca passa a mirar no que existe.
-        val pistasLargas = listOf("ram", "memory", "zram", "boost")
+        // Largas de proposito: quando a busca falha, o que interessa e ver o que
+        // EXISTE por perto, mesmo com nome inesperado. Foi olhando esta lista
+        // que ficou claro que nos Moto G a tela nao se chama nada com "ram".
+        val pistasLargas = listOf("ram", "memory", "zram", "boost", "perf", "desemp")
         val candidatas = mutableListOf<String>()
         for (pacote in PACOTES_COM_RAM + candidatos) {
             try {
