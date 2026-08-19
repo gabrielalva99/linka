@@ -162,11 +162,11 @@ object Telemetry {
         // contador de tentativas é por versão e nada no painel o zerava. Com 250
         // na rua, isso é um técnico dirigindo até a loja porque um download
         // falhou três vezes.
-        // REINICIAR O APLICATIVO. Existe porque estado em memoria pode travar o
-        // aparelho de um jeito que nenhum comando alcanca: foi o caso da flag de
-        // "ja estou baixando", que ficou presa e deixou dois aparelhos sem
-        // atualizar em silencio (19/08). Sem isto, o unico jeito seria alguem ir
-        // ate a loja ou esperar a energia cair a noite.
+        // REINICIAR O APLICATIVO. Existe porque estado em memoria pode segurar o
+        // aparelho de um jeito que nenhum outro comando alcanca — a flag de "ja
+        // estou baixando" deixou dois aparelhos uma hora atras da frota em
+        // 19/08, calados. Aquele caso se resolveu sozinho, mas so porque havia
+        // uma rede de seguranca de 30 minutos por perto; o proximo pode nao ter.
         //
         // Agenda a volta ANTES de morrer: com o quiosque ligado o Android
         // costuma restaurar a tarefa sozinho, mas o alarme cobre o caso em que

@@ -22,16 +22,23 @@ object SelfUpdate {
     /**
      * QUANDO a tentativa em curso comecou (0 = nenhuma).
      *
-     * Era um booleano, e isso prendia o aparelho para sempre: a flag pertence ao
-     * objeto e vive enquanto o processo viver, entao uma thread de download
-     * pendurada deixava `running` em true e TODA chamada seguinte voltava na
-     * primeira linha — sem baixar, sem gravar estado, sem erro. Um aparelho
-     * parado numa versao velha, calado, ate alguem reiniciar o app.
+     * Era um booleano, e isso segurava as tentativas seguintes enquanto uma
+     * thread de download estivesse pendurada: a flag pertence ao objeto e vive
+     * com o processo, entao toda chamada nova voltava na primeira linha — sem
+     * baixar, sem gravar estado, sem erro.
      *
      * Rede que entrega bytes bem devagar nao dispara o tempo-limite de leitura:
-     * cada pedaco chega dentro do prazo, e a copia inteira nunca termina. Foi o
-     * que aconteceu com um Moto G06 e um Moto G17 na Casas Bahia (19/08): a
-     * frota subiu para a 0.90.0 e os dois ficaram na 0.88.0, sem nada no painel.
+     * cada pedaco chega dentro do prazo, e a copia demora muito mais do que
+     * deveria. Foi o que aconteceu com um Moto G06 e um Moto G17 na Casas Bahia
+     * (19/08): a frota subiu para a 0.90.0 e os dois ficaram na 0.88.0 por cerca
+     * de uma hora, sem nada no painel.
+     *
+     * ── O QUE ISTO NAO E, e vale registrar ────────────────────────────────────
+     * Nao era travamento permanente. Eu diagnostiquei como tal e estava errado:
+     * os dois se resolveram sozinhos, sem reinicio, quando a thread terminou e a
+     * rede de seguranca de 30 minutos pediu conteudo de novo. O conserto aqui
+     * encurta essa janela e — mais importante — faz o aparelho CONTAR que esta
+     * naquele estado, em vez de sumir do radar enquanto espera.
      */
     @Volatile
     private var rodandoDesde = 0L
