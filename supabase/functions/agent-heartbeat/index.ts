@@ -244,8 +244,14 @@ Deno.serve(async (req) => {
   // O video que nao tocou. Vem para o painel porque e aqui que ele serve: na
   // tela do aparelho, um codigo de erro so ocupa a vitrine que devia estar
   // vendendo.
-  if (typeof payload.erro_de_video === "string") {
-    update.erro_de_video = payload.erro_de_video.slice(0, 300);
+  // Aceita o NULO tambem: e assim que o alerta some quando o video volta a
+  // tocar. Guardar so quando ha erro deixaria o problema antigo preso na tela
+  // depois de resolvido.
+  if ("erro_de_video" in payload) {
+    update.erro_de_video =
+      typeof payload.erro_de_video === "string" && payload.erro_de_video.length > 0
+        ? payload.erro_de_video.slice(0, 300)
+        : null;
   }
   if (typeof payload.tela_de_ram === "string") {
     update.tela_de_ram = payload.tela_de_ram.slice(0, 200);

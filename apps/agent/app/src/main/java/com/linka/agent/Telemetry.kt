@@ -322,7 +322,10 @@ object Telemetry {
         // inventario. Sem isto, "o botao nao apareceu no Moto G" so se
         // investigava com o aparelho na mao — e ele esta na loja.
         Prefs.telaDeRam(ctx)?.let { body.put("tela_de_ram", it) }
-        Prefs.ultimoErroDeVideo(ctx)?.let { body.put("erro_de_video", it) }
+        // Manda SEMPRE, inclusive vazio: e assim que o painel sabe que o problema
+        // passou. Mandar so quando existe faria o alerta antigo ficar preso no
+        // servidor mesmo depois de o aparelho voltar ao normal.
+        body.put("erro_de_video", Prefs.ultimoErroDeVideo(ctx) ?: JSONObject.NULL)
         // Saída de manutenção que aconteceu na loja: sobe na primeira batida que
         // pegar rede. Só limpa depois de o servidor confirmar (abaixo), senão uma
         // queda de rede apagaria o registro justamente de quem destravou offline.

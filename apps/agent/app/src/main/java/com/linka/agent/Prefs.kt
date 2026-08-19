@@ -230,6 +230,11 @@ object Prefs {
     fun ultimoErroDeVideo(ctx: Context): String? =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_ERRO_VIDEO, null)
 
+    /** Voltou a tocar: o erro anterior nao descreve mais o aparelho. */
+    fun limparErroDeVideo(ctx: Context) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .edit().remove(KEY_ERRO_VIDEO).apply()
+
     fun setUltimoErroDeVideo(ctx: Context, valor: String) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_ERRO_VIDEO, valor).apply()

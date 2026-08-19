@@ -1730,6 +1730,20 @@ const val PASSADAS_DA_NUVEM = 3
                     // nada e o vídeo toca do começo, como sempre tocou. Dois
                     // aparelhos fora de sincronia é um detalhe estético; vitrine
                     // que não sobe porque a conta deu errado é a loja parada.
+                    // VOLTOU A TOCAR: o erro anterior deixa de valer.
+                    //
+                    // Sem isto o painel acusa para sempre um problema que passou.
+                    // Visto no G67 (19/08): o video falhou porque ainda estava
+                    // baixando, o aparelho pulou para o outro — como agora sabe
+                    // fazer — e quando o arquivo terminou de descer voltou a tocar
+                    // normalmente. So que o alerta continuou na tela.
+                    //
+                    // Alerta que sobrevive ao proprio assunto ensina a ignorar
+                    // alertas, e essa e a segunda vez hoje que o mesmo descuido
+                    // aparece: o erro de instalacao fazia igual.
+                    if (state == Player.STATE_READY) {
+                        Prefs.limparErroDeVideo(this@MainActivity)
+                    }
                     if (state == Player.STATE_READY && !jaAlinhou && !daNuvem) {
                         jaAlinhou = true
                         val dur = duration
