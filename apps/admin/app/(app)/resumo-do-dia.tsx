@@ -27,7 +27,7 @@ export type ResumoDoDia = {
   hoje: { visitas: number; segundosVitrine: number };
   ontem: { visitas: number; segundosVitrine: number };
   horaCorte: string;
-  campanha: { nome: string; baixaram: number; total: number } | null;
+  campanha: { nomes: string[]; baixaram: number; total: number } | null;
   pendencias: { semLoja: number; videosOrfaos: number; pacotesSemClasse: number };
 };
 
@@ -171,9 +171,17 @@ export function ResumoDoDia({
         <h2 className="text-sm font-medium">{t.home.onAir}</h2>
         {campanha ? (
           <p className="mt-2 text-sm">
-            <Link href="/campanhas" className="font-medium hover:text-primary hover:underline">
-              {campanha.nome}
-            </Link>
+            {campanha.nomes.map((nome, i) => (
+              <span key={nome}>
+                {i > 0 && <span className="text-muted">{" · "}</span>}
+                <Link
+                  href="/campanhas"
+                  className="font-medium hover:text-primary hover:underline"
+                >
+                  {nome}
+                </Link>
+              </span>
+            ))}
             <span className="text-muted">
               {" · "}
               {t.home.onAirDownloaded

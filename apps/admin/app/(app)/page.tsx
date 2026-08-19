@@ -105,7 +105,19 @@ export default async function DashboardPage() {
       ),
       // A publicação chegou? Campanha ativa + quantos aparelhos já baixaram tudo.
       porCliente(
-        supabase.from("campaigns").select("name").eq("is_active", true).limit(1),
+        // TODAS as campanhas no ar, e em ordem definida.
+        //
+        // Era `.limit(1)` sem `order by`: com duas campanhas ativas — e a
+        // Motorola tem duas — a tela mostrava UMA, escolhida pelo acaso do
+        // banco, e podia trocar entre dois carregamentos. Quem lia concluía que
+        // a outra não estava no ar. "O que está no ar" é a pergunta que esta
+        // tela responde; responder pela metade é pior que não responder.
+        supabase
+          .from("campaigns")
+          .select("name")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(5),
         filtro,
       ),
       porCliente(
@@ -183,16 +195,16 @@ export default async function DashboardPage() {
     (v) => !usados.has(v.id),
   ).length;
 
-  const nomeCampanha =
-    ((campanhaAtiva ?? []) as { name: string }[])[0]?.name ?? null;
+  const nomesDasCampanhas =
+    ((campanhaAtiva ?? []) as { name: string }[]).map((c) => c.name);
 
   const resumo: TipoResumo = {
     hoje: somar(rollupHoje as never),
     ontem: somar(rollupOntem as never),
     horaCorte,
-    campanha: nomeCampanha
+    campanha: nomesDasCampanhas.length > 0
       ? {
-          nome: nomeCampanha,
+          nomes: nomesDasCampanhas,
           baixaram: sincronizados ?? 0,
           total: totalDevices ?? 0,
         }
