@@ -120,20 +120,28 @@ object PainelDeRecursos {
      * CompanionDeviceManager), ficha técnica, teste de tela e jogos. Entram
      * depois, e cada um sozinho — recurso novo aqui é uma linha nesta lista.
      */
-    private val RECURSOS = listOf(
-        Recurso("camera", "Câmera", "Tire uma foto") { act, _, _ ->
-            abrirPorIntent(act, Intent("android.media.action.STILL_IMAGE_CAMERA"))
-        },
-        Recurso("youtube", "YouTube", "Veja em alta resolução") { act, _, _ ->
-            abrirPorPacote(act, "com.google.android.youtube")
-        },
-        Recurso("brilho", "Brilho da tela", "Veja o vídeo mudar") { act, vitrine, mostrar ->
-            mostrar(controleDeBrilho(act, vitrine))
-        },
-        Recurso("volume", "Som", "Ouça o alto-falante") { act, vitrine, mostrar ->
-            mostrar(controleDeVolume(act, vitrine))
-        },
-    )
+    private fun recursos(act: Activity): List<Recurso> = buildList {
+        add(Recurso("camera", "Câmera", "Tire uma foto") { a, _, _ ->
+            abrirPorIntent(a, Intent("android.media.action.STILL_IMAGE_CAMERA"))
+        })
+        add(Recurso("youtube", "YouTube", "Veja em alta resolução") { a, _, _ ->
+            abrirPorPacote(a, "com.google.android.youtube")
+        })
+        // Só entra onde o aparelho de fato oferece o recurso: a lista é montada
+        // por aparelho, não igual para a frota toda. Ver telaDeOtimizacaoDeRam.
+        val ram = telaDeOtimizacaoDeRam(act)
+        if (ram != null) {
+            add(Recurso("ram", "Otimização de RAM", "Veja a memória do aparelho") { a, _, _ ->
+                abrirPorIntent(a, ram)
+            })
+        }
+        add(Recurso("brilho", "Brilho da tela", "Veja o vídeo mudar") { a, vitrine, mostrar ->
+            mostrar(controleDeBrilho(a, vitrine))
+        })
+        add(Recurso("volume", "Som", "Ouça o alto-falante") { a, vitrine, mostrar ->
+            mostrar(controleDeVolume(a, vitrine))
+        })
+    }
 
     /**
      * Monta a tela do painel.
@@ -223,7 +231,7 @@ object PainelDeRecursos {
         }
         val lista = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
 
-        for (r in RECURSOS) {
+        for (r in recursos(act)) {
             lista.addView(botaoDeRecurso(act, r) {
                 // A MEDIÇÃO VEM ANTES DA AÇÃO, e não depois.
                 //
@@ -411,6 +419,96 @@ object PainelDeRecursos {
             },
         )
     }
+
+    // ── Otimização de RAM ─────────────────────────────────────────────────────
+
+    /**
+     * A tela de Otimização de RAM, descoberta NO APARELHO.
+     *
+     * ── Por que existe (levantado na Casas Bahia Interlagos, 18/08) ───────────
+     * É um dos recursos que a loja mais demonstra, e o caminho dele é fundo:
+     * Ajustes, rolar, achar. Um botão aqui resolve em um toque — e é o mesmo
+     * motivo de câmera e YouTube já estarem nesta lista.
+     *
+     * ── Por que descobrir em vez de escrever o nome ───────────────────────────
+     * Cada linha da Motorola batiza esta tela de um jeito, e o nome muda entre
+     * versões de Android. Nome fixo no código funcionaria no aparelho onde foi
+     * testado e falharia calado no resto da frota — que é o pior defeito
+     * possível numa vitrine: o botão existe, o cliente toca, nada acontece.
+     *
+     * Aqui a lista de telas do próprio aparelho é lida e o nome é procurado.
+     * Achou, o botão aparece; não achou, o botão não existe. Aparelho de 16 GB
+     * não oferece o recurso, e nesses o painel simplesmente não mostra a opção
+     * — melhor do que mostrar um botão que não leva a lugar nenhum.
+     *
+     * Os pedaços procurados são específicos de propósito: "ram" sozinho casaria
+     * com "Program", "Parameter" e outras dezenas de telas.
+     */
+    /**
+     * Onde a tela pode morar. NÃO é dentro dos Ajustes.
+     *
+     * Medido no Razr 60 Ultra com a tela aberta na mão: ela é
+     * `com.motorola.appforecast/.ui.activity.ZRamSettingsActivity` — pacote
+     * próprio, sem ícone, invisível para quem procura no lugar óbvio. Eu tinha
+     * varrido só `com.android.settings` e concluído que o aparelho não oferecia
+     * o recurso; o Gabriel abriu a tela e mostrou que oferecia.
+     *
+     * Os Ajustes ficam na lista mesmo assim: outra linha da Motorola pode
+     * hospedar a tela lá, e procurar nos dois custa nada.
+     */
+    private val PACOTES_COM_RAM = listOf(
+        "com.motorola.appforecast",
+        "com.android.settings",
+    )
+
+    /**
+     * Pedaços de nome que identificam a tela. Específicos de propósito: "ram"
+     * sozinho casaria com "Program", "Parameter" e dezenas de telas inocentes.
+     * `zram` é o nome real no Razr (compressão de memória).
+     */
+    private val PISTAS_DE_RAM = listOf(
+        "zram", "ramboost", "rambooster", "ramopt", "ramexpan", "ramplus",
+        "memoryopt", "memoryexpan", "memoryextens", "virtualram", "extendedram",
+    )
+
+    /**
+     * A tela de Otimização de RAM, descoberta NO APARELHO.
+     *
+     * ── Por que existe (levantado na Casas Bahia Interlagos, 18/08) ───────────
+     * É um dos recursos que a loja mais demonstra, e o caminho até ele é fundo.
+     * Um botão aqui resolve em um toque — mesmo motivo de câmera e YouTube já
+     * estarem nesta lista.
+     *
+     * ── Por que descobrir em vez de escrever o nome ───────────────────────────
+     * Cada linha da Motorola batiza esta tela de um jeito, e o pacote que a
+     * hospeda muda junto. Nome fixo funcionaria no aparelho onde foi testado e
+     * falharia calado no resto da frota — o pior defeito possível numa vitrine:
+     * o botão existe, o cliente toca, nada acontece.
+     *
+     * Achou, o botão aparece; não achou, o botão não existe. Aparelho que não
+     * oferece o recurso simplesmente não mostra a opção.
+     */
+    fun telaDeOtimizacaoDeRam(ctx: android.content.Context): Intent? {
+        val pm = ctx.packageManager
+        for (pacote in PACOTES_COM_RAM) {
+            val alvo = try {
+                pm.getPackageInfo(pacote, android.content.pm.PackageManager.GET_ACTIVITIES)
+                    .activities
+                    ?.firstOrNull { a ->
+                        val nome = a.name.lowercase()
+                        a.exported && PISTAS_DE_RAM.any { nome.contains(it) }
+                    }
+            } catch (_: Exception) {
+                null
+            }
+            if (alvo != null) return Intent().setClassName(pacote, alvo.name)
+        }
+        return null
+    }
+
+    /** O pacote que hospeda a tela, para o quiosque autorizá-lo. */
+    fun pacoteDaOtimizacaoDeRam(ctx: android.content.Context): String? =
+        telaDeOtimizacaoDeRam(ctx)?.component?.packageName
 
     // ── Abrir app do sistema ──────────────────────────────────────────────────
 

@@ -544,6 +544,16 @@ object Kiosk {
         android.os.UserManager.DISALLOW_CONFIG_DATE_TIME,
         // Idioma trocado deixa a vitrine em outro idioma até alguém ir na loja.
         android.os.UserManager.DISALLOW_CONFIG_LOCALE,
+        // COM OS AJUSTES ABERTOS, esta passa a ser necessária: sem ela o cliente
+        // vai em Apps > LINKA > Forçar parada e a vitrine morre. Pior que morrer:
+        // aplicativo em "forçado a parar" não é acordado nem por notificação do
+        // servidor, então o aparelho só voltaria no próximo reinício — e o
+        // reinício, nesta loja, é quando cortam a energia à noite.
+        //
+        // Ela NÃO bloqueia instalar: isso é DISALLOW_INSTALL_APPS, que continua
+        // fora (ver NUNCA_RESTRINGIR). Medido no Razr antes de entrar aqui —
+        // `adb install` e a atualização automática seguem funcionando.
+        android.os.UserManager.DISALLOW_APPS_CONTROL,
     )
 
     /**
@@ -585,11 +595,29 @@ object Kiosk {
      * atalho, nem pela busca, nem por link de outro app.
      */
     private val FORA_DO_QUIOSQUE = setOf(
-        "com.android.settings",
+        // AJUSTES SAIRAM DESTA LISTA (18/08, levantado na Casas Bahia Interlagos).
+        //
+        // Um dos recursos que a loja mais demonstra e a OTIMIZACAO DE RAM, e ela
+        // mora dentro dos Ajustes. Com o app inteiro fora do quiosque, o cliente
+        // tocava no icone e nada acontecia — a gente tinha tirado da vitrine um
+        // argumento de venda do proprio aparelho. E a mesma perda que o Bluetooth
+        // ja tinha custado, pela mesma causa: marreta no lugar de trava fina.
+        //
+        // Bloquear o app inteiro tambem era redundante. Wi-Fi, modo aviao, contas,
+        // senha de tela, restauracao de fabrica, idioma e data ja estao travados um
+        // a um por RESTRICOES_DE_VITRINE — dentro dos Ajustes eles aparecem
+        // esmaecidos. O que o cliente ganha e o resto: RAM, tela, som, bateria,
+        // conectividade. Que e exatamente o que ele foi ali ver.
         "com.android.vending",
+        // O INSTALADOR CONTINUA FORA, e agora ele e a trava principal.
+        //
+        // Sem Play Store e sem instalador, nao existe caminho para o cliente por
+        // um app novo no aparelho — mesmo com Ajustes e navegador abertos. E por
+        // isso que DISALLOW_INSTALL_APPS pode continuar de fora (ver
+        // NUNCA_RESTRINGIR): a protecao vem daqui, nao de uma trava que tambem
+        // fecharia a atualizacao automatica e o cabo.
         "com.google.android.packageinstaller",
         "com.android.packageinstaller",
-        "com.android.settings.intelligence",
     )
 
     /**
@@ -755,6 +783,13 @@ object Kiosk {
             for (a in Inventory.apps(ctx)) {
                 if (a.pacote !in FORA_DO_QUIOSQUE) permitidos.add(a.pacote)
             }
+            // A tela de Otimização de RAM mora num pacote SEM ÍCONE
+            // (com.motorola.appforecast no Razr), então ela não entra pelo
+            // inventário — que lista o que o cliente vê na tela inicial. Sem esta
+            // linha o botão do painel existiria e não abriria nada: o quiosque
+            // recusa em silêncio o que não está autorizado, que é o defeito mais
+            // difícil de perceber de uma vitrine.
+            PainelDeRecursos.pacoteDaOtimizacaoDeRam(ctx)?.let { permitidos.add(it) }
             dpm(ctx).setLockTaskPackages(admin(ctx), permitidos.toTypedArray())
         } catch (_: Exception) {
         }
