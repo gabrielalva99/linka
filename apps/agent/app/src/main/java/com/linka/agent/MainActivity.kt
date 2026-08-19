@@ -246,6 +246,7 @@ const val PASSADAS_DA_NUVEM = 3
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        SelfUpdate.anotarResultadoDaInstalacao(this, intent)
         // Antes do desvio de aparelho já pareado abaixo: este pedido vem do
         // serviço para aparelho JÁ na frota, e cair no `return` seguinte deixaria
         // a vitrine destravada para sempre.

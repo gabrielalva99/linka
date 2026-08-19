@@ -109,10 +109,15 @@ object SelfUpdate {
 
         val tentativas = Prefs.updateAttempts(ctx, version)
         if (tentativas >= MAX_TENTATIVAS) {
+            // NAO CHUTA MAIS A CAUSA. A versao anterior afirmava "provavel
+            // assinatura diferente" e mandava passar cabo — e no unico caso real
+            // isso era falso, com quatro aparelhos ja rodando a mesma versao. O
+            // motivo verdadeiro, quando o Android informa, esta no update_state.
             Prefs.setUpdateError(
                 ctx,
-                "Instalação da versão $version recusada $tentativas vezes. " +
-                    "provável assinatura diferente. Precisa de passagem por cabo.",
+                "Não consegui instalar a versão $version em $tentativas tentativas. " +
+                    (Prefs.updateState(ctx)?.let { "Último retorno do aparelho: $it" }
+                        ?: "O aparelho não informou o motivo."),
             )
             return
         }
@@ -128,6 +133,28 @@ object SelfUpdate {
         // ANTES do download (e não depois): se o processo morrer no meio da
         // instalação, ela tem que contar, senão um APK que derruba o app na
         // instalação viraria laço infinito.
+        // ── A FROTA NAO BAIXA TODA DE UMA VEZ ────────────────────────────────
+        //
+        // Publicar avisa todos os aparelhos ao mesmo tempo, e ate agora todos
+        // saiam correndo para o mesmo arquivo no mesmo segundo. Numa loja com 13
+        // aparelhos isso ja da 64 MB simultaneos na mesma wi-fi; em 19/08, seis
+        // deles levaram SocketTimeoutException na mesma publicacao, e eu passei a
+        // tarde procurando defeito em aparelho individual. O defeito era a
+        // largada em bloco.
+        //
+        // Com 250 aparelhos numa rede de loja, isso deixa de ser lentidao e vira
+        // a rede inteira parada — inclusive para o que a loja precisa dela.
+        //
+        // Cada aparelho sorteia um atraso e o GUARDA: sorteio novo a cada batida
+        // faria o aparelho adiar para sempre, sem nunca chegar a hora. O atraso
+        // vale por versao, entao versao nova recomeca a fila.
+        val espera = Prefs.esperaDaAtualizacao(ctx, version)
+        if (System.currentTimeMillis() < espera) {
+            val faltam = (espera - System.currentTimeMillis()) / 1000
+            Prefs.setUpdateState(ctx, "aguardando a vez para baixar $version (${faltam}s)")
+            return
+        }
+
         val agora = System.currentTimeMillis()
         synchronized(this) {
             val emCurso = rodandoDesde
@@ -244,6 +271,44 @@ object SelfUpdate {
         } finally {
             conn?.disconnect()
         }
+    }
+
+    /**
+     * O QUE O ANDROID DISSE sobre a instalacao.
+     *
+     * O resultado volta pelo PendingIntent que `install` registra, e ate agora
+     * era descartado — o app so sabia "nao instalou". Foi assim que o painel
+     * acabou dizendo "provavel assinatura diferente, precisa de passagem por
+     * cabo" para um Moto G max em 19/08: um chute meu, escrito quando a
+     * tentativa numero tres falhava. Naquele mesmo momento QUATRO aparelhos ja
+     * rodavam a versao nova, entao de assinatura nao era nada — e a frase mandava
+     * alguem pegar a estrada por engano.
+     *
+     * Agora o motivo do proprio Android e guardado e sobe para o painel.
+     */
+    fun anotarResultadoDaInstalacao(ctx: Context, intent: android.content.Intent?) {
+        val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, Int.MIN_VALUE)
+            ?: return
+        if (status == Int.MIN_VALUE) return
+
+        if (status == PackageInstaller.STATUS_SUCCESS) {
+            Prefs.clearUpdateFailure(ctx)
+            return
+        }
+        val detalhe = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+        val nome = when (status) {
+            PackageInstaller.STATUS_FAILURE_STORAGE -> "sem espaço no aparelho"
+            PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "pacote incompatível com este aparelho"
+            PackageInstaller.STATUS_FAILURE_CONFLICT -> "conflito com o aplicativo já instalado (assinatura)"
+            PackageInstaller.STATUS_FAILURE_INVALID -> "arquivo de instalação inválido"
+            PackageInstaller.STATUS_FAILURE_ABORTED -> "instalação interrompida"
+            PackageInstaller.STATUS_FAILURE_BLOCKED -> "instalação bloqueada pelo sistema"
+            else -> "falha $status"
+        }
+        Prefs.setUpdateState(
+            ctx,
+            "instalação recusada: $nome" + (detalhe?.let { " ($it)" } ?: ""),
+        )
     }
 
     private fun install(ctx: Context, apk: File) {

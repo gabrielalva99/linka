@@ -171,11 +171,34 @@ object Prefs {
             if (value == null) remove(KEY_UPD_STATE) else putString(KEY_UPD_STATE, value)
         }.apply()
 
+    /**
+     * A HORA DA VEZ deste aparelho baixar uma versao.
+     *
+     * Sorteada uma vez por versao e guardada. Sem guardar, cada batida sortearia
+     * de novo e o aparelho adiaria para sempre; sem sortear, os 13 (ou 250) da
+     * loja baixam no mesmo segundo e derrubam a rede uns dos outros.
+     *
+     * Ate 8 minutos: cabe folgado dentro do ciclo normal de atualizacao e espalha
+     * o trafego o suficiente para a wi-fi da loja respirar entre um e outro.
+     */
+    private const val KEY_UPD_ESPERA = "update_espera"
+    private const val KEY_UPD_ESPERA_VER = "update_espera_versao"
+
+    fun esperaDaAtualizacao(ctx: Context, version: String): Long {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        if (p.getString(KEY_UPD_ESPERA_VER, null) == version) {
+            return p.getLong(KEY_UPD_ESPERA, 0L)
+        }
+        val ate = System.currentTimeMillis() + (Math.random() * 8 * 60_000).toLong()
+        p.edit().putString(KEY_UPD_ESPERA_VER, version).putLong(KEY_UPD_ESPERA, ate).apply()
+        return ate
+    }
+
     /** Atualizou com sucesso: some o histórico de falha e o aviso do painel. */
     fun clearUpdateFailure(ctx: Context) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR)
-            .remove(KEY_UPD_STATE).apply()
+            .remove(KEY_UPD_STATE).remove(KEY_UPD_ESPERA).remove(KEY_UPD_ESPERA_VER).apply()
 
     /**
      * Onde mora a tela de Otimizacao de RAM neste aparelho ("pacote/classe"),
