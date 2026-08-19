@@ -631,6 +631,30 @@ const val PASSADAS_DA_NUVEM = 3
             0
         }
         val (url, fit) = playlist[i]
+
+        // ── NÃO BUSCAR DA NUVEM O QUE JÁ ESTÁ SENDO BAIXADO ──────────────────
+        //
+        // Se a vez é de um vídeo que ainda não desceu, o player o tocava direto
+        // da nuvem — ao mesmo tempo em que o cache baixava o MESMO arquivo para
+        // guardar. Medido no servidor (G47, 19/08): o mesmo vídeo saindo duas
+        // vezes, em requisições paralelas, uma inteira e outra em pedaços. O
+        // aparelho gastava o dobro da banda para guardar a mesma campanha, numa
+        // rede que já era o gargalo da loja.
+        //
+        // Agora, enquanto aquele arquivo não chega, entra um da campanha que JÁ
+        // está no aparelho. O cliente vê conteúdo da marca do mesmo jeito, o
+        // rodízio volta ao normal assim que o download termina, e a rede carrega
+        // cada arquivo uma vez só.
+        //
+        // Sem nenhum baixado ainda, mantém o comportamento antigo e toca da
+        // nuvem: vitrine preta na inauguração seria pior que tráfego dobrado.
+        if (!MediaCache.isCached(this, url)) {
+            val pronto = playlist.firstOrNull { MediaCache.isCached(this, it.first) }
+            if (pronto != null) {
+                applyContent(pronto.first, pronto.second)
+                return
+            }
+        }
         applyContent(url, fit)
     }
 
