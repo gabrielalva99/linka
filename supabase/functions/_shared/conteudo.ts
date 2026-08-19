@@ -400,9 +400,29 @@ export async function revisaoDe(conteudo: Record<string, unknown>): Promise<stri
   // Chaves em ordem fixa: JSON.stringify preserva a ordem de inserção, e o objeto
   // sempre nasce do mesmo literal em montarConteudo — que é o único lugar
   // autorizado a construí-lo, justamente para as duas funções hasharem igual.
+  // FORA DO HASH TAMBÉM: agent_update e current_version.
+  //
+  // ── O EFEITO MANADA (medido na Casas Bahia, 19/08) ────────────────────────
+  // Publicar uma versão mudava o hash, o heartbeat respondia "conteúdo mudou"
+  // para a frota INTEIRA no mesmo minuto, e os 13 aparelhos saíam para o mesmo
+  // arquivo ao mesmo tempo. Resultado medido: 11 com tempo esgotado e ZERO
+  // baixando, e o ciclo se repetindo — porque a cada nova rodada todos voltavam
+  // juntos. Publicar deixava de ser "avisar" e virava "derrubar a rede da loja".
+  //
+  // Versão publicada NÃO é conteúdo de vitrine. Tirar daqui não esconde nada: o
+  // aparelho continua recebendo `agent_update` toda vez que busca conteúdo — só
+  // que agora ele busca no ritmo DELE, e os ritmos são naturalmente diferentes
+  // entre aparelhos. A adoção passa a ser espalhada por construção, sem ninguém
+  // precisar sortear atraso.
+  //
+  // O custo é conhecido e aceito: a versão nova chega em até meia hora em vez de
+  // em segundos. Meia hora escalonada vale mais que segundos que ninguém
+  // consegue completar.
   const estavel: Record<string, unknown> = { ...conteudo };
   delete estavel.content_url;
   delete estavel.fit;
+  delete estavel.agent_update;
+  delete estavel.current_version;
   return (await sha256(JSON.stringify(estavel))).slice(0, 16);
 }
 
