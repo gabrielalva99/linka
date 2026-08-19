@@ -591,6 +591,38 @@ object PainelDeRecursos {
             }
             if (candidatas.size >= 6) break
         }
+        // SEGUNDA MELHOR OPCAO: a tela de Sistema.
+        //
+        // Nos Moto G a Otimizacao da RAM NAO tem tela propria — ela e um item
+        // dentro de Ajustes > Sistema > Desempenho (conferido pelo Gabriel no
+        // aparelho, 19/08). O Android so deixa abrir TELAS, nunca um item dentro
+        // de uma; entao atalho direto nao existe e nao vai existir.
+        //
+        // O que da para fazer e encurtar o caminho: o botao leva a Sistema, e de
+        // la sao dois toques ate a Otimizacao da RAM, contra quatro partindo da
+        // tela inicial. Numa vitrine, com o cliente na mao do vendedor, essa
+        // diferenca e a demonstracao acontecer ou nao.
+        //
+        // So faz isso quando ha INDICIO do recurso no aparelho (alguma tela de
+        // memoria ou desempenho por perto). Sem indicio, o botao continua nao
+        // existindo: melhor nenhum botao do que um que leva o cliente para uma
+        // tela onde nao ha o que mostrar.
+        val temIndicio = candidatas.isNotEmpty()
+        if (temIndicio) {
+            val sistema = "com.android.settings/com.android.settings.Settings\$SystemDashboardActivity"
+            val abre = try {
+                pm.getPackageInfo("com.android.settings", android.content.pm.PackageManager.GET_ACTIVITIES)
+                    .activities
+                    ?.any { it.exported && it.name.endsWith("Settings\$SystemDashboardActivity") } == true
+            } catch (_: Exception) {
+                false
+            }
+            if (abre) {
+                Prefs.setTelaDeRam(ctx, sistema)
+                return sistema
+            }
+        }
+
         Prefs.setTelaDeRam(
             ctx,
             if (candidatas.isEmpty()) "" else ("? " + candidatas.joinToString(",")).take(190),
