@@ -133,11 +133,13 @@ export default async function FrotaPage({
         .eq("id", cliente.id)
         .maybeSingle()
     : { data: null };
-  const { data: release } = await supabase
+  //
+  // São VÁRIAS: desde 20/08 a versão publicada pode mirar um tipo de aparelho,
+  // então o celular e a TV podem estar em versões diferentes de propósito.
+  const { data: releasesNoAr } = await supabase
     .from("agent_releases")
-    .select("version")
-    .eq("is_current", true)
-    .maybeSingle();
+    .select("version, target_device_type")
+    .eq("is_current", true);
   const { data: lojasData } = await porCliente(
     supabase.from("stores").select("id, name"),
     filtro,
@@ -196,7 +198,23 @@ export default async function FrotaPage({
     ? all.filter((d) => d.device_type === activeType)
     : all;
 
-  const publicadaAgora = release?.version ?? null;
+  /**
+   * Qual versão ESTE tipo de aparelho deveria estar rodando.
+   *
+   * Repete a regra de `release_atual` no banco — a versão mirada no tipo vence a
+   * geral. Tem que repetir: se esta tela usasse a geral para todo mundo, uma TV
+   * na versão certa dela apareceria como "desatualizada" para sempre, e o filtro
+   * "com problema" viveria acusando aparelho que está exatamente onde deveria.
+   */
+  const noArPorAlvo = (releasesNoAr ?? []) as {
+    version: string;
+    target_device_type: string | null;
+  }[];
+  const publicadaGeral =
+    noArPorAlvo.find((r) => r.target_device_type === null)?.version ?? null;
+  const publicadaPara = (tipoDoAparelho: string): string | null =>
+    noArPorAlvo.find((r) => r.target_device_type === tipoDoAparelho)?.version ??
+    publicadaGeral;
   const devices = daAba.filter((d) => {
     if (busca) {
       // Inclui o nome do CATÁLOGO, e não só o do hardware.
@@ -219,9 +237,10 @@ export default async function FrotaPage({
       const fora = effectiveStatus(d.status, d.last_seen_at, toleranciaMs) !== "online";
       if (situacao === "offline" && !fora) return false;
       if (situacao === "sem_travas" && d.kiosk_locked) return false;
+      const publicadaDele = publicadaPara(d.device_type);
       if (
         situacao === "desatualizado" &&
-        (!publicadaAgora || d.agent_version === publicadaAgora)
+        (!publicadaDele || d.agent_version === publicadaDele)
       ) {
         return false;
       }
@@ -229,7 +248,7 @@ export default async function FrotaPage({
       // aparelho sem loja, que é o que impede campanha de alcançar.
       if (situacao === "problema") {
         const desatualizado =
-          publicadaAgora != null && d.agent_version !== publicadaAgora;
+          publicadaDele != null && d.agent_version !== publicadaDele;
         if (!fora && d.kiosk_locked && !desatualizado && d.store_id) return false;
       }
     }
@@ -250,18 +269,24 @@ export default async function FrotaPage({
   );
   const online = noAr.length;
   const synced = noAr.filter((d) => d.synced).length;
-  const publicada = publicadaAgora;
   // "Atualizado" é estar na publicada OU À FRENTE dela.
   //
   // A comparação era de igualdade, então um aparelho com versão mais nova que a
   // publicada aparecia como desatualizado — foi o que a tela mostrou depois de
   // um teste por cabo: 0 de 2 atualizados, com um aparelho à frente da frota.
   // Igualdade só funciona enquanto ninguém nunca sai da fila.
-  const updated = publicada
-    ? noAr.filter(
-        (d) => d.agent_version != null && compararVersao(d.agent_version, publicada) >= 0,
-      ).length
-    : 0;
+  //
+  // A comparação é POR APARELHO, e não contra uma versão só: com a aba "todos"
+  // aberta a lista mistura celular e TV, que podem estar em versões publicadas
+  // diferentes de propósito.
+  const updated = noAr.filter((d) => {
+    const publicadaDele = publicadaPara(d.device_type);
+    return (
+      publicadaDele != null &&
+      d.agent_version != null &&
+      compararVersao(d.agent_version, publicadaDele) >= 0
+    );
+  }).length;
   // Aparelho sem bloqueio não aceita trava de Wi-Fi nem atualização remota:
   // precisa aparecer aqui, não ser descoberto um por um.
   //

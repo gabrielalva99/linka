@@ -13,6 +13,45 @@ export type PublishState =
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
 /**
+ * Para quem esta versão vale.
+ *
+ * Vazio = toda a frota, que é como sempre funcionou. Preenchido = só aquele tipo
+ * de aparelho, e vence da geral para ele. O vocabulário é o do banco
+ * (public.device_type) de propósito: uma lista escrita à mão aqui seria uma
+ * segunda verdade para o mesmo assunto.
+ */
+const ALVOS = ["smartphone", "tablet", "tv", "notebook", "other"] as const;
+
+function alvoDoForm(form: FormData): string | null {
+  const bruto = String(form.get("target_device_type") ?? "").trim();
+  if (!bruto || bruto === "todos") return null;
+  return (ALVOS as readonly string[]).includes(bruto) ? bruto : null;
+}
+
+/**
+ * Tira de cena a versão vigente DO MESMO ALVO — e só dele.
+ *
+ * É a linha mais perigosa desta tela. Sem o recorte por alvo, publicar uma
+ * versão de TV desligaria a versão que os 250 aparelhos de loja obedecem, e a
+ * frota inteira ficaria sem versão publicada sem ninguém pedir isso. O índice
+ * único do banco garante que só exista uma por alvo; este recorte garante que a
+ * que sai é a certa.
+ *
+ * `.is(null)` e `.eq(valor)` são caminhos diferentes de propósito: no Postgres,
+ * `= null` não casa com nada, então usar `.eq` para o alvo geral afetaria ZERO
+ * linhas em silêncio e deixaria duas versões vigentes brigando.
+ */
+async function tirarDoAr(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  alvo: string | null,
+) {
+  const q = supabase.from("agent_releases").update({ is_current: false }).eq("is_current", true);
+  return alvo === null
+    ? await q.is("target_device_type", null)
+    : await q.eq("target_device_type", alvo);
+}
+
+/**
  * Registra a versão recém-enviada e a torna a versão da frota.
  *
  * O arquivo já subiu direto do navegador para o Storage (3,7 MB não passam por
@@ -31,14 +70,13 @@ export async function publishRelease(
   }
   if (!url) return { ok: false, error: "Envie o arquivo APK primeiro." };
 
+  const alvo = alvoDoForm(form);
   const supabase = await createSupabaseServerClient();
 
-  // Uma versão vale por vez: a anterior sai de cena antes de a nova entrar.
-  // Ordem importa — o banco tem índice único garantindo que só exista uma atual.
-  const { error: offErr } = await supabase
-    .from("agent_releases")
-    .update({ is_current: false })
-    .eq("is_current", true);
+  // Uma versão vale por vez POR ALVO: a anterior do mesmo alvo sai de cena antes
+  // de a nova entrar. Ordem importa — o banco tem índice único garantindo que só
+  // exista uma vigente por alvo.
+  const { error: offErr } = await tirarDoAr(supabase, alvo);
   if (offErr) return { ok: false, error: "Não foi possível publicar." };
 
   // NÃO conta linhas de propósito, e aqui é seguro: INSERT barrado por RLS
@@ -51,6 +89,7 @@ export async function publishRelease(
     url,
     notes: notes || null,
     is_current: true,
+    target_device_type: alvo,
   });
   if (error) {
     return {
@@ -59,7 +98,10 @@ export async function publishRelease(
     };
   }
 
-  await logAction("publicar_versao", "agent_release", undefined, { versao: version });
+  await logAction("publicar_versao", "agent_release", undefined, {
+    versao: version,
+    alvo: alvo ?? "todos",
+  });
   revalidatePath("/dispositivos/versoes");
   return { ok: true, version };
 }
@@ -73,10 +115,17 @@ export async function publishRelease(
  */
 export async function makeCurrent(id: string) {
   const supabase = await createSupabaseServerClient();
-  await supabase
+
+  // O alvo vem da versão escolhida, e não de quem clicou: voltar a frota de TV
+  // para uma versão anterior não pode mexer na versão que os celulares obedecem.
+  const { data: alvoDela } = await supabase
     .from("agent_releases")
-    .update({ is_current: false })
-    .eq("is_current", true);
+    .select("target_device_type")
+    .eq("id", id)
+    .maybeSingle();
+  if (!alvoDela) return;
+
+  await tirarDoAr(supabase, alvoDela.target_device_type ?? null);
   await supabase.from("agent_releases").update({ is_current: true }).eq("id", id);
   revalidatePath("/dispositivos/versoes");
 }

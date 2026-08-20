@@ -219,7 +219,14 @@ Titulo "Instalando o aplicativo LINKA"
 # frota ja estava na 0.19.0, e ninguem percebeu ate abrir o painel.
 # Por isso o script busca a versao publicada antes de instalar; o arquivo local
 # so entra em campo quando a loja esta sem internet.
-$urlVersao = "https://xkzktmsqtvpkxmzftars.supabase.co/rest/v1/agent_releases?is_current=eq.true&select=version,url"
+# target_device_type=is.null NAO e detalhe: desde 20/08 a versao publicada pode
+# mirar so a TV ou so o celular, entao esta consulta passou a poder devolver MAIS
+# DE UMA linha. Como o codigo abaixo pega $r[0] de um resultado sem ordem, um
+# celular podia sair da bancada com o APK da TV — e ninguem descobriria ate o
+# aparelho estar na loja. Este filtro fixa a versao GERAL, que e a que serve
+# qualquer aparelho; quem tiver versao mirada se atualiza sozinho no primeiro
+# contato com o painel, em ate um minuto.
+$urlVersao = "https://xkzktmsqtvpkxmzftars.supabase.co/rest/v1/agent_releases?is_current=eq.true&target_device_type=is.null&select=version,url"
 try {
   $r = Invoke-RestMethod -Uri $urlVersao -Headers @{ apikey = $anonKey } -TimeoutSec 20
   if ($r -and $r[0].url) {

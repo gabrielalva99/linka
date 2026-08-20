@@ -21,11 +21,13 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // função chamadora (ela já faz esse SELECT por outros motivos), então a lista
 // mora aqui para as duas pedirem a mesma coisa.
 export const CAMPOS_DO_APARELHO =
-  "id, tenant_id, content_fit, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, screen_width, screen_height, stores(opens_at, closes_at), tenants(heartbeat_seconds), device_models(screen_width, screen_height)";
+  "id, tenant_id, device_type, content_fit, idle_return_seconds, volume_percent, agent_version, cleanup_enabled, cleanup_time, block_settings, screen_width, screen_height, stores(opens_at, closes_at), tenants(heartbeat_seconds), device_models(screen_width, screen_height)";
 
 export type AparelhoParaConteudo = {
   id: string;
   tenant_id: string;
+  /** smartphone | tablet | tv | notebook | other — decide qual versão do app é a dele. */
+  device_type: string | null;
   content_fit: string | null;
   idle_return_seconds: number | null;
   volume_percent: number | null;
@@ -292,11 +294,19 @@ export async function montarConteudo(
   const prefetch: string[] = playlist.map((p) => p.url);
 
   // Versão atual do app: o aparelho decide se precisa se atualizar.
-  const { data: release } = await supabase
-    .from("agent_releases")
-    .select("version, url")
-    .eq("is_current", true)
-    .maybeSingle();
+  //
+  // Vai o TIPO do aparelho junto porque a versão publicada pode mirar só a TV ou
+  // só o celular (20/08). Sem isso, uma tentativa no box de TV arrastaria os 250
+  // aparelhos de loja para a mesma versão — publicar deixaria de ser decisão e
+  // viraria risco.
+  //
+  // Quem escolhe é `release_atual` no banco, e não este arquivo: são três
+  // chamadores (aqui, a lista do painel e o kit de provisionamento) e a regra
+  // espalhada vira três regras que concordam até o dia em que não concordam.
+  const { data: escolhida } = await supabase.rpc("release_atual", {
+    tipo: device.device_type ?? null,
+  });
+  const release = Array.isArray(escolhida) ? escolhida[0] : escolhida;
 
   // Horário da loja vai para o aparelho: com a loja aberta, tela apagada é
   // vitrine morta e ele precisa acordar sozinho. Com a loja fechada, ninguém

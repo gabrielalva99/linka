@@ -7,6 +7,28 @@ import { publishRelease, type PublishState } from "./actions";
 import { tamanho } from "@/lib/numeros";
 
 const inicial: PublishState = { ok: null };
+
+/**
+ * O botão diz QUEM vai receber, e não "publicar".
+ *
+ * Quem publica está olhando para o botão, não para o seletor três campos acima.
+ * Escrever o alvo no próprio botão é o que separa "subir uma versão de teste na
+ * TV" de "mexer nos 250 aparelhos que estão em loja agora".
+ */
+const QUEM_RECEBE: Record<string, { botao: string; aviso: string }> = {
+  todos: {
+    botao: "Publicar para todos os aparelhos",
+    aviso: "Vai para a frota inteira, de todos os clientes.",
+  },
+  smartphone: {
+    botao: "Publicar só para os celulares",
+    aviso: "Vai só para os celulares. As TVs continuam como estão.",
+  },
+  tv: {
+    botao: "Publicar só para as TVs",
+    aviso: "Vai só para as TVs. Os celulares continuam como estão.",
+  },
+};
 const field =
   "rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
 
@@ -23,6 +45,10 @@ export function PublishForm() {
   const [enviando, setEnviando] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [arquivo, setArquivo] = useState<string | null>(null);
+  // "todos" e não vazio: o valor precisa aparecer escrito na tela antes de
+  // alguém publicar. Alvo em branco lido como "a frota inteira" é o tipo de
+  // padrão que só é descoberto depois de atingir os 250 aparelhos.
+  const [alvo, setAlvo] = useState("todos");
   const [erro, setErro] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const versaoRef = useRef<HTMLInputElement>(null);
@@ -114,6 +140,19 @@ export function PublishForm() {
             required
           />
         </label>
+        <label className="flex flex-col gap-1.5 sm:w-48">
+          <span className="text-sm text-muted">Para quais aparelhos</span>
+          <select
+            name="target_device_type"
+            value={alvo}
+            onChange={(e) => setAlvo(e.target.value)}
+            className={field}
+          >
+            <option value="todos">Todos os aparelhos</option>
+            <option value="smartphone">Só os celulares</option>
+            <option value="tv">Só as TVs</option>
+          </select>
+        </label>
         <label className="flex flex-1 flex-col gap-1.5">
           <span className="text-sm text-muted">Novidades desta versão</span>
           <input
@@ -149,10 +188,11 @@ export function PublishForm() {
           disabled={!url || pending}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
         >
-          {pending ? "Publicando…" : "Publicar para a frota"}
+          {pending ? "Publicando…" : QUEM_RECEBE[alvo].botao}
         </button>
         <span className="text-xs text-muted">
-          Os aparelhos baixam sozinhos no próximo contato (até 1 minuto).
+          {QUEM_RECEBE[alvo].aviso} Eles baixam sozinhos no próximo contato (até
+          1 minuto).
         </span>
       </div>
 
