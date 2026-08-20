@@ -100,6 +100,21 @@ Deno.serve(async (req) => {
     : null;
   const hardwareModel = payload.hardware_model ? String(payload.hardware_model) : "";
 
+  // O TIPO DO APARELHO, dito por ele mesmo — e só no nascimento do registro.
+  //
+  // Antes daqui estava "smartphone" escrito fixo. Passou despercebido enquanto a
+  // frota era só de celular; deixou de passar em 20/08, com um TV box e um tablet
+  // Samsung chegando E a publicação de versão ganhando alvo por tipo. Um tablet
+  // cadastrado como celular receberia a versão mirada em CELULARES e não a mirada
+  // em TABLETS — o oposto do que quem publicou pediu, sem erro nenhum na tela.
+  //
+  // Validado contra a lista do enum de propósito: valor estranho vindo do
+  // aparelho vira "smartphone" em vez de estourar o provisionamento na loja.
+  const TIPOS = new Set(["smartphone", "tablet", "tv", "notebook", "other"]);
+  const deviceType = TIPOS.has(String(payload.device_type))
+    ? String(payload.device_type)
+    : "smartphone";
+
   const supabase = createClient(url, serviceKey);
 
   // Freio de chute. Esta porta não tem como exigir login — quem bate é aparelho,
@@ -216,7 +231,10 @@ Deno.serve(async (req) => {
         .insert({
           tenant_id: tenant.id,
           name: autoName(hardwareModel, androidId),
-          device_type: "smartphone",
+          // Palpite do aparelho. A partir daqui quem manda é o painel: este valor
+          // NÃO é reescrito nas entradas seguintes, senão uma correção feita à mão
+          // ("este tablet é um totem") seria desfeita no próximo provisionamento.
+          device_type: deviceType,
           platform: "android",
           status: "provisioning",
           store_id: storeId,

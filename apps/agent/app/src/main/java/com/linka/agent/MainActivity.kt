@@ -341,6 +341,7 @@ const val PASSADAS_DA_NUVEM = 3
                     Identidade.estavel(this).let { id ->
                         Api.provision(
                             code, androidId(), Build.VERSION.RELEASE, id.valor, id.fonte,
+                            Perfil.tipo(this),
                         )
                     }
                 } catch (e: Exception) {

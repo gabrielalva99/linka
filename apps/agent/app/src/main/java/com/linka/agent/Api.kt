@@ -63,6 +63,7 @@ object Api {
         osVersion: String,
         stableId: String = "",
         stableIdSource: String = "",
+        deviceType: String = "smartphone",
     ): Result {
         val body = JSONObject()
             .put("provisioning_code", code)
@@ -76,6 +77,9 @@ object Api {
             .put("os_version", osVersion)
             .put("agent_version", AGENT_VERSION)
             .put("platform", "android")
+            // O aparelho diz o que ele e. So vale no nascimento do registro: dai
+            // em diante quem manda e o painel. Ver Perfil.kt.
+            .put("device_type", deviceType)
         return post("agent-provision", body)
     }
 
