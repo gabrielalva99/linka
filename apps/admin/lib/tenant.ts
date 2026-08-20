@@ -89,7 +89,16 @@ export const listTenants = cache(async function listTenants(): Promise<ActiveTen
  * desempate, é a escolha estar VISÍVEL e ser trocável: antes o painel decidia
  * sozinho e ninguém tinha como saber nem mudar.
  */
-export const getActiveTenant = cache(async function getActiveTenant(): Promise<ActiveTenant | null> {
+/*
+ * SEM `cache` DE PROPOSITO, ao contrario de listTenants. Esta funcao le o
+ * COOKIE, e o cookie muda no meio da requisicao: o seletor de cliente grava o
+ * novo valor e manda o layout inteiro recarregar. Um valor memorizado antes
+ * dessa troca faria a tela seguinte responder com o cliente anterior — e
+ * cliente errado nao da tela vermelha, da campanha de uma marca na vitrine de
+ * outra. O que ela tem de caro (a lista) ja vem do cache de listTenants, entao
+ * memorizar aqui economizaria quase nada e arriscaria isso.
+ */
+export async function getActiveTenant(): Promise<ActiveTenant | null> {
   const disponiveis = await listTenants();
   if (disponiveis.length === 0) return null;
   if (disponiveis.length === 1) return disponiveis[0];
@@ -100,7 +109,7 @@ export const getActiveTenant = cache(async function getActiveTenant(): Promise<A
   // marca — e o RLS não recusaria, porque quem opera a plataforma tem acesso a
   // todos por definição.
   return disponiveis.find((t) => t.id === escolhido) ?? disponiveis[0];
-});
+}
 
 /**
  * Id para filtrar as LISTAS por cliente, ou null quando não há o que filtrar.
@@ -110,11 +119,12 @@ export const getActiveTenant = cache(async function getActiveTenant(): Promise<A
  * quem opera a plataforma o RLS deixa passar TODOS os clientes, e sem o filtro a
  * lista de lojas da Motorola viria misturada com a da marca seguinte.
  */
-export const tenantFilter = cache(async function tenantFilter(): Promise<string | null> {
+/* Sem `cache` pelo mesmo motivo de getActiveTenant: depende do cookie. */
+export async function tenantFilter(): Promise<string | null> {
   const disponiveis = await listTenants();
   if (disponiveis.length <= 1) return null;
   return (await getActiveTenant())?.id ?? null;
-});
+}
 
 /**
  * Aplica o recorte de cliente a uma consulta, quando há recorte a aplicar.
