@@ -61,9 +61,19 @@ else nao "Patch de segurança" "${P:-ausente} — desatualizado"; fi
 ABI=$(g ro.product.cpu.abilist)
 case "$ABI" in *arm64*) diz "Arquitetura" "$ABI";; *) nao "Arquitetura" "$ABI — 32 bits";; esac
 
-# 5. Resolução de saída
+# 5. Resolucao — so cobra 1080p de quem MANDA imagem para uma TV.
+#
+# Num aparelho de mao a resolucao e o painel dele, e nao uma saida de video que
+# alguem configura. Cobrar 1080p de um tablet reprovava por engano: o Galaxy Tab
+# A7 Lite (800x1340, painel nativo) apareceu como "abaixo de 1080p" na primeira
+# versao desta checagem. A presenca de toque e o que separa os dois mundos.
 R=$(adb "${S[@]}" shell wm size 2>/dev/null | tr -d '\r' | awk -F': ' '{print $2}')
-case "$R" in *1920x1080*|*3840x2160*) diz "Saída de vídeo" "$R";; *) nao "Saída de vídeo" "${R:-?} — abaixo de 1080p";; esac
+if adb "${S[@]}" shell pm list features 2>/dev/null | grep -q touchscreen; then
+  diz "Resolucao do painel" "$R (aparelho de mao — 1080p nao se aplica)"
+else
+  case "$R" in *1920x1080*|*3840x2160*) diz "Saida de video" "$R";;
+    *) nao "Saida de video" "${R:-?} — abaixo de 1080p para uma TV";; esac
+fi
 
 # 6. O LINKA instala?
 MIN=$(g ro.build.version.sdk)
@@ -73,11 +83,20 @@ else nao "O LINKA instala" "NÃO — o app exige API 26"; fi
 echo
 echo "════ O QUE MUDA NO AGENTE ════"
 F=$(adb "${S[@]}" shell pm list features 2>/dev/null | tr -d '\r')
-echo "$F" | grep -q leanback && echo "  Android TV (leanback) — precisa do manifesto leanback" \
-                            || echo "  AOSP de media box — manifesto leanback dispensável"
-echo "$F" | grep -q hdmi.cec && echo "  HDMI-CEC presente — ligar/desligar a TV é possível (a testar)" \
-                            || echo "  sem HDMI-CEC — a TV fica ligada o tempo todo"
-echo "$F" | grep -q touchscreen && echo "  tem toque" || echo "  sem toque — saída de manutenção pelo controle"
+# O QUE PERGUNTAR MUDA COM O APARELHO.
+#
+# A primeira versao disto despejava as perguntas de TV em tudo: um tablet
+# Samsung recebia "sem HDMI-CEC, a TV fica ligada o tempo todo", que nao quer
+# dizer nada num aparelho de mao. A presenca de toque e o divisor.
+if echo "$F" | grep -q touchscreen; then
+  echo "  Aparelho de mao (tem toque) — vitrine com interacao do cliente"
+  echo "  Saida de manutencao pelos 7 toques: funciona"
+  echo "  Painel $R — conferir se a vitrine (travada em retrato) casa com o suporte da loja"
+else
+  echo "$F" | grep -q leanback && echo "  Android TV (leanback) — precisa do manifesto leanback" || echo "  AOSP de media box — manifesto leanback dispensavel"
+  echo "$F" | grep -q hdmi.cec && echo "  HDMI-CEC presente — ligar/desligar a TV e possivel (a testar)" || echo "  sem HDMI-CEC — a TV fica ligada o tempo todo"
+  echo "  Sem toque — saida de manutencao precisa ser pelo controle remoto"
+fi
 echo "$F" | grep -q "android.hardware.ethernet" && echo "  tem porta de rede"
 echo "$(echo "$F" | grep -c wifi) rede(s) sem fio"
 C=$(adb "${S[@]}" shell dumpsys account 2>/dev/null | grep -cE "^[[:space:]]+Account \{")
