@@ -10,10 +10,51 @@ import android.content.Intent
  */
 class LinkaDeviceAdminReceiver : DeviceAdminReceiver() {
 
+    /**
+     * Assumiu o cargo — mas AINDA NÃO É DONO quando esta linha roda.
+     *
+     * ── O DEFEITO QUE ISTO CONSERTA (achado em 20/08) ─────────────────────
+     * `set-device-owner` faz duas coisas, nesta ordem: (1) registra o
+     * administrador, o que dispara ESTE método, e só depois (2) grava o cargo de
+     * dono. Ou seja, quando chegamos aqui `isDeviceOwner` ainda responde FALSO —
+     * e a primeira linha de `applyPolicies` é `if (!isDeviceOwner) return`.
+     *
+     * Resultado: este gancho NUNCA aplicou nada. Nunca apareceu porque o kit de
+     * provisionamento reinicia o app logo depois, e aí é o `onCreate` que aplica
+     * as travas. O gancho era decoração, e ninguém sabia.
+     *
+     * Apareceu ao provisionar o tablet Samsung com o app JÁ ABERTO: depois de
+     * virar dono, `am force-stop` não mata mais o processo (o Android protege o
+     * dono do aparelho), o app não reiniciou, e o aparelho ficou dono SEM
+     * NENHUMA TRAVA — modo avião ligava normalmente. Num aparelho de loja isso é
+     * uma vitrine que parece protegida e não está.
+     *
+     * ── O CONSERTO ────────────────────────────────────────────────────────
+     * Esperar o cargo chegar, em vez de desistir na primeira tentativa. São
+     * milissegundos na prática; o teto de 10 segundos existe só para não deixar
+     * uma linha de execução pendurada se algo der errado de verdade.
+     *
+     * `goAsync` segura o processo vivo durante a espera: sem ele o Android pode
+     * encerrar o receptor assim que este método retorna, e a espera morreria
+     * junto.
+     */
     override fun onEnabled(context: Context, intent: Intent) {
-        // Assumiu o cargo: aplica as travas na hora e reporta ao painel.
-        Kiosk.applyPolicies(context)
-        Telemetry.beatAsync(context)
+        val segurando = goAsync()
+        Thread {
+            try {
+                val ate = System.currentTimeMillis() + 10_000L
+                while (System.currentTimeMillis() < ate && !Kiosk.isDeviceOwner(context)) {
+                    try { Thread.sleep(200) } catch (_: InterruptedException) { break }
+                }
+                // Aplica de qualquer forma na saída: se o cargo chegou, as travas
+                // entram; se não chegou, `applyPolicies` volta sozinha na primeira
+                // linha e nada quebra.
+                Kiosk.applyPolicies(context)
+                Telemetry.beatAsync(context)
+            } finally {
+                segurando.finish()
+            }
+        }.start()
     }
 
     override fun onDisabled(context: Context, intent: Intent) {

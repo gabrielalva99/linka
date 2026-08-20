@@ -348,6 +348,23 @@ foreach ($p in $permissoes) {
 
 # 5. Verificacao (o que vale e o que o aparelho confirma) ---------------------
 Titulo "Conferindo se as travas pegaram"
+# REINICIAR O APP AQUI NAO FUNCIONA MAIS, e e importante saber disso.
+#
+# Depois que o aplicativo vira dono do aparelho, o Android PROTEGE o processo:
+# 'am force-stop' roda sem erro e nao mata nada. Descoberto em 20/08
+# provisionando um tablet Samsung com o app ja aberto.
+#
+# Antes isso passava despercebido porque no fluxo normal o app acabou de ser
+# instalado e nao esta rodando: o 'am start' abaixo criava um processo novo, e
+# era ESSE processo que aplicava as travas no onCreate. Quando o app ja estava
+# aberto, nada reiniciava e o aparelho ficava dono SEM TRAVA NENHUMA — parecendo
+# protegido no painel e aceitando modo aviao na mao do cliente.
+#
+# A partir da 0.106.0 quem aplica as travas e o proprio receptor, no instante em
+# que o cargo chega (LinkaDeviceAdminReceiver.onEnabled). Este passo deixou de
+# ser o que garante a protecao e virou so 'traga a vitrine para a frente'.
+# O force-stop continua aqui de proposito: em aparelho que ainda NAO virou dono
+# ele funciona, e nao custa nada onde nao funciona.
 & $adb shell am force-stop com.linka.agent | Out-Null
 & $adb shell am start -n com.linka.agent/.MainActivity | Out-Null
 Start-Sleep -Seconds 4
