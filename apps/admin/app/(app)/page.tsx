@@ -281,6 +281,10 @@ export default async function DashboardPage() {
     senha_de_tela: t.home.screenLock,
     atualizacao_travada: t.home.updateStuck,
     bateria_baixa: t.home.lowBattery,
+    // Aparelho fora da base. Nao e o mesmo aviso que bateria baixa: aquele so
+    // acende quando ja e quase tarde, e nao acende nunca se a rede cair antes
+    // da bateria — foi assim que o G06 morreu com 86% e nada apitou.
+    fora_da_tomada: t.home.unplugged,
     quente: t.home.hot,
     sem_loja: t.home.noStoreSet,
     // Sem modelo o aparelho some dos relatórios por modelo E da cobertura por

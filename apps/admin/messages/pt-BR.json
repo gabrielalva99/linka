@@ -428,6 +428,7 @@
     "screenLock": "senha de tela",
     "updateStuck": "atualização travada",
     "lowBattery": "bateria baixa",
+    "unplugged": "fora do carregador",
     "hot": "quente",
     "noStoreSet": "sem loja",
     "noModelSet": "sem modelo cadastrado; fica fora dos relatórios por modelo e da cobertura por linha",

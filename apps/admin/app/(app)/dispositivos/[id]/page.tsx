@@ -264,8 +264,17 @@ export default async function DeviceDetailPage({
     [t.device.mode, d.mode ? DEVICE_MODE_LABELS[d.mode] : "—"],
     [
       t.device.battery,
+      // Fora da base fica dito com todas as letras, e nao pela AUSENCIA do
+      // raio. Vitrine correta e vitrine carregando: o aparelho que morre num
+      // apagao e sempre o que estava solto, e ninguem le um icone que falta.
       d.battery_level != null
-        ? `${d.battery_level}%${d.battery_charging ? " ⚡" : ""}`
+        ? `${d.battery_level}%${
+            d.battery_charging === true
+              ? " ⚡"
+              : d.battery_charging === false
+                ? " · fora da base"
+                : ""
+          }`
         : "—",
     ],
     [t.device.os, d.os_version ?? "—"],
