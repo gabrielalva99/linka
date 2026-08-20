@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { UserRole } from "@linka/shared";
 
@@ -18,8 +19,16 @@ export type SessionContext = {
 /**
  * Contexto do usuário logado (servidor). Retorna null se não houver sessão.
  * Lê perfil (is_superadmin) e vínculos com tenants — respeitando RLS.
+ *
+ * `cache` DEDUPLICA POR REQUISIÇÃO. Esta função faz três idas em sequência
+ * (validar a sessão, ler o perfil, ler os vínculos) e era chamada pelo menos
+ * duas vezes para desenhar uma tela — uma no layout, outra na página, mais as
+ * checagens de permissão. Seis viagens ao banco para responder a mesma
+ * pergunta, uma esperando a outra. Com o cache, a primeira paga e as demais
+ * pegam o resultado pronto; a memória dura só o tempo desta requisição, então
+ * nenhuma tela chega a ver dado de outro usuário.
  */
-export async function getSessionContext(): Promise<SessionContext | null> {
+export const getSessionContext = cache(async function getSessionContext(): Promise<SessionContext | null> {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -55,4 +64,4 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       };
     }),
   };
-}
+});

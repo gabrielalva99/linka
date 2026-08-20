@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -46,7 +47,15 @@ export const TENANT_COOKIE = "linka_tenant";
  * A tela de Clientes NÃO usa esta função de propósito: é lá que se reativa, e um
  * cliente que desaparece da própria tela de administração não tem volta.
  */
-export async function listTenants(): Promise<ActiveTenant[]> {
+/*
+ * `cache` aqui vale por muitas viagens. `tenantFilter` chama esta funcao E
+ * `getActiveTenant`, que chama esta funcao DE NOVO — duas idas ao banco para
+ * uma pergunta so. Multiplique pelas telas que pedem o filtro mais de uma vez e
+ * pelo layout, que pede junto: a visao geral fazia mais de dez consultas em
+ * sequencia, uma esperando a outra, antes de comecar as dez que interessam.
+ * Foi o que sobrou de lentidao depois de mover a execucao para Sao Paulo.
+ */
+export const listTenants = cache(async function listTenants(): Promise<ActiveTenant[]> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("tenants")
@@ -60,7 +69,7 @@ export async function listTenants(): Promise<ActiveTenant[]> {
     toleranciaSemContatoMs:
       Number(t.tolerancia_sem_contato_segundos ?? 180) * 1000,
   }));
-}
+});
 
 /**
  * Cliente sobre o qual as telas operam.
@@ -80,7 +89,7 @@ export async function listTenants(): Promise<ActiveTenant[]> {
  * desempate, é a escolha estar VISÍVEL e ser trocável: antes o painel decidia
  * sozinho e ninguém tinha como saber nem mudar.
  */
-export async function getActiveTenant(): Promise<ActiveTenant | null> {
+export const getActiveTenant = cache(async function getActiveTenant(): Promise<ActiveTenant | null> {
   const disponiveis = await listTenants();
   if (disponiveis.length === 0) return null;
   if (disponiveis.length === 1) return disponiveis[0];
@@ -91,7 +100,7 @@ export async function getActiveTenant(): Promise<ActiveTenant | null> {
   // marca — e o RLS não recusaria, porque quem opera a plataforma tem acesso a
   // todos por definição.
   return disponiveis.find((t) => t.id === escolhido) ?? disponiveis[0];
-}
+});
 
 /**
  * Id para filtrar as LISTAS por cliente, ou null quando não há o que filtrar.
@@ -101,11 +110,11 @@ export async function getActiveTenant(): Promise<ActiveTenant | null> {
  * quem opera a plataforma o RLS deixa passar TODOS os clientes, e sem o filtro a
  * lista de lojas da Motorola viria misturada com a da marca seguinte.
  */
-export async function tenantFilter(): Promise<string | null> {
+export const tenantFilter = cache(async function tenantFilter(): Promise<string | null> {
   const disponiveis = await listTenants();
   if (disponiveis.length <= 1) return null;
   return (await getActiveTenant())?.id ?? null;
-}
+});
 
 /**
  * Aplica o recorte de cliente a uma consulta, quando há recorte a aplicar.
