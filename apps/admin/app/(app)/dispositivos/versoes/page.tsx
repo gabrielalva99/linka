@@ -7,6 +7,7 @@ import { ehOperadorDaPlataforma } from "@/lib/perms";
 import { PublishForm } from "./publish-form";
 import { RollbackButton } from "./rollback-button";
 import { dataHora } from "@/lib/datas";
+import { DEVICE_TYPE_TABS, type DeviceType } from "@linka/shared";
 
 type Release = {
   id: string;
@@ -18,18 +19,17 @@ type Release = {
   target_device_type: string | null;
 };
 
-/** Como o alvo é dito na tela. Nulo vira "Todos". */
-const NOME_DO_ALVO: Record<string, string> = {
-  todos: "Todos",
-  smartphone: "Celulares",
-  tablet: "Tablets",
-  tv: "TVs",
-  notebook: "Notebooks",
-  other: "Outros",
-};
-
+/**
+ * Como o alvo é dito na tela.
+ *
+ * Vem de DEVICE_TYPE_TABS — os mesmos rótulos das abas da lista de aparelhos.
+ * Uma tabela própria aqui já criou confusão de verdade: esta tela dizia
+ * "Celulares" enquanto o cadastro dizia "Smartphone", e quem publicava tinha que
+ * adivinhar se era a mesma coisa.
+ */
 function nomeDoAlvo(alvo: string | null) {
-  return NOME_DO_ALVO[alvo ?? "todos"] ?? (alvo ?? "Todos");
+  if (!alvo) return "Todos";
+  return DEVICE_TYPE_TABS[alvo as DeviceType] ?? alvo;
 }
 
 export default async function VersoesPage() {
@@ -112,8 +112,8 @@ export default async function VersoesPage() {
         sozinho. Não precisa de cabo nem de ninguém na loja.
       </p>
       <p className="mt-1 text-sm text-muted">
-        Você escolhe quem recebe: todos os aparelhos, só os celulares ou só as
-        TVs. O que for <strong className="font-medium text-foreground">para
+        Você escolhe quem recebe: todos os aparelhos ou apenas um tipo deles. O
+        que for <strong className="font-medium text-foreground">para
         todos</strong> atinge{" "}
         <strong className="font-medium text-foreground">a frota inteira, de
         todos os clientes</strong> — e as contagens abaixo também. Aparelho

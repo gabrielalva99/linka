@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { publishRelease, type PublishState } from "./actions";
+import { DEVICE_TYPE, DEVICE_TYPE_TABS, type DeviceType } from "@linka/shared";
 import { tamanho } from "@/lib/numeros";
 
 const inicial: PublishState = { ok: null };
@@ -14,21 +15,30 @@ const inicial: PublishState = { ok: null };
  * Quem publica está olhando para o botão, não para o seletor três campos acima.
  * Escrever o alvo no próprio botão é o que separa "subir uma versão de teste na
  * TV" de "mexer nos 250 aparelhos que estão em loja agora".
+ *
+ * O NOME DO TIPO NUNCA É ESCRITO AQUI. Ele vem de DEVICE_TYPE_TABS, o mesmo do
+ * cadastro de aparelhos e das abas da lista. A primeira versão desta tela tinha
+ * rótulos próprios e dizia "Celulares" onde o resto do painel diz "Smartphones"
+ * — o mesmo tipo com dois nomes, e ninguém com como saber se era o mesmo.
+ *
+ * As frases são montadas SEM artigo ("Apenas Smartphones", e não "Apenas os
+ * Smartphones") de propósito: em português o artigo muda com o gênero da
+ * palavra, e "os TVs" apareceria sozinho no dia em que alguém acrescentasse um
+ * tipo novo à lista compartilhada.
  */
-const QUEM_RECEBE: Record<string, { botao: string; aviso: string }> = {
-  todos: {
-    botao: "Publicar para todos os aparelhos",
-    aviso: "Vai para a frota inteira, de todos os clientes.",
-  },
-  smartphone: {
-    botao: "Publicar só para os celulares",
-    aviso: "Vai só para os celulares. As TVs continuam como estão.",
-  },
-  tv: {
-    botao: "Publicar só para as TVs",
-    aviso: "Vai só para as TVs. Os celulares continuam como estão.",
-  },
-};
+function quemRecebe(alvo: string): { botao: string; aviso: string } {
+  if (alvo === "todos") {
+    return {
+      botao: "Publicar para todos os aparelhos",
+      aviso: "Vai para a frota inteira, de todos os clientes.",
+    };
+  }
+  const nome = DEVICE_TYPE_TABS[alvo as DeviceType] ?? alvo;
+  return {
+    botao: `Publicar apenas para ${nome}`,
+    aviso: `Vai apenas para ${nome}. Os demais tipos de aparelho continuam como estão.`,
+  };
+}
 const field =
   "rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
 
@@ -149,8 +159,11 @@ export function PublishForm() {
             className={field}
           >
             <option value="todos">Todos os aparelhos</option>
-            <option value="smartphone">Só os celulares</option>
-            <option value="tv">Só as TVs</option>
+            {DEVICE_TYPE.map((ty) => (
+              <option key={ty} value={ty}>
+                Apenas {DEVICE_TYPE_TABS[ty]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="flex flex-1 flex-col gap-1.5">
@@ -188,10 +201,10 @@ export function PublishForm() {
           disabled={!url || pending}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
         >
-          {pending ? "Publicando…" : QUEM_RECEBE[alvo].botao}
+          {pending ? "Publicando…" : quemRecebe(alvo).botao}
         </button>
         <span className="text-xs text-muted">
-          {QUEM_RECEBE[alvo].aviso} Eles baixam sozinhos no próximo contato (até
+          {quemRecebe(alvo).aviso} Eles baixam sozinhos no próximo contato (até
           1 minuto).
         </span>
       </div>

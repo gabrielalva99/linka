@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logAction } from "@/lib/audit";
+import { DEVICE_TYPE } from "@linka/shared";
 
 export type PublishState =
   | { ok: true; version: string }
@@ -16,16 +17,18 @@ const SEMVER = /^\d+\.\d+\.\d+$/;
  * Para quem esta versão vale.
  *
  * Vazio = toda a frota, que é como sempre funcionou. Preenchido = só aquele tipo
- * de aparelho, e vence da geral para ele. O vocabulário é o do banco
- * (public.device_type) de propósito: uma lista escrita à mão aqui seria uma
- * segunda verdade para o mesmo assunto.
+ * de aparelho, e vence da geral para ele.
+ *
+ * A lista vem de DEVICE_TYPE, que é a MESMA que o cadastro de aparelhos usa.
+ * Repetir os valores aqui criaria uma segunda verdade sobre o mesmo assunto — e
+ * foi exatamente esse o erro na primeira versão desta tela: ela dizia
+ * "Celulares" onde o cadastro diz "Smartphone", como se fossem coisas
+ * diferentes.
  */
-const ALVOS = ["smartphone", "tablet", "tv", "notebook", "other"] as const;
-
 function alvoDoForm(form: FormData): string | null {
   const bruto = String(form.get("target_device_type") ?? "").trim();
   if (!bruto || bruto === "todos") return null;
-  return (ALVOS as readonly string[]).includes(bruto) ? bruto : null;
+  return (DEVICE_TYPE as readonly string[]).includes(bruto) ? bruto : null;
 }
 
 /**
