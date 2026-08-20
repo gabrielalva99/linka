@@ -29,29 +29,6 @@ function alvoDoForm(form: FormData): string | null {
 }
 
 /**
- * Tira de cena a versão vigente DO MESMO ALVO — e só dele.
- *
- * É a linha mais perigosa desta tela. Sem o recorte por alvo, publicar uma
- * versão de TV desligaria a versão que os 250 aparelhos de loja obedecem, e a
- * frota inteira ficaria sem versão publicada sem ninguém pedir isso. O índice
- * único do banco garante que só exista uma por alvo; este recorte garante que a
- * que sai é a certa.
- *
- * `.is(null)` e `.eq(valor)` são caminhos diferentes de propósito: no Postgres,
- * `= null` não casa com nada, então usar `.eq` para o alvo geral afetaria ZERO
- * linhas em silêncio e deixaria duas versões vigentes brigando.
- */
-async function tirarDoAr(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  alvo: string | null,
-) {
-  const q = supabase.from("agent_releases").update({ is_current: false }).eq("is_current", true);
-  return alvo === null
-    ? await q.is("target_device_type", null)
-    : await q.eq("target_device_type", alvo);
-}
-
-/**
  * Registra a versão recém-enviada e a torna a versão da frota.
  *
  * O arquivo já subiu direto do navegador para o Storage (3,7 MB não passam por
@@ -73,23 +50,25 @@ export async function publishRelease(
   const alvo = alvoDoForm(form);
   const supabase = await createSupabaseServerClient();
 
-  // Uma versão vale por vez POR ALVO: a anterior do mesmo alvo sai de cena antes
-  // de a nova entrar. Ordem importa — o banco tem índice único garantindo que só
-  // exista uma vigente por alvo.
-  const { error: offErr } = await tirarDoAr(supabase, alvo);
-  if (offErr) return { ok: false, error: "Não foi possível publicar." };
-
-  // NÃO conta linhas de propósito, e aqui é seguro: INSERT barrado por RLS
-  // ESTOURA (ao contrário de UPDATE e DELETE, que afetam zero linhas em
-  // silêncio). Quem não pode publicar não passa daqui, então o UPDATE de
-  // is_current logo acima — que seria silencioso — nunca fica órfão: ou os dois
-  // acontecem, ou a função sai pelo erro antes de gravar a trilha.
-  const { error } = await supabase.from("agent_releases").insert({
-    version,
-    url,
-    notes: notes || null,
-    is_current: true,
-    target_device_type: alvo,
+  // TUDO OU NADA, e isto custou um susto para virar regra.
+  //
+  // Publicar são dois passos: tirar a vigente do ar e gravar a nova. Feitos
+  // soltos daqui, o segundo pode falhar depois de o primeiro já ter acontecido —
+  // e aí a frota fica SEM versão publicada sem ninguém ter pedido isso.
+  //
+  // Aconteceu em 20/08 às 17:23: a 0.104.0 foi publicada, o botão foi clicado de
+  // novo, o primeiro passo tirou a 0.104.0 do ar, o segundo bateu em "essa versão
+  // já existe", e a tela respondeu com uma mensagem que soa inofensiva para um
+  // estado que já estava quebrado. Só não virou apagão porque o alvo era
+  // "smartphone"; no alvo geral teria derrubado a versão dos 15 aparelhos.
+  //
+  // Agora os dois passos moram numa função do banco, que é atômica: se a gravação
+  // estoura, a retirada volta atrás junto. Não existe mais estado no meio.
+  const { error } = await supabase.rpc("publicar_release", {
+    p_version: version,
+    p_url: url,
+    p_notes: notes || null,
+    p_alvo: alvo,
   });
   if (error) {
     return {
@@ -115,17 +94,9 @@ export async function publishRelease(
  */
 export async function makeCurrent(id: string) {
   const supabase = await createSupabaseServerClient();
-
-  // O alvo vem da versão escolhida, e não de quem clicou: voltar a frota de TV
-  // para uma versão anterior não pode mexer na versão que os celulares obedecem.
-  const { data: alvoDela } = await supabase
-    .from("agent_releases")
-    .select("target_device_type")
-    .eq("id", id)
-    .maybeSingle();
-  if (!alvoDela) return;
-
-  await tirarDoAr(supabase, alvoDela.target_device_type ?? null);
-  await supabase.from("agent_releases").update({ is_current: true }).eq("id", id);
+  // Mesma armadilha da publicação, mesmo remédio: quem tira uma do ar e põe a
+  // outra no lugar é o banco, de uma vez. O alvo sai da versão escolhida, e não
+  // de quem clicou — voltar a frota de TV não pode mexer na dos celulares.
+  await supabase.rpc("tornar_release_vigente", { p_id: id });
   revalidatePath("/dispositivos/versoes");
 }
