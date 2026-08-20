@@ -1,4 +1,21 @@
 import type { Metadata } from "next";
+
+/**
+ * O painel roda em Sao Paulo, junto do banco.
+ *
+ * O DEFEITO QUE ISTO CONSERTA. A Vercel executava as funcoes em iad1
+ * (Washington) enquanto o Supabase esta em gru1 (Sao Paulo). Cada requisicao
+ * saia do Brasil, atravessava o continente para rodar, voltava ao Brasil para
+ * consultar o banco e refazia o caminho — e uma tela do painel faz varias
+ * consultas. Medido em producao: 1 SEGUNDO so para o proxy conferir a sessao e
+ * redirecionar, contra 90 ms do que e servido pela borda. A visao geral, que e
+ * a tela com mais consultas, ficava tao lenta que o clique no menu parecia nao
+ * ter funcionado, e a pessoa clicava de novo.
+ *
+ * `regions` no vercel.json cobre as funcoes; isto aqui declara a mesma
+ * preferencia no codigo, onde ela e lida junto com o resto.
+ */
+export const preferredRegion = ["gru1"];
 import localFont from "next/font/local";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
