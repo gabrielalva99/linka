@@ -188,8 +188,26 @@ const val PASSADAS_DA_NUVEM = 3
 
         val token = Prefs.token(this)
         if (token != null) {
-            startHeartbeat()
+            // A ORDEM DESTAS DUAS LINHAS É O CONSERTO, e ela é contraintuitiva.
+            //
+            // `startHeartbeat()` não inicia o serviço: ele ENFILEIRA o início na
+            // mesma fila da tela. O serviço só roda quando este `onCreate`
+            // terminar. Só que o relógio de 5 segundos do Android começa a contar
+            // no instante em que a linha é chamada.
+            //
+            // Com `startHeartbeat()` na frente, todo o tempo de `showContent`
+            // (montar o tocador, ler o cache, preparar a tela) era gasto com o
+            // cronômetro correndo e o serviço esperando a vez. Num aparelho que
+            // acabou de se atualizar — com o sistema recompilando o app e o disco
+            // disputado — isso passava dos 5 segundos e o Android matava o
+            // aplicativo.
+            //
+            // Invertendo, o cronômetro só começa quando não há mais nada na
+            // frente: a última coisa que este `onCreate` faz é pedir o serviço e
+            // devolver o controle. A vitrine não perde nada — ela aparece antes,
+            // e não depois.
             showContent(token)
+            startHeartbeat()
         } else {
             // O código vem do kit por DOIS caminhos, e a ordem importa.
             //

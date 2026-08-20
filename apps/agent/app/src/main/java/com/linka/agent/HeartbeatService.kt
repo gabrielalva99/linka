@@ -33,8 +33,29 @@ class HeartbeatService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Api.init(this)
+        // PRIMEIRA LINHA, ANTES DE QUALQUER OUTRA COISA — e isto derruba aparelho
+        // quando não é respeitado.
+        //
+        // O Android dá ~5 segundos entre `startForegroundService()` lá na tela e
+        // esta chamada. Estourou, ele MATA o aplicativo com
+        // ForegroundServiceDidNotStartInTimeException. Não é aviso: é o processo
+        // morrendo, a vitrine apagando e o aparelho sumindo do painel até voltar
+        // sozinho — foram 5 a 6 minutos no moto g77 em 20/08.
+        //
+        // Aqui estava `Api.init(this)` na frente. Ele parece inofensivo (lê a
+        // versão do pacote), mas é uma chamada ao PackageManager — justamente o
+        // serviço mais ocupado do aparelho nos segundos seguintes a instalar um
+        // APK. Ou seja: a linha de risco rodava exatamente no pior momento
+        // possível, que é logo depois da atualização do próprio app.
+        //
+        // Medido antes de mexer: 6 quedas em 4 aparelhos e 3 modelos diferentes
+        // (edge 70, moto g17, moto g77) em dois dias, todas com esta assinatura.
+        // Era o defeito mais comum da frota.
+        //
+        // Promover primeiro e trabalhar depois não custa nada: o que vem abaixo
+        // não depende de estarmos em primeiro plano.
         startInForeground()
+        Api.init(this)
         if (timer == null) {
             timer = Timer().also {
                 it.scheduleAtFixedRate(
