@@ -73,6 +73,23 @@ object SelfUpdate {
      */
     private const val MAX_TENTATIVAS = 3
 
+    /**
+     * Volta para a atualização que ficou esperando a vez.
+     *
+     * Chamado pelo relógio de 60 segundos do serviço. Sem argumentos de propósito:
+     * o serviço não conhece versão nem endereço — quem sabe é o que ficou gravado
+     * na última resposta de conteúdo.
+     *
+     * Barato quando não há nada: uma leitura de preferência e volta. Quando há, cai
+     * no mesmo `maybeUpdate` de sempre, com as mesmas travas (tentativas, download
+     * em curso, manutenção, quiosque e a vez sorteada). Não é um segundo caminho de
+     * atualização — é o mesmo caminho, alcançável de minuto em minuto.
+     */
+    fun retomarPendente(ctx: Context) {
+        val (version, url) = Prefs.atualizacaoPendente(ctx) ?: return
+        maybeUpdate(ctx, version, url)
+    }
+
     fun maybeUpdate(ctx: Context, version: String, url: String) {
         if (version.isEmpty() || url.isEmpty()) return
         if (!isNewer(version, Api.AGENT_VERSION)) {
@@ -81,6 +98,26 @@ object SelfUpdate {
             return
         }
         if (!Kiosk.isDeviceOwner(ctx)) return
+
+        // GUARDA O QUE ESTÁ PENDENTE, para o relógio de 60s poder voltar aqui.
+        //
+        // Daqui para baixo existem três saídas que só ADIAM: manutenção aberta,
+        // vitrine fora do quiosque, e a vez sorteada que ainda não chegou. Antes
+        // desta linha, adiar significava esperar a próxima busca de conteúdo — que
+        // é de 30 em 30 minutos, porque publicar versão de propósito NÃO acorda a
+        // frota (a versão fica fora do hash de revisão desde o efeito manada da
+        // Casas Bahia).
+        //
+        // O resultado medido em 20/08: o sorteio de até 8 minutos vencia sozinho e
+        // o aparelho ficava mais meia hora parado, com "aguardando a vez (74s)"
+        // congelado na tela — o número não descia porque ninguém reescrevia a
+        // mensagem. Cinco aparelhos assim ao mesmo tempo.
+        //
+        // Com a pendência gravada, quem age é `retomarPendente` no relógio de 60
+        // segundos. O sorteio continua existindo e continua espalhando a carga: a
+        // diferença é que agora ele é OBEDECIDO na hora certa, em vez de vencer no
+        // vazio e cobrar mais um ciclo.
+        Prefs.setAtualizacaoPendente(ctx, version, url)
 
         // ESPERA a vitrine estar presa no app. Este e o conserto de uma regressao
         // que o Gabriel notou: "algumas atualizacoes atras o app piscava 1 segundo
@@ -119,6 +156,16 @@ object SelfUpdate {
                     (Prefs.updateState(ctx)?.let { "Último retorno do aparelho: $it" }
                         ?: "O aparelho não informou o motivo."),
             )
+            // DESISTIU: apaga a pendência para o relógio de 60s parar de voltar aqui.
+            //
+            // Sem isto, o aparelho que esgotou as três tentativas reescreveria esta
+            // mesma mensagem de erro no disco a cada minuto, para sempre — gravação
+            // inútil no aparelho mais fraco da frota, justamente o que mais falha.
+            //
+            // Não é perda: desistir é estado final por versão. Versão nova publicada
+            // chega pela busca de conteúdo, zera a contagem e grava a pendência de
+            // novo; e o "tentar de novo" do painel age pelo mesmo caminho.
+            Prefs.setAtualizacaoPendente(ctx, "", "")
             return
         }
         // A trava vem ANTES da contagem, e a ordem inversa era um defeito.

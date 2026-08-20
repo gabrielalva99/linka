@@ -181,6 +181,34 @@ object Prefs {
      * Ate 8 minutos: cabe folgado dentro do ciclo normal de atualizacao e espalha
      * o trafego o suficiente para a wi-fi da loja respirar entre um e outro.
      */
+    /**
+     * A ATUALIZAÇÃO QUE ESTÁ ESPERANDO A VEZ — versão e endereço.
+     *
+     * Existe porque o aparelho descobre a atualização num lugar (a resposta do
+     * conteúdo) e precisa AGIR em outro (o relógio de 60 segundos do serviço).
+     *
+     * Sem isto, quem sorteava a vez não tinha como voltar: o sorteio de até 8
+     * minutos vencia no vazio e o aparelho só reavaliava na busca de conteúdo
+     * seguinte, meia hora depois. Cada aparelho gastava DOIS ciclos de 30
+     * minutos — um para descobrir, outro para agir — quando um bastaria. Medido
+     * em 20/08: cinco aparelhos parados com "aguardando a vez (74s)" congelado
+     * na tela por doze minutos, porque ninguém reescrevia a mensagem.
+     */
+    private const val KEY_UPD_PEND_VER = "update_pendente_versao"
+    private const val KEY_UPD_PEND_URL = "update_pendente_url"
+
+    fun setAtualizacaoPendente(ctx: Context, version: String, url: String) =
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_UPD_PEND_VER, version).putString(KEY_UPD_PEND_URL, url).apply()
+
+    /** Versão e endereço da atualização pendente, ou nulo se não há nenhuma. */
+    fun atualizacaoPendente(ctx: Context): Pair<String, String>? {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val v = p.getString(KEY_UPD_PEND_VER, null) ?: return null
+        val u = p.getString(KEY_UPD_PEND_URL, null) ?: return null
+        return if (v.isEmpty() || u.isEmpty()) null else v to u
+    }
+
     private const val KEY_UPD_ESPERA = "update_espera"
     private const val KEY_UPD_ESPERA_VER = "update_espera_versao"
 
@@ -208,7 +236,8 @@ object Prefs {
     fun clearUpdateFailure(ctx: Context) =
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_UPD_VERSION).remove(KEY_UPD_COUNT).remove(KEY_UPD_ERROR)
-            .remove(KEY_UPD_STATE).remove(KEY_UPD_ESPERA).remove(KEY_UPD_ESPERA_VER).apply()
+            .remove(KEY_UPD_STATE).remove(KEY_UPD_ESPERA).remove(KEY_UPD_ESPERA_VER)
+            .remove(KEY_UPD_PEND_VER).remove(KEY_UPD_PEND_URL).apply()
 
     /**
      * Onde mora a tela de Otimizacao de RAM neste aparelho ("pacote/classe"),

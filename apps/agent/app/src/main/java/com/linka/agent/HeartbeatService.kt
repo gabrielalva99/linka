@@ -60,6 +60,24 @@ class HeartbeatService : Service() {
             timer = Timer().also {
                 it.scheduleAtFixedRate(
                     timerTask {
+                        // ANTES da batida, e a ordem é o conserto.
+                        //
+                        // Quem descobre a atualização é a busca de conteúdo, que
+                        // acontece de 30 em 30 minutos. Quem AGE passa a ser esta
+                        // linha, de minuto em minuto — senão o sorteio da vez
+                        // (até 8 minutos) vence no vazio e o aparelho espera mais
+                        // um ciclo inteiro sem motivo.
+                        //
+                        // Rodando antes da batida, o estado que vai para o painel
+                        // é o recém-escrito. Era isso que faltava para a contagem
+                        // "aguardando a vez (74s)" DESCER na tela em vez de ficar
+                        // congelada no mesmo número por doze minutos, fazendo
+                        // parecer travamento onde havia só espera.
+                        //
+                        // Não instala nada aqui dentro: maybeUpdate confere as
+                        // travas e, se for baixar, sai para uma thread própria.
+                        // A batida abaixo não fica esperando download.
+                        SelfUpdate.retomarPendente(this@HeartbeatService)
                         Telemetry.batidaPeriodica(this@HeartbeatService)
                         checkCleanup()
                         coletarEEnviarEventos()
