@@ -15,6 +15,22 @@
 # `verify_jwt = false`. Função que o PAINEL chama não entra — ali existe sessão
 # de usuário e a verificação é justamente o que a protege.
 
+# NAO RODE `supabase config push` COM ESTE ARQUIVO.
+#
+# Ele descreve SO as funcoes. Tudo o que nao esta declarado aqui o push aplica
+# com o valor PADRAO — e o padrao de `site_url` e `http://localhost:3000`. Um
+# push mandaria os links de convite e de recuperacao de senha da producao para o
+# localhost de quem rodou o comando, junto com o que mais estiver configurado
+# pelo painel e ausente daqui (expiracao de sessao, cadastro aberto ou fechado,
+# SMTP). O comando nao tem simulacao nem diff: empurra e aplica.
+#
+# A configuracao de autenticacao (Site URL e Redirect URLs) vive no painel do
+# Supabase, em Authentication > URL Configuration, e hoje precisa apontar para
+# https://painel.linkaretail.com.br — o painel mudou de endereco em 20/08.
+#
+# Para publicar funcao, use `supabase functions deploy <nome>`, que le as secoes
+# abaixo sem tocar em mais nada.
+
 project_id = "xkzktmsqtvpkxmzftars"
 
 [functions.agent-heartbeat]
