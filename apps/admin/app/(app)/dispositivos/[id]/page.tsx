@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getActiveTenant, porCliente, tenantFilter } from "@/lib/tenant";
+import {
+  getActiveTenant,
+  porCliente,
+  tenantFilter,
+  toleranciaSemContatoMs,
+} from "@/lib/tenant";
 import { getMessages } from "@/lib/i18n";
 import { podeOperarAgora } from "@/lib/perms";
 import { modelLabel } from "@/lib/device-display";
@@ -23,7 +28,7 @@ import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
 import { UpdateRetry } from "./update-retry";
-import { FUSO_PADRAO, dataHora, nomeDaLoja } from "@/lib/datas";
+import { FUSO_PADRAO, dataHora, nomeDaLoja, tempoDecorrido } from "@/lib/datas";
 import { decimal } from "@/lib/numeros";
 
 type Rel = { name: string | null } | { name: string | null }[] | null;
@@ -92,7 +97,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, update_state, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
+      "id, code, name, status, last_seen_at, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, update_state, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -168,6 +173,26 @@ export default async function DeviceDetailPage({
     (Array.isArray(lojaDoAparelho)
       ? lojaDoAparelho[0]?.timezone
       : lojaDoAparelho?.timezone) ?? FUSO_PADRAO;
+
+  // FORA DO AR: a diferenca entre "esta assim" e "estava assim quando sumiu".
+  //
+  // O DEFEITO QUE ISTO CONSERTA. Esta tela imprimia os campos do aparelho como
+  // se fossem o agora: um Moto G06 que calou as 22h36 aparecia na manha
+  // seguinte com "Tela: Acesa", "Wi-Fi otimo" e "Ligado ha 11h04" — o retrato
+  // do ultimo instante, com cara de tempo real. A lista dizia "fora do ar" e o
+  // detalhe parecia desmentir a lista; entre as duas, quem opera acredita na
+  // que mostra mais numero, e o aparelho apagado fica na loja o dia inteiro.
+  //
+  // A tolerancia e a MESMA da lista (vem do ritmo de contato configurado), e
+  // nao um numero escolhido aqui: duas telas com criterios diferentes foi
+  // exatamente o problema.
+  const toleranciaMs = toleranciaSemContatoMs(tenant);
+  const semNoticiaDesde = (device as { last_seen_at: string | null }).last_seen_at;
+  const foraDoAr =
+    semNoticiaDesde != null &&
+    Date.now() - new Date(semNoticiaDesde).getTime() > toleranciaMs;
+  const silencio = tempoDecorrido(semNoticiaDesde);
+  const ultimaNoticia = dataHora(semNoticiaDesde, fusoDaLoja);
   const saidas = (saidasData ?? []) as {
     created_at: string;
     metadata: { loja?: string; detalhe?: string } | null;
@@ -176,6 +201,7 @@ export default async function DeviceDetailPage({
     id: string;
     code: string | null;
     name: string;
+    last_seen_at: string | null;
     mode: DeviceMode | null;
     battery_level: number | null;
     battery_charging: boolean | null;
@@ -319,6 +345,17 @@ export default async function DeviceDetailPage({
         )}
       </div>
 
+      {/* O aviso vem ANTES de qualquer numero, porque e ele que diz como ler
+          todos os outros: sem isto, cada cartao abaixo passa por leitura de
+          agora. */}
+      {foraDoAr && (
+        <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <span className="font-semibold">Fora do ar</span> desde {ultimaNoticia}{" "}
+          ({silencio}). Os numeros desta tela sao a ultima medicao recebida, e
+          nao o estado de agora.
+        </p>
+      )}
+
       {/* Aparelho que nunca reportou: a instrução de pareamento vem antes de
           qualquer dado, porque não existe dado nenhum para ler ainda. */}
       {d.agent_version == null && <PairingCard code={d.provisioning_code} />}
@@ -333,7 +370,17 @@ export default async function DeviceDetailPage({
       </dl>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium text-muted">{t.device.health}</h2>
+        <h2 className="text-sm font-medium text-muted">
+          {t.device.health}
+          {/* O carimbo fica junto do titulo porque estes cinco cartoes sao os
+              que mais parecem tempo real — "Tela: Acesa" nao tem como avisar
+              sozinho que a leitura e de ontem. */}
+          {semNoticiaDesde && (
+            <span className="ml-2 text-xs">
+              {foraDoAr ? `· medido em ${ultimaNoticia}` : `· ${silencio}`}
+            </span>
+          )}
+        </h2>
         <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-5">
           {health.map(([k, v]) => (
             <div key={k} className="rounded-xl border border-line bg-surface p-4">

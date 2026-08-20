@@ -102,3 +102,24 @@ export function nomeDaLoja(
   if (!rede || rede === loja.name.trim()) return loja.name;
   return `${rede} - ${loja.name}`;
 }
+
+/**
+ * "há 12h" — o TAMANHO do silêncio.
+ *
+ * Um horário sozinho não responde a pergunta que importa. "22:36" parece
+ * recente para quem olha às 23h e é abandono para quem olha às 11h do dia
+ * seguinte — e é a mesma tela, com o mesmo texto. Quem opera precisa saber se
+ * manda alguém até a loja agora, e isso se decide pelo tamanho do silêncio.
+ */
+export function tempoDecorrido(v: Entrada, agora: Date = new Date()): string {
+  const d = paraData(v);
+  if (!d) return "—";
+  const seg = Math.max(0, Math.round((agora.getTime() - d.getTime()) / 1000));
+  if (seg < 90) return "há instantes";
+  const min = Math.floor(seg / 60);
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h${String(min % 60).padStart(2, "0")}`;
+  const dias = Math.floor(h / 24);
+  return dias === 1 ? "há 1 dia" : `há ${dias} dias`;
+}
