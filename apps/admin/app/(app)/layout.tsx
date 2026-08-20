@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/i18n";
 import { getSessionContext } from "@/lib/auth";
@@ -5,6 +6,7 @@ import { ROLE_LABELS } from "@linka/shared";
 import { LinkaLogo } from "../linka-logo";
 import { NavLink } from "./nav-link";
 import { TenantSwitcher } from "./tenant-switcher";
+import { MenuMobile } from "./menu-mobile";
 import { getActiveTenant, listTenants } from "@/lib/tenant";
 
 export default async function AppLayout({
@@ -48,9 +50,11 @@ export default async function AppLayout({
       <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface p-4 sm:flex">
         {/* Logotipo da marca no lugar do texto. Largura fixa e altura
             automática: o arquivo é o mesmo entregue pelo design, sem recorte. */}
-        <div className="mb-8">
-<LinkaLogo className="h-5 w-auto" />
-        </div>
+        {/* O logotipo LEVA para a visao geral. E onde a pessoa tenta clicar
+            antes de procurar o item no menu, e ate agora nao acontecia nada. */}
+        <Link href="/" className="mb-8 block" aria-label="Visao geral">
+          <LinkaLogo className="h-5 w-auto" />
+        </Link>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
             <NavLink key={item.href} href={item.href} label={item.label} />
@@ -59,8 +63,20 @@ export default async function AppLayout({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-line px-6 py-3">
-          <span className="text-sm text-muted">{roleLabel}</span>
+        {/* `relative` ancora o menu de celular, que abre logo abaixo desta
+            barra. */}
+        <header className="relative flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <MenuMobile itens={nav} />
+            {/* Em tela estreita o logotipo assume o papel do menu lateral, que
+                nao existe nessa largura: e o caminho curto de volta ao inicio. */}
+            <Link href="/" className="sm:hidden" aria-label="Visao geral">
+              <LinkaLogo className="h-5 w-auto" />
+            </Link>
+            {/* Papel e e-mail saem em tela estreita: sao identificacao, nao
+                navegacao, e ocupavam o espaco de quem precisa se mover. */}
+            <span className="hidden text-sm text-muted sm:inline">{roleLabel}</span>
+          </div>
           <div className="flex items-center gap-3">
             {/* Em qual cliente estamos. Só existe para quem opera a plataforma e
                 enxerga mais de um — para o usuário de uma marca não há escolha a
@@ -68,7 +84,7 @@ export default async function AppLayout({
             {clientes.length > 1 && (
               <TenantSwitcher clientes={clientes} atual={ativo?.id ?? null} />
             )}
-            <span className="text-sm">{ctx.email}</span>
+            <span className="hidden text-sm sm:inline">{ctx.email}</span>
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
