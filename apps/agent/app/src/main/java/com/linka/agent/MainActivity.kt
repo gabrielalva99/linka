@@ -25,6 +25,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -1789,7 +1790,54 @@ const val PASSADAS_DA_NUVEM = 3
         // Só vale para vídeo em laço (arquivo local). Da nuvem o vídeo toca uma
         // passada e para, então não há laço para alinhar.
         var jaAlinhou = false
-        val exo = ExoPlayer.Builder(this).build().apply {
+        // QUANTO VIDEO O TOCADOR GUARDA NA MEMORIA.
+        //
+        // ── POR QUE ISTO EXISTE (medido em 21/08) ─────────────────────────
+        // O padrao do ExoPlayer e guardar 50 SEGUNDOS de video, dimensionado
+        // para streaming: numa rede que engasga, esse colchao evita a imagem
+        // parar. Nossa vitrine toca ARQUIVO DO PROPRIO DISCO, onde nao existe
+        // rede para engasgar. Cinquenta segundos de colchao ali e memoria
+        // parada sem funcao nenhuma.
+        //
+        // O razr da Interlagos (007) chegou a 383 MB de 384 tocando uma peca de
+        // 24 MB em 1224x2992, e caiu duas vezes num dia. A pilha do erro aponta
+        // `shouldContinueLoading`, que e exatamente a funcao que decide guardar
+        // mais video.
+        //
+        // ── O QUE A CURVA MOSTROU, e por que aponta para ca ───────────────
+        // Ele subiu ate 100%, ficou meia hora encostado no teto e DESCEU sozinho
+        // para 20%, sem cair e sem reiniciar. Trezentos megabytes voltaram de uma
+        // vez. Vazamento nao devolve memoria: o que sobe e volta inteiro sao
+        // objetos com dono enquanto estao em uso, que e a cara de colchao de
+        // video dimensionado demais.
+        //
+        // ── OS NUMEROS, e por que estes ──────────────────────────────────
+        // `targetBufferBytes` e o que fecha a porta de verdade: e um teto em
+        // BYTES, e nao em segundos. Sem ele, video de bitrate alto estoura a
+        // conta mesmo com pouca duracao guardada, que e justamente o caso do
+        // aparelho de tela grande.
+        //
+        // Arquivo local: 4 MB e ~3 segundos bastam. O disco entrega mais rapido
+        // do que o decodificador consome, entao o colchao so precisa cobrir o
+        // tempo de leitura.
+        //
+        // Da nuvem continua folgado, porque ali a rede da loja E o risco. Ainda
+        // assim ganha teto: antes nao tinha nenhum.
+        val colchao = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                if (daNuvem) 15_000 else 3_000,   // minimo antes de comecar a tocar
+                if (daNuvem) 30_000 else 6_000,   // maximo guardado
+                if (daNuvem) 2_500 else 500,      // para iniciar
+                if (daNuvem) 5_000 else 1_000,    // para retomar depois de faltar
+            )
+            .setTargetBufferBytes(if (daNuvem) 16 * 1024 * 1024 else 4 * 1024 * 1024)
+            // Tempo manda mais que tamanho: com o teto em bytes definido, isto
+            // garante que o tocador respeite o teto em vez de insistir em
+            // completar os segundos pedidos.
+            .setPrioritizeTimeOverSizeThresholds(false)
+            .build()
+
+        val exo = ExoPlayer.Builder(this).setLoadControl(colchao).build().apply {
             setMediaItem(MediaItem.fromUri(sourceFor(url)))
             repeatMode = if (daNuvem) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
             // Vitrine é muda por padrão: som só quando o painel liberar para este
