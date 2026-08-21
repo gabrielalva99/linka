@@ -175,6 +175,20 @@ export default async function FrotaPage({
     supabase.from("v_campanha_do_aparelho").select("device_id, campanha"),
     filtro,
   );
+  // QUEM TEM APLICATIVO FORA DE FABRICA, em uma consulta so.
+  //
+  // Mesma razao da campanha logo acima: com 250 aparelhos, perguntar por linha
+  // seria a diferenca entre a lista abrir e a lista travar.
+  const { data: appsExtras } = await supabase.rpc(
+    "aparelhos_com_app_fora_de_fabrica_lista",
+    { p_tenant: filtro },
+  );
+  const appExtraPorAparelho = new Map(
+    ((appsExtras ?? []) as { device_id: string; quantos: number; apps: string }[]).map(
+      (x) => [x.device_id, x],
+    ),
+  );
+
   const campanhaPorAparelho = new Map(
     ((campanhas ?? []) as { device_id: string; campanha: string | null }[]).map((c) => [
       c.device_id,
@@ -237,6 +251,7 @@ export default async function FrotaPage({
       const fora = effectiveStatus(d.status, d.last_seen_at, toleranciaMs) !== "online";
       if (situacao === "offline" && !fora) return false;
       if (situacao === "sem_travas" && d.kiosk_locked) return false;
+      if (situacao === "app_extra" && !appExtraPorAparelho.has(d.id)) return false;
       const publicadaDele = publicadaPara(d.device_type);
       if (
         situacao === "desatualizado" &&

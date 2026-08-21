@@ -83,6 +83,7 @@ export function Filters({
         <option value="offline">{t.fleet.offlineOnly}</option>
         <option value="sem_travas">{t.fleet.unlockedOnly}</option>
         <option value="desatualizado">{t.fleet.outdatedOnly}</option>
+        <option value="app_extra">{t.fleet.extraAppsOnly}</option>
         {/* Arquivados ficam FORA de todas as outras opções: é o único filtro que
             mostra o que a lista esconde por padrão. */}
         <option value="arquivados">{t.fleet.archivedOnly}</option>

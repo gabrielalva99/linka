@@ -59,6 +59,7 @@ export default async function DashboardPage() {
     { count: semLoja },
     { count: sincronizados },
     { data: pacotesSemClasse },
+    { data: comAppExtra },
     { data: videosDoCliente },
     { data: videosEmCampanha },
   ] =
@@ -144,6 +145,11 @@ export default async function DashboardPage() {
       // Motorola, e o clique caía numa tela que filtra por cliente e não mostrava
       // nada (20/08). Aviso que não fecha ao ser clicado ensina a ignorar o bloco.
       supabase.rpc("pacotes_sem_classificacao", { p_tenant: filtro }),
+      // Aparelho com aplicativo que ninguem instalou de fabrica. O inventario ja
+      // reportava isso, mas so dentro da ficha de cada aparelho: para achar os
+      // cinco que precisavam de limpeza era preciso abrir os quinze. Com 250 vira
+      // impossivel, e foi assim que o Gabriel acabou limpando na mao, um por um.
+      supabase.rpc("aparelhos_com_app_fora_de_fabrica", { p_tenant: filtro }),
       // SÓ PEÇAS PRINCIPAIS entram nesta conta.
       //
       // Variante nunca está em `campaign_items`, e isso é o desenho, não uma
@@ -217,6 +223,7 @@ export default async function DashboardPage() {
       semLoja: semLoja ?? 0,
       videosOrfaos,
       pacotesSemClasse: Number(pacotesSemClasse ?? 0),
+      comAppExtra: Number(comAppExtra ?? 0),
     },
   };
   const criticos = issues.filter((i) => i.gravidade === "critico");

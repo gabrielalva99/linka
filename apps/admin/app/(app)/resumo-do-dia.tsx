@@ -28,7 +28,12 @@ export type ResumoDoDia = {
   ontem: { visitas: number; segundosVitrine: number };
   horaCorte: string;
   campanha: { nomes: string[]; baixaram: number; total: number } | null;
-  pendencias: { semLoja: number; videosOrfaos: number; pacotesSemClasse: number };
+  pendencias: {
+    semLoja: number;
+    videosOrfaos: number;
+    pacotesSemClasse: number;
+    comAppExtra: number;
+  };
 };
 
 /** "3h12" / "44min" — hora cheia só quando existe. */
@@ -80,6 +85,20 @@ export function ResumoDoDia({
         : t.home.pendOrphanMediaP
       ).replace("{n}", String(pendencias.videosOrfaos)),
       href: "/biblioteca",
+    });
+  }
+  // Aplicativo que ninguem instalou de fabrica na vitrine.
+  //
+  // Vale para o cliente tambem, e nao so para a plataforma: quem resolve e quem
+  // tem o aparelho na mao. Leva para a lista JA FILTRADA, porque saber que
+  // existem tres nao ajuda se descobrir quais custa abrir a frota inteira.
+  if (pendencias.comAppExtra > 0) {
+    listaPendencias.push({
+      texto: (pendencias.comAppExtra === 1
+        ? t.home.pendExtraApps
+        : t.home.pendExtraAppsP
+      ).replace("{n}", String(pendencias.comAppExtra)),
+      href: "/dispositivos?situacao=app_extra",
     });
   }
   // SÓ PARA QUEM PODE RESOLVER.
