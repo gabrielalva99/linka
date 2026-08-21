@@ -139,7 +139,11 @@ export default async function DashboardPage() {
       // Pacote medido e não classificado: o P0 que a varredura de UX abriu. Vive
       // aqui porque é pendência que não apita e cobra depois — o número de
       // "recurso mais usado" fica errado sem ninguém perceber.
-      supabase.rpc("pacotes_sem_classificacao"),
+      // O CLIENTE ATIVO VAI JUNTO, e a falta dele já causou um beco sem saída:
+      // um pacote sem classificação no cliente Teste acendia o aviso na tela da
+      // Motorola, e o clique caía numa tela que filtra por cliente e não mostrava
+      // nada (20/08). Aviso que não fecha ao ser clicado ensina a ignorar o bloco.
+      supabase.rpc("pacotes_sem_classificacao", { p_tenant: filtro }),
       // SÓ PEÇAS PRINCIPAIS entram nesta conta.
       //
       // Variante nunca está em `campaign_items`, e isso é o desenho, não uma
