@@ -610,6 +610,8 @@
     "title": "O aplicativo parou neste aparelho",
     "hint": "Enquanto o aplicativo está parado, a vitrine não aparece. Ele volta sozinho, mas se isto se repetir há algo a corrigir.",
     "times": "{n} vezes",
+    "incidents": "{n} acidentes",
+    "records": "{n} registros",
     "since": "de {p} até {u}",
     "details": "detalhes técnicos"
   }
