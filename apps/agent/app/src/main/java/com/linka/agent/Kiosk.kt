@@ -357,6 +357,63 @@ object Kiosk {
         }
     }
 
+    /**
+     * As políticas, FORA DA LINHA PRINCIPAL.
+     *
+     * ── A MEDIÇÃO QUE OBRIGOU ISTO (21/08) ────────────────────────────────
+     * Cronômetro na subida do app, no Razr 60 Ultra — o aparelho MAIS RÁPIDO da
+     * frota, logo depois de uma atualização:
+     *
+     *     super=0ms crashlog=0ms ram=1ms api=1ms push=2ms brilho=2ms
+     *     politicas=8933ms  ← aqui
+     *     permissoes=8941ms conteudo=8980ms servico=8981ms
+     *
+     * `applyPolicies` sozinha segurava a linha principal por **8,9 segundos**.
+     * Todo o resto da subida soma 2 ms.
+     *
+     * ── OS DOIS SINTOMAS QUE ISSO EXPLICA ─────────────────────────────────
+     * Os dois batem no mesmo limite de 5 segundos do Android:
+     *
+     *   - "LINKA não está respondendo — aguardar ou fechar". É o ANR: linha
+     *     principal presa. O Gabriel via isso a cada atualização do tablet.
+     *   - Morte do serviço em primeiro plano. Ele tem 5 segundos para se
+     *     anunciar, e não consegue com a linha principal travada. Foi o que
+     *     apagou o edge 70 da Interlagos por **12h54** em 20/08.
+     *
+     * Uma causa, dois sintomas, e o segundo custou meio dia de vitrine no
+     * escuro. Reordenar a subida (tentativa da 0.104.0) não resolveu porque o
+     * problema nunca foi a ordem: eram 9 segundos de trabalho no lugar errado.
+     *
+     * ── POR QUE PODE SAIR DA LINHA PRINCIPAL ──────────────────────────────
+     * Tudo aqui dentro é chamada ao sistema (binder para o system_server):
+     * restrições, trava de tela, brilho, tempo de tela, token de reset, bloqueio
+     * de apps, autorização do quiosque, permissões de demonstração. Nenhuma
+     * mexe em janela nem em vista, então nenhuma precisa da linha principal.
+     * São lentas justamente porque o system_server está ocupado logo depois de
+     * instalar um APK — que é exatamente quando o app sobe.
+     *
+     * ── A ORDEM CONTINUA GARANTIDA ────────────────────────────────────────
+     * Uma dessas chamadas AUTORIZA os pacotes do quiosque, e sem ela
+     * `startLockTask` falha em silêncio — o aparelho ficaria com cara de
+     * trancado e destrancado de verdade, que é o pior estado possível.
+     *
+     * Por isso existe o `aoTerminar`: quem chama tranca ali, com a autorização
+     * já no lugar. Enquanto as políticas correm, a vitrine já está no ar e
+     * respondendo — o que se perde é uma janela de segundos sem quiosque, e isso
+     * é infinitamente melhor que meio dia de tela apagada.
+     */
+    fun aplicarPoliticasEmSegundoPlano(ctx: Context, aoTerminar: () -> Unit) {
+        Thread {
+            try {
+                applyPolicies(ctx)
+            } catch (_: Throwable) {
+                // Política que falha não pode derrubar a vitrine.
+            } finally {
+                aoTerminar()
+            }
+        }.start()
+    }
+
     fun applyPolicies(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
         val dpm = dpm(ctx)

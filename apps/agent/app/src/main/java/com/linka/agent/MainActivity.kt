@@ -146,18 +146,46 @@ class MainActivity : Activity() {
 const val PASSADAS_DA_NUVEM = 3
     }
 
+    /**
+     * CRONÔMETRO DA SUBIDA — fica no produto de propósito.
+     *
+     * O Gabriel relatou em 21/08: no tablet, TODA atualização mostrava "LINKA não
+     * está respondendo — aguardar ou fechar", e só depois o vídeo entrava. Esse
+     * diálogo é o ANR do Android: linha principal presa por mais de 5 segundos.
+     *
+     * É o MESMO número da morte do serviço em primeiro plano, e provavelmente a
+     * mesma causa: se a linha principal trava, o serviço não consegue se anunciar
+     * a tempo e o Android mata o aplicativo. Um aparelho de loja ficou 12h54 no
+     * escuro por isso (edge 70, 20/08).
+     *
+     * Sem medida, consertar isso é chute. Com ela, o próprio aparelho de loja
+     * conta onde perdeu o tempo — e o custo é uma linha de log por subida.
+     */
+    private var subidaEm = 0L
+    private val marcos = StringBuilder()
+
+    private fun marco(nome: String) {
+        marcos.append(nome).append('=').append(SystemClock.uptimeMillis() - subidaEm).append("ms ")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        subidaEm = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
+        marco("super")
         // PRIMEIRA COISA DEPOIS DO super: daqui para a frente, qualquer queda vira
         // relato. Instalado antes de tudo porque o trecho mais provável de quebrar
         // é justamente a subida — e é a queda na subida que deixa a vitrine preta.
         CrashLog.instalar(applicationContext)
+        marco("crashlog")
         // Descobre onde mora a tela de Otimizacao de RAM enquanto ninguem esta
         // esperando. A busca varre o aparelho inteiro e leva segundos; no toque
         // do cliente, esses segundos sao a demonstracao que nao acontece.
         PainelDeRecursos.aquecerBuscaDaRam(applicationContext)
+        marco("ram")
         Api.init(this)
+        marco("api")
         pegarEnderecoDePush()
+        marco("push")
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Deixa esta tela ACENDER o aparelho, não só mantê-lo aceso. Sem isto,
         // uma vitrine que apagou durante o expediente ficava preta até alguém
@@ -170,9 +198,29 @@ const val PASSADAS_DA_NUVEM = 3
         // A vitrine nasce no brilho máximo, sem esperar ninguém abrir e fechar o
         // painel de recursos.
         Kiosk.brilhoDaVitrine(this)
+        marco("brilho")
         // Reaplica as travas a cada início: atualização do app ou do Android não
         // pode destravar a vitrine sem ninguém perceber. É inócuo se não somos dono.
-        Kiosk.applyPolicies(this)
+        // AS POLÍTICAS SAEM DA LINHA PRINCIPAL. Medido em 21/08: elas sozinhas
+        // seguravam a subida por 8,9 segundos no aparelho mais rápido da frota —
+        // acima dos 5 segundos que causam o "não está respondendo" e a morte do
+        // serviço. Ver o comentário em Kiosk.aplicarPoliticasEmSegundoPlano.
+        //
+        // Quando terminarem, tranca de novo: é a chamada de lá que autoriza os
+        // pacotes do quiosque, e sem ela a primeira tentativa de trancar (dentro
+        // de showContent) falha em silêncio.
+        Kiosk.aplicarPoliticasEmSegundoPlano(this) {
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && Prefs.token(this) != null) {
+                    Kiosk.trancar(this)
+                    android.util.Log.i(
+                        "LINKA-SUBIDA",
+                        "politicas terminaram em ${SystemClock.uptimeMillis() - subidaEm}ms",
+                    )
+                }
+            }
+        }
+        marco("politicas")
 
         // Dono do aparelho CONCEDE; so quem nao e dono precisa pedir.
         //
@@ -182,6 +230,7 @@ const val PASSADAS_DA_NUVEM = 3
         // campanha. Numa loja, e a campanha coberta por uma pergunta que ninguem
         // vai responder.
         Kiosk.liberarPropriasPermissoes(this)
+        marco("permissoes")
         if (Build.VERSION.SDK_INT >= 33 && !Kiosk.isDeviceOwner(this)) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
@@ -207,7 +256,10 @@ const val PASSADAS_DA_NUVEM = 3
             // devolver o controle. A vitrine não perde nada — ela aparece antes,
             // e não depois.
             showContent(token)
+            marco("conteudo")
             startHeartbeat()
+            marco("servico")
+            android.util.Log.i("LINKA-SUBIDA", marcos.toString())
         } else {
             // O código vem do kit por DOIS caminhos, e a ordem importa.
             //
