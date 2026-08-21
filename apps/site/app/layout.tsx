@@ -45,6 +45,23 @@ export const metadata: Metadata = {
     "retail media",
     "trade marketing",
   ],
+  // PROVA DE QUE O SITE É NOSSO, para o Google Search Console.
+  //
+  // Existe para destravar a conversão da conta do Google Play em conta de
+  // ORGANIZAÇÃO, que é o que permite publicar o agente em distribuição privada.
+  // Sem o app na Play, o provisionamento por QR não funciona: o verificador do
+  // Google recusa a instalação automática e todo aparelho novo precisa de cabo e
+  // notebook na loja.
+  //
+  // Verificado por etiqueta no site, e não por registro no DNS, de propósito. O
+  // DNS do domínio mora na Hostinger e tem o SPF do e-mail junto; mexer lá para
+  // acrescentar um TXT é risco desnecessário quando o site é nosso e sobe a cada
+  // envio. Se o Play recusar propriedade de "prefixo do URL" e exigir "domínio",
+  // aí sim vai por DNS.
+  //
+  // NÃO REMOVER depois de verificado: o Google reconfere de tempos em tempos, e
+  // propriedade que perde a prova volta a ficar sem verificação.
+  verification: { google: "YHKn1BtSgQ0-ADF65ncQjminU09x5dXYAmNa262xgIA" },
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
   openGraph: {
