@@ -268,6 +268,44 @@ object Prefs {
         de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_ERRO_VIDEO, valor).apply()
 
+    /**
+     * A TELA ONDE A VITRINE ESTÁ, medida por quem enxerga.
+     *
+     * ── POR QUE NÃO DÁ PARA MEDIR NA HORA DE MANDAR ───────────────────────
+     * Quem manda a batida periódica é o SERVIÇO, e serviço não está associado a
+     * tela nenhuma. Pedir as medidas dali faz o Android devolver a tela PADRÃO
+     * do aparelho, que num dobrável pode ser a externa mesmo com o aparelho
+     * aberto e o vídeo rodando na interna.
+     *
+     * Foi o que aconteceu com o razr da Interlagos (007) em 21/08: aparelho
+     * aberto, vitrine na tela interna, e reportando 1080x1272, que é a tela
+     * externa. Os outros dois razr, idênticos, reportavam 1224x2992 certo.
+     *
+     * Isso não é detalhe de telemetria: é a MEDIDA QUE ESCOLHE O CRIATIVO. Com
+     * a tela errada, o servidor entrega a peça de outro formato e a loja exibe
+     * conteúdo cortado sem ninguém perceber.
+     *
+     * Então quem mede é a tela, que sabe em qual display está, e guarda aqui. O
+     * serviço só repete o que foi guardado. Em dobrável a tela é recriada ao
+     * abrir e fechar, e a medida se atualiza sozinha nesse momento.
+     */
+    private const val KEY_TELA_W = "tela_largura"
+    private const val KEY_TELA_H = "tela_altura"
+
+    fun setTelaDaVitrine(ctx: Context, largura: Int, altura: Int) {
+        if (largura <= 0 || altura <= 0) return
+        de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_TELA_W, largura).putInt(KEY_TELA_H, altura).apply()
+    }
+
+    /** Nulo enquanto a vitrine ainda não mediu; aí quem chama usa o que der. */
+    fun telaDaVitrine(ctx: Context): Pair<Int, Int>? {
+        val p = de(ctx).getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val w = p.getInt(KEY_TELA_W, 0)
+        val h = p.getInt(KEY_TELA_H, 0)
+        return if (w > 0 && h > 0) w to h else null
+    }
+
     private const val KEY_TELA_RAM = "tela_de_ram"
 
     /**

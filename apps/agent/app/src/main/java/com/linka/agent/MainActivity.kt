@@ -2004,6 +2004,16 @@ const val PASSADAS_DA_NUVEM = 3
 
     override fun onResume() {
         super.onResume()
+        // A TELA É MEDIDA AQUI, e só aqui.
+        //
+        // Esta é a única parte do aplicativo que sabe em qual display está. O
+        // serviço, que manda a batida, não sabe: pedir as medidas de lá devolve a
+        // tela padrão do aparelho, e num dobrável isso é a externa mesmo com o
+        // aparelho aberto.
+        //
+        // Em onResume porque cobre os dois casos que importam: a primeira subida
+        // e o dobrável sendo aberto ou fechado, que recria esta tela.
+        Health.tela(this)?.let { (w, h) -> Prefs.setTelaDaVitrine(this, w, h) }
         Prefs.setLeftAt(this, 0L)
         // Trancar de novo tem que ser AQUI, e não em onNewIntent.
         //

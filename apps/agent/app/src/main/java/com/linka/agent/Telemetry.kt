@@ -297,7 +297,18 @@ object Telemetry {
         // recebe. Em dobrável muda quando o aparelho abre, então vai em toda
         // batida — medir uma vez no provisionamento estaria errado metade do
         // tempo, e ninguém saberia qual metade.
-        Health.tela(ctx)?.let { (w, h) ->
+        // QUEM MEDIU FOI A VITRINE, e a batida só repete.
+        //
+        // Medir aqui daria a tela errada: a batida periódica sai do SERVIÇO, e
+        // serviço não está preso a display nenhum. Num dobrável o Android
+        // devolve a tela padrão, que pode ser a externa mesmo com o aparelho
+        // aberto. Foi o que fez o razr da Interlagos reportar 1080x1272 (tela
+        // externa) enquanto exibia na interna, recebendo criativo de outro
+        // formato o dia inteiro. Ver Prefs.telaDaVitrine.
+        //
+        // A medida direta continua como reserva, para o caso de a batida sair
+        // antes de a vitrine ter aberto uma vez.
+        (Prefs.telaDaVitrine(ctx) ?: Health.tela(ctx))?.let { (w, h) ->
             body.put("screen_width", w)
             body.put("screen_height", h)
         }
