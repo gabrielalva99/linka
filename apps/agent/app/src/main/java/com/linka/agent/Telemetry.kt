@@ -238,6 +238,15 @@ object Telemetry {
             .put("battery_level", bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             .put("battery_charging", bm.isCharging)
             .put("os_version", Build.VERSION.RELEASE)
+            // Memoria do proprio aplicativo: usado, teto e nativa. O teto vai
+            // junto porque "180 MB" nao diz nada sozinho, e diz tudo ao lado de
+            // "de 192". Ver o comentario em Health.memoriaMb.
+            .also { corpo ->
+                val (usado, teto, nativo) = Health.memoriaMb()
+                corpo.put("heap_usado_mb", usado)
+                    .put("heap_teto_mb", teto)
+                    .put("heap_nativo_mb", nativo)
+            }
             .put("playing_url", Prefs.playingUrl(ctx) ?: JSONObject.NULL)
             .put("playing_fit", Prefs.playingFit(ctx) ?: JSONObject.NULL)
             // Campanha inteira já no aparelho: exibição não depende mais da rede.

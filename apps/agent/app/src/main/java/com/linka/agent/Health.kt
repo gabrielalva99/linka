@@ -28,6 +28,41 @@ object Health {
         return tenths / 10.0
     }
 
+    /**
+     * A MEMÓRIA QUE O APLICATIVO ESTÁ USANDO, e o teto dele.
+     *
+     * ── POR QUE ISTO EXISTE ────────────────────────────────────────────────
+     * O aplicativo morreu por falta de memória em três ocasiões (moto g17 em
+     * 20/08, razr 60 ultra duas vezes em 21/08), e nenhuma delas deu para
+     * diagnosticar: o aparelho não media a si mesmo, então não existia curva.
+     *
+     * O caso do razr mostra por que a curva importa mais que o instante: ele
+     * rodou 5h16 sem parar entre uma queda e a outra. Saber se a memória subiu
+     * reto, em degraus ou de uma vez no fim aponta culpados diferentes, e sem
+     * isso qualquer conserto é chute. Chute já custou caro duas vezes esta
+     * semana.
+     *
+     * ── O TETO NÃO É A RAM DO APARELHO, e essa confusão atrapalhou ─────────
+     * O Android dá a cada aplicativo uma cota própria de memória, independente
+     * do quanto a máquina tem. Medido: 192 MB no Galaxy Tab A7 Lite, 384 MB no
+     * razr 60 ultra, 256 MB no moto g17. O razr morreu com o aparelho tendo
+     * memória de sobra, porque quem acabou foi a cota dele.
+     *
+     * Por isso o teto viaja junto com o uso: "180 MB" não quer dizer nada
+     * sozinho. Quer dizer tudo ao lado de "de 192".
+     *
+     * ── A NATIVA VAI JUNTO ────────────────────────────────────────────────
+     * Decodificador de vídeo aloca fora do heap Java. Se o crescimento estiver
+     * lá e não aqui, a causa é outra e o conserto também.
+     */
+    fun memoriaMb(): Triple<Long, Long, Long> {
+        val rt = Runtime.getRuntime()
+        val usado = (rt.totalMemory() - rt.freeMemory()) / 1_048_576
+        val teto = rt.maxMemory() / 1_048_576
+        val nativo = android.os.Debug.getNativeHeapAllocatedSize() / 1_048_576
+        return Triple(usado, teto, nativo)
+    }
+
     /** Segundos desde o último boot — reinício sozinho aparece como uptime baixo. */
     fun uptimeSeconds(): Long = SystemClock.elapsedRealtime() / 1000
 

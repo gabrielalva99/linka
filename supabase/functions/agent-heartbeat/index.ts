@@ -97,6 +97,28 @@ Deno.serve(async (req) => {
     const n = Number(payload.battery_level);
     if (Number.isFinite(n) && n >= 0 && n <= 100) update.battery_level = Math.round(n);
   }
+  // MEMÓRIA DO APLICATIVO. Existe para diagnosticar a morte por falta de memória,
+  // que é o único defeito que a frota ainda reporta. Ver device_memoria.
+  //
+  // Tetos plausíveis vão de 48 a 1024 MB; fora disso é aparelho reportando lixo,
+  // e número inventado num diagnóstico é pior que número nenhum.
+  const mem = {
+    usado: Number(payload.heap_usado_mb),
+    teto: Number(payload.heap_teto_mb),
+    nativo: Number(payload.heap_nativo_mb),
+  };
+  const memOk =
+    Number.isFinite(mem.usado) && Number.isFinite(mem.teto) &&
+    mem.teto >= 48 && mem.teto <= 1024 &&
+    mem.usado >= 0 && mem.usado <= mem.teto * 2;
+  if (memOk) {
+    update.heap_usado_mb = Math.round(mem.usado);
+    update.heap_teto_mb = Math.round(mem.teto);
+    if (Number.isFinite(mem.nativo) && mem.nativo >= 0) {
+      update.heap_nativo_mb = Math.round(mem.nativo);
+    }
+  }
+
   if (typeof payload.battery_charging === "boolean") {
     update.battery_charging = payload.battery_charging;
   }
@@ -366,6 +388,27 @@ Deno.serve(async (req) => {
     if (linhas.length > 0) {
       await supabase.from("device_errors").insert(linhas);
     }
+  }
+
+  // A CURVA DA MEMORIA, em faixas de 10 minutos.
+  //
+  // Guardar toda batida seriam 360 mil linhas por dia com 250 aparelhos, para
+  // responder uma pergunta que uma amostra a cada 10 minutos ja responde: sao 30
+  // pontos nas cinco horas que o razr leva para estourar.
+  //
+  // Guarda o PICO da faixa, porque quem mata e o pico e nao a media. E e upsert
+  // sem leitura antes: uma escrita por batida, sem custo de ida e volta.
+  if (memOk) {
+    const agora = Date.now();
+    const faixa = new Date(agora - (agora % 600_000)).toISOString();
+    await supabase.rpc("registrar_memoria", {
+      p_device: device.id,
+      p_tenant: device.tenant_id,
+      p_faixa: faixa,
+      p_usado: Math.round(mem.usado),
+      p_teto: Math.round(mem.teto),
+      p_nativo: Number.isFinite(mem.nativo) && mem.nativo >= 0 ? Math.round(mem.nativo) : 0,
+    });
   }
 
   // Inventário de apps: chega de hora em hora, não a cada batida.
