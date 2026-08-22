@@ -81,7 +81,9 @@ Deno.serve(async (req) => {
 
   const { data: device } = await supabase
     .from("devices")
-    .select(`model_id, pending_command, push_token, ${CAMPOS_DO_APARELHO}`)
+    .select(
+      `model_id, pending_command, push_token, is_device_owner, app_removido_em, ${CAMPOS_DO_APARELHO}`,
+    )
     .eq("device_token", token)
     .maybeSingle();
   if (!device) return json({ error: "invalid_token" }, 401);
@@ -174,6 +176,36 @@ Deno.serve(async (req) => {
 
   if (typeof payload.is_device_owner === "boolean") {
     update.is_device_owner = payload.is_device_owner;
+
+    // A DESPEDIDA DO APP, e o painel finalmente entende o que ela significa.
+    //
+    // Tirar o dono do aparelho dispara `onDisabled` no agente, que manda uma
+    // batida antes de morrer. Esse sinal sempre chegou; o painel é que lia como
+    // defeito e abria "o aplicativo não está no controle do aparelho", junto com
+    // "sem contato" e "parado no menu" nos minutos seguintes. Três alarmes
+    // vermelhos para um aparelho que ninguém tirou da tomada.
+    //
+    // Aconteceu com o tablet 117 em 21/08 19h40. Quem abrisse o painel no dia
+    // seguinte concluiria que quebrou um aparelho na loja.
+    //
+    // O QUE ISTO NÃO FAZ: arquivar. Numa loja, app removido é grave, e some do
+    // radar é justamente o que não pode acontecer. O alerta continua de pé até
+    // alguém confirmar no painel. A diferença é que agora ele diz o que houve.
+    //
+    // A comparação é com o estado ANTERIOR: aparelho que nunca foi dono (em
+    // provisionamento, ou onde o `set-device-owner` falhou) reporta falso desde
+    // sempre e não cai aqui.
+    if (
+      !payload.is_device_owner && device.is_device_owner === true &&
+      !device.app_removido_em
+    ) {
+      update.app_removido_em = new Date().toISOString();
+    }
+    // Voltou a ser dono: foi reprovisionado, e a marca sai sozinha. Sem isto o
+    // aparelho reaproveitado nasceria com um alerta de remoção antigo grudado.
+    if (payload.is_device_owner && device.app_removido_em) {
+      update.app_removido_em = null;
+    }
   }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
   // A trava DE VERDADE e a janela de manutencao, separadas do campo acima.

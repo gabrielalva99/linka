@@ -97,7 +97,7 @@ export default async function DeviceDetailPage({
   const { data: device } = await supabase
     .from("devices")
     .select(
-      "id, code, name, status, last_seen_at, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, update_state, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
+      "id, code, name, status, last_seen_at, mode, battery_level, battery_charging, os_version, agent_version, content_url, content_fit, playing_url, playing_fit, provisioning_code, hardware_model, temperature_c, uptime_seconds, screen_on, connection, signal_dbm, is_device_owner, kiosk_locked, lock_task_on, maintenance_open, pending_command, idle_return_seconds, adb_enabled, last_command_result, cleanup_enabled, cleanup_time, last_cleanup_at, last_cleanup_result, update_error, update_state, block_settings, blocked_apps, screen_lock_set, exclude_from_reports, is_active, archived_at, archive_reason, app_removido_em, retirado_em, retirado_por, retirado_cargo, retirado_loja, device_models(name), stores(name, timezone, retail_chains(name)), positions(label)",
     )
     .eq("id", id)
     .single();
@@ -239,6 +239,7 @@ export default async function DeviceDetailPage({
     is_active: boolean;
     archived_at: string | null;
     archive_reason: string | null;
+    app_removido_em: string | null;
     retirado_em: string | null;
     retirado_por: string | null;
     retirado_cargo: string | null;
@@ -447,6 +448,35 @@ export default async function DeviceDetailPage({
         deviceId={d.id}
         podeOperar={podeOperar}
       />
+
+      {d.app_removido_em && !d.retirado_em && (
+        /* APLICATIVO REMOVIDO. Mesmo motivo do bloco abaixo: sem esta linha a
+           ficha inteira se lê errado. Um aparelho de onde o app foi tirado fica
+           offline, sem vídeo e sem travas ao mesmo tempo, e a página vira três
+           alarmes vermelhos apontando para um defeito que não existe.
+
+           Aconteceu com o tablet 117 em 21/08. Ninguém que abrisse esta tela no
+           dia seguinte teria como saber que a retirada foi de propósito.
+
+           Continua vermelho de propósito: numa loja, app removido é grave, e
+           ficar quieto é exatamente o que não pode acontecer. Quem confirma que
+           foi intencional é a pessoa, arquivando no fim da página. */
+        <section className="mt-8 rounded-xl border border-danger/40 bg-danger/5 p-5">
+          <h2 className="text-sm font-semibold text-danger">
+            O aplicativo foi removido deste aparelho
+          </h2>
+          <p className="mt-2 text-sm">
+            Ele deixou de estar no controle do aparelho em{" "}
+            {dataHora(d.app_removido_em, fusoDaLoja)}, e o que aparece abaixo é o
+            último estado que ele conseguiu reportar antes disso.
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            Se a retirada foi de propósito, arquive o aparelho no fim desta
+            página e ele para de gerar aviso. Se não foi, alguém precisa ir até o
+            aparelho: sem o aplicativo, o painel não alcança mais ele.
+          </p>
+        </section>
+      )}
 
       {d.retirado_em && (
         /* RETIRADO PARA VENDA. Vem antes de tudo porque muda a leitura da página

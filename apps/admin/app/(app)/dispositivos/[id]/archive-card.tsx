@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { arquivarAparelho, desarquivarAparelho } from "./actions";
 import { data } from "@/lib/datas";
 
-const MOTIVOS = ["Roubado", "Quebrado", "Devolvido ao fabricante", "Trocado"];
+// "Aplicativo removido" entrou depois: era o caso mais comum na bancada e o
+// único que a lista não previa. Quem desprovisionava um aparelho de teste tinha
+// que escolher "Trocado" ou "Devolvido", que são outra coisa, e seis meses
+// depois o motivo registrado mentiria sobre o que aconteceu.
+const MOTIVOS = [
+  "Aplicativo removido",
+  "Roubado",
+  "Quebrado",
+  "Devolvido ao fabricante",
+  "Trocado",
+];
 
 /**
  * Tirar o aparelho de operação, ou trazer de volta.
@@ -125,7 +135,7 @@ export function ArchiveCard({
           onClick={() => setAbrindo(true)}
           className="text-xs text-muted hover:text-warning hover:underline"
         >
-          Tirar de operação (roubado, quebrado, devolvido)
+          Tirar de operação (app removido, roubado, quebrado, devolvido)
         </button>
       )}
     </section>

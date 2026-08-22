@@ -275,6 +275,10 @@ export default async function DashboardPage() {
   }
 
   const rotulo: Record<string, string> = {
+    // Fala sozinho: quando este aparece, a origem esconde todos os outros deste
+    // aparelho. Um aparelho sem app não tem como estar "sem contato" por
+    // surpresa nem "parado no menu" — isso é consequência, não notícia.
+    app_removido: t.home.appRemoved,
     fora_do_ar: t.home.offline,
     tela_vazia: t.home.blankScreen,
     sem_travas: t.home.unlocked,
