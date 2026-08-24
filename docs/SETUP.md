@@ -1,35 +1,68 @@
-# Setup — ações do Gabriel para destravar o resto do R0
+# Setup — levantar o ambiente do zero
 
-O código da fundação está pronto e no GitHub (`gabrielalva99/linka`, privado).
-Faltam **duas ações que só você pode fazer** (criar recursos na nuvem). Depois delas,
-eu aplico as migrations, ligo a autenticação e coloco o painel no ar.
+Para quem vai mexer no código. A nuvem já está montada e no ar desde julho de 2026: não
+há nada para criar, só para conectar.
 
-## 1. Criar o projeto Supabase dedicado  ⏱️ ~5 min
+## 1. Painel e site
 
-Passo a passo completo em [`../supabase/README.md`](../supabase/README.md). Resumo:
+```bash
+git clone git@github.com:gabrielalva99/linka.git
+cd linka
+pnpm install
+cp apps/admin/.env.example apps/admin/.env.local
+```
 
-1. https://supabase.com/dashboard → **New project**
-2. Name `linka-prod` · **Region: South America (São Paulo)** · senha forte (guardar)
-3. Quando criar, me avise para eu **reconectar o MCP do Supabase** a este projeto
-   (ou me passe URL + chaves de `Project Settings → API`).
+Preencha o `.env.local` com os valores de **Project Settings → API** no Supabase:
 
-> Importante: **projeto novo**, separado do que já existe (o do site de apresentações).
-> Não misturar os dois bancos.
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xkzktmsqtvpkxmzftars.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+```
 
-## 2. Conectar o repositório na Vercel (CI/CD)  ⏱️ ~5 min
+Só isso. O painel **não usa service role key**: ele fala com o banco como o usuário
+logado e é a RLS que decide o que ele enxerga.
 
-1. https://vercel.com/new → importar o repositório `gabrielalva99/linka`
-2. **Root Directory**: `apps/admin`  (a Vercel detecta Next.js e pnpm automaticamente)
-3. Em **Environment Variables**, adicionar (valores do Supabase do passo 1):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-4. Deploy. A partir daí, todo `git push` na branch `main` publica sozinho.
+```bash
+pnpm dev          # painel em http://localhost:3000
+pnpm typecheck    # antes de commitar
+```
 
-## Depois das duas ações, eu faço (sem você):
+Publicação é automática: `git push` na `main` sobe painel e site pela Vercel.
 
-- Aplicar as 5 migrations no banco e rodar o verificador de segurança do Supabase.
-- Criar seu usuário como **superadmin**.
-- Construir login com papéis + convite por e-mail (Resend).
-- Cadastrar o tenant **Motorola** e telas de redes/lojas/posições.
-- Confirmar o painel no ar, conectado ao banco.
+## 2. Banco
+
+```bash
+pnpm exec supabase login
+pnpm exec supabase link --project-ref xkzktmsqtvpkxmzftars
+```
+
+Depois disso, leia [`../supabase/README.md`](../supabase/README.md) **antes de aplicar
+qualquer coisa**. Este banco atende frota real em loja, e há três comandos que derrubam
+produção sem dar erro nenhum na hora.
+
+## 3. Agente Android
+
+Precisa de Android Studio, JDK 17 e `adb` no PATH.
+
+```bash
+cd apps/agent
+./gradlew assembleRelease
+adb install -r linka-agente.apk
+```
+
+Para provisionar um aparelho novo (dono do aparelho + travas), use o roteiro em
+[`../tools/provisionar/`](../tools/provisionar/). Fazer na mão erra a ordem, e a ordem
+importa: instalar o app **antes** de travar, senão o aparelho fica protegido rodando uma
+versão velha.
+
+## 4. Acesso ao painel de produção
+
+**https://painel.linkaretail.com.br**
+
+Superadmin: `suporte@linkaretail.com.br`. Usuário novo entra por convite, em
+**Clientes → o cliente → Usuários**.
+
+## O que você precisa saber antes do primeiro commit
+
+Estão em [`../README.md`](../README.md), na seção "Regras que não se quebram". Cada uma
+custou um incidente em produção. Vale os dois minutos de leitura antes, e não depois.

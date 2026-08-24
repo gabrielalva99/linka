@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LINKA — Painel
 
-## Getting Started
+Painel web do LINKA, em Next.js (App Router). É por onde se opera a frota: cadastrar
+aparelhos, publicar campanha, acompanhar alertas e ler relatório.
 
-First, run the development server:
+**No ar em https://painel.linkaretail.com.br**, publicado pela Vercel a cada push na
+`main`.
+
+## Rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm dev          # a partir da raiz do monorepo, http://localhost:3000
+pnpm typecheck
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Configuração em `.env.local` (copiar de `.env.example`). Ver
+[`../../docs/SETUP.md`](../../docs/SETUP.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Como ele conversa com o banco
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Sem service role key.** O painel fala com o Supabase como o usuário logado, e é a RLS
+que decide o que aparece. Tela que só funciona com service key é sinal de política
+faltando, não de chave faltando.
 
-## Learn More
+**Todo acesso passa pelo escopo do cliente.** As consultas usam o auxiliar de tenant em
+`lib/tenant.ts` (`porCliente`), que aplica o filtro do cliente selecionado. Consulta que
+escapa disso mistura dado de marca com marca, que é o pior defeito possível neste produto.
 
-To learn more about Next.js, take a look at the following resources:
+**Relatório lê rollup, nunca `device_events` cru.** A tela de visão geral se recarrega
+sozinha; consulta pesada ali roda a cada minuto por aba aberta.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Onde ficam as coisas
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/(app)/
+├── page.tsx            # Visão geral: alertas, produção do dia, pendências
+├── dispositivos/       # Frota, ficha do aparelho, modelos, versões publicadas
+├── campanhas/          # Campanhas e alvos (rede, loja, modelo, aparelho)
+├── biblioteca/         # Criativos, com variação por formato de tela
+├── redes/ lojas/       # Rede varejista e pontos de venda
+├── clientes/ usuarios/ # Marcas atendidas e quem tem acesso
+└── relatorios/         # Leitura dos rollups
+```
 
-## Deploy on Vercel
+Texto de tela vive em `messages/pt-BR.json`, nunca escrito direto no componente.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Como escrever texto de tela
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**O painel fala com o cliente.** Simples, sem jargão, e sem revelar decisão de projeto
+nem história interna. "Sem contato há 17 min" serve; "heartbeat timeout" não.
+
+**Nada de travessão no meio de frase.** Lê como texto de máquina.
+
+**Cor sai de token**, em `packages/ui`. Não hardcodar `#00f24f` em componente.

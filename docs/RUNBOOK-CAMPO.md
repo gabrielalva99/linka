@@ -7,6 +7,29 @@ Cada procedimento diz **o que você vê**, **o que fazer** e **como saber que de
 
 ---
 
+## 0. Chegou um e-mail do LINKA
+
+Desde 24/08 o painel manda e-mail quando um aparelho entra em estado crítico, e outro
+quando ele volta ao normal. Antes disso ele só mostrava na tela, e um aparelho chegou a
+passar **41 horas apagado** sem ninguém saber.
+
+**O que o e-mail é.** Um resumo por cliente, com o código do aparelho, a loja, o problema
+e há quanto tempo. Um e-mail só, mesmo que sejam treze aparelhos.
+
+**O que ele não é.** Ele não chega para tudo. Só para o que é crítico **com a loja
+aberta**: fora do ar, tela sem vídeo, parado no menu, aplicativo removido. Bateria baixa e
+travas incompletas continuam só no painel, porque acordar alguém às 22h por isso ensina a
+ignorar o aviso inteiro.
+
+**O que fazer.** Abra o painel pelo botão do e-mail e vá pelo procedimento do problema
+citado, aqui embaixo. Se o aparelho voltar sozinho, chega um segundo e-mail dizendo isso,
+e você não precisa fazer nada.
+
+**Se você não recebe os e-mails:** eles vão para superadmin e para quem tem papel de
+agência no cliente. Quem é da loja não recebe. Ver **Clientes → o cliente → Usuários**.
+
+---
+
 ## 1. Preciso trocar a rede Wi-Fi da loja
 
 Senha nova do roteador, roteador trocado, ou o aparelho foi remanejado para outra loja.
@@ -111,7 +134,7 @@ O aviso na Visão geral nomeia quais aparelhos estão nessa situação, com link
 
 ---
 
-## 5. O aparelho saiu de operação (roubado, quebrado, devolvido)
+## 5. O aparelho saiu de operação (app removido, roubado, quebrado, devolvido)
 
 **Não apague o cadastro.** Arquive: no painel, **Dispositivos → o aparelho → Arquivar**,
 com o motivo.
@@ -138,6 +161,57 @@ Neste hardware **o token de reset do Android é recusado**, então não dá para
 remotamente. O que o sistema faz é denunciar, para alguém agir antes do próximo reinício.
 
 Presencialmente: sete toques, PIN de manutenção, e remova a senha pelos Ajustes.
+
+---
+
+## 7. O painel diz "o aplicativo foi removido deste aparelho"
+
+Alguém tirou o cargo de dono e, quase sempre, desinstalou o app. O aparelho avisa antes de
+morrer, e por isso o painel sabe a hora exata.
+
+Este aviso **substitui os outros**: o mesmo aparelho não vai mostrar "sem contato" nem
+"parado no menu" junto. Eles seriam consequência de um fato já explicado, e nunca fechariam
+sozinhos, porque não existe mais ninguém do outro lado para reportar que melhorou.
+
+**Se foi de propósito** (aparelho saindo do piloto, indo para outro uso): arquive, com o
+motivo **"Aplicativo removido"**. O alerta fecha e ele para de contar como frota.
+
+**Se não foi:** alguém precisa ir até o aparelho. Sem o aplicativo, o painel não alcança
+mais ele, e nenhum comando remoto funciona. O caminho de volta é o do item 2.
+
+> O alerta continua vermelho até alguém confirmar, de propósito. Numa loja, aplicativo
+> removido é grave, e ficar quieto é exatamente o que não pode acontecer.
+
+---
+
+## 8. O aparelho está ligado, mas o LINKA não está na tela
+
+**Defeito conhecido e ainda em aberto.** Em 22/08 um aparelho ficou 17 horas assim.
+
+Acontece depois de o aparelho reiniciar, geralmente porque a bateria acabou e alguém
+plugou de novo. O aplicativo deveria voltar sozinho e nem sempre volta. Ainda não se sabe
+se o mecanismo não roda ou se roda e falha, porque as duas falhas são silenciosas.
+
+**Na hora, o que resolve:** abrir o LINKA à mão no aparelho. Em um minuto ele volta ao
+painel e despeja tudo que mediu enquanto estava sozinho. **Nada se perde:** a fila local
+guarda o que tocou e entrega depois, mesmo que demore um dia.
+
+**O que ajuda a consertar:** anote a hora em que você encontrou o aparelho assim e se ele
+estava plugado. É a informação que falta para fechar o diagnóstico.
+
+---
+
+## 9. Os aparelhos estão descarregando na loja
+
+Se um aparelho zera a bateria, ele desliga, e ao voltar cai no item 8.
+
+O painel avisa em duas etapas: **"fora do carregador"** depois de 30 minutos desligado da
+tomada, e **"bateria baixa"** abaixo de 15%. O primeiro é o que importa, porque o segundo
+só acende quando já é quase tarde, e não acende nunca se a rede cair antes da bateria.
+
+**Quando o mesmo aparelho repete isso**, o problema não é descuido, é a instalação: tomada
+de menos no ponto, cabo que sai fácil, ou alguém desligando para carregar outra coisa.
+Vale olhar o ponto físico em vez de pedir para plugar de novo toda semana.
 
 ---
 
