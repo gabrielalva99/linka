@@ -49,3 +49,17 @@ verify_jwt = false
 # continua reportando estado normalmente pelo heartbeat. Só o relatório secaria.
 [functions.agent-events]
 verify_jwt = false
+
+# Chamadas pelo banco, não por gente. O cron e o gatilho mandam só o cabeçalho
+# x-linka-guarda, cujo valor nasce e mora no cofre; não existe JWT para mandar.
+# Com verify_jwt = true as duas levam 401 antes de rodar a primeira linha.
+#
+# agent-push estava fora deste arquivo e valia só pelo painel do Supabase, que é
+# precisamente o descuido descrito acima: uma publicação pelo CLI assumiria o
+# padrão e o push da frota morreria calado, porque o heartbeat de 60 s continua
+# entregando tudo e nada no painel acusaria.
+[functions.agent-push]
+verify_jwt = false
+
+[functions.alertas-avisar]
+verify_jwt = false
