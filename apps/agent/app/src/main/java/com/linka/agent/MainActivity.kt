@@ -1395,17 +1395,30 @@ const val PASSADAS_DA_NUVEM = 3
     }
 
     /**
-     * QUEM ESTÁ RETIRANDO ESTE APARELHO.
+     * ESTE APARELHO ESTÁ SAINDO DA VITRINE.
      *
-     * ── Por que perguntar (pedido do Gabriel, 18/08) ──────────────────────────
+     * ── Por que registrar (pedido do Gabriel, 18/08) ──────────────────────────
      * Desmontar uma vitrine é uma ação cara e, do jeito anterior, anônima: o
      * aparelho sumia da frota e não sobrava rastro de quem fez. "Foi só um teste"
      * é uma resposta barata quando ninguém precisa assinar embaixo.
      *
-     * O dado é DECLARATÓRIO, e vale dizer isso em voz alta: ninguém confere a
-     * identidade aqui. O que sustenta o registro é o PIN da loja, que só quem
-     * trabalha ali tem, mais a hora exata gravada pelo servidor. Não é prova
-     * judicial; é o suficiente para uma conversa com nome e data.
+     * ── Por que a pergunta saiu daqui (24/08) ─────────────────────────────────
+     * A tela pedia nome, cargo e loja. Isso fazia o APLICATIVO coletar dado
+     * pessoal, contra o que a arquitetura promete desde o começo, e obrigava a
+     * declarar isso na Play Store para sempre.
+     *
+     * Trocar o nome por um código ou por uma lista de usuários não resolveria:
+     * na taxonomia do Google, "User IDs" está na mesma categoria que "Name", com
+     * definição literal de "identifiers that relate to an identifiable person".
+     *
+     * Então a identificação mudou de lugar, e melhorou no caminho. O dado daqui
+     * era DECLARATÓRIO: qualquer um digitava qualquer nome, e ninguém conferia.
+     * No painel quem atribui já está autenticado, e a trilha guarda quem
+     * afirmou. Saiu de "alguém escreveu um nome" para "fulano, logado, disse que
+     * foi o beltrano".
+     *
+     * O que sobe daqui agora é o FATO e a HORA. É o suficiente para o painel
+     * saber que precisa perguntar.
      *
      * ── A ordem importa ───────────────────────────────────────────────────────
      * O registro sobe ANTES de o aparelho perder o controle. Depois do
@@ -1433,22 +1446,12 @@ const val PASSADAS_DA_NUVEM = 3
             text = "Este aparelho vai sair da vitrine e as proteções serão " +
                 "removidas para o cliente usar normalmente." +
                 System.lineSeparator() + System.lineSeparator() +
-                "Identifique quem está fazendo a retirada. A informação fica " +
-                "registrada com a data e a hora."
+                "A data e a hora ficam registradas. Quem retirou é informado " +
+                "depois, no painel."
             textSize = 14f
             setPadding(0, 24, 0, 24)
             setTextColor(getColor(R.color.marca_cinza))
         }
-        fun campo(dica: String) = EditText(this).apply {
-            hint = dica
-            setTextColor(getColor(R.color.marca_claro))
-            setHintTextColor(getColor(R.color.marca_cinza))
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
-        }
-        val nome = campo("Nome completo")
-        val cargo = campo("Cargo")
-        val loja = campo("Loja")
         val status = TextView(this).apply {
             textSize = 14f
             setPadding(0, 24, 0, 8)
@@ -1466,22 +1469,13 @@ const val PASSADAS_DA_NUVEM = 3
         }
 
         confirmar.setOnClickListener {
-            val n = nome.text.toString().trim()
-            // Nome de uma letra não identifica ninguém, e registro que não
-            // identifica é pior que registro nenhum: parece resposta e não é.
-            if (n.length < 3) {
-                status.text = "Escreva o nome de quem está retirando o aparelho."
-                return@setOnClickListener
-            }
             confirmar.isEnabled = false
             confirmar.text = "Registrando…"
             status.text = "Enviando o registro…"
 
-            val dados = org.json.JSONObject()
-                .put("nome", n)
-                .put("cargo", cargo.text.toString().trim())
-                .put("loja", loja.text.toString().trim())
-            Prefs.setRetiradaPendente(this, dados.toString())
+            // Corpo vazio de propósito: o que sobe é o FATO e a HORA. Ver o
+            // comentário longo em agent-heartbeat sobre por que o nome saiu.
+            Prefs.setRetiradaPendente(this, org.json.JSONObject().toString())
 
             Thread {
                 Telemetry.beat(this)
@@ -1509,7 +1503,6 @@ const val PASSADAS_DA_NUVEM = 3
         }
 
         root.addView(titulo); root.addView(explica)
-        root.addView(nome); root.addView(cargo); root.addView(loja)
         root.addView(status); root.addView(confirmar); root.addView(voltar)
         setContentView(root)
     }

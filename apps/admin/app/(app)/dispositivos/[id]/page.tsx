@@ -27,6 +27,7 @@ import { AppsPanel, type DeviceApp } from "./apps-panel";
 import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
+import { RetiradaCard } from "./retirada-card";
 import { UpdateRetry } from "./update-retry";
 import { FUSO_PADRAO, dataHora, nomeDaLoja, tempoDecorrido } from "@/lib/datas";
 import { decimal } from "@/lib/numeros";
@@ -481,20 +482,17 @@ export default async function DeviceDetailPage({
       {d.retirado_em && (
         /* RETIRADO PARA VENDA. Vem antes de tudo porque muda a leitura da página
            inteira: sem isto, um aparelho vendido parece um aparelho com defeito
-           — offline, sem vídeo, sem bateria — e alguém sai atrás de um problema
+           (offline, sem vídeo, sem bateria) e alguém sai atrás de um problema
            que não existe. */
-        <section className="mt-8 rounded-xl border border-line bg-surface p-5">
-          <h2 className="text-sm font-semibold">Retirado da vitrine para venda</h2>
-          <p className="mt-2 text-sm">
-            {d.retirado_por}
-            {d.retirado_cargo ? ` · ${d.retirado_cargo}` : ""}
-            {d.retirado_loja ? ` · ${d.retirado_loja}` : ""}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            {dataHora(d.retirado_em, fusoDaLoja)} · informado no próprio aparelho,
-            com o PIN de manutenção da loja
-          </p>
-        </section>
+        <RetiradaCard
+          deviceId={d.id}
+          retiradoEm={d.retirado_em}
+          por={d.retirado_por}
+          cargo={d.retirado_cargo}
+          loja={d.retirado_loja}
+          quando={dataHora(d.retirado_em, fusoDaLoja)}
+          podeOperar={podeOperar}
+        />
       )}
 
       <section className="mt-8">

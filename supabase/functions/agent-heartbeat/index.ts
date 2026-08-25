@@ -361,26 +361,31 @@ Deno.serve(async (req) => {
   // Grava ANTES de o aparelho perder o controle — este é o último recado que ele
   // consegue mandar. Depois disso o app é desinstalado e não existe segunda
   // chance de contar quem foi.
+  // ── O NOME SAIU DAQUI, E ISSO É DE PROPÓSITO (24/08) ──────────────────────
+  //
+  // Até a 0.111.0 o aparelho perguntava nome, cargo e loja de quem retirava, e
+  // mandava nesta batida. Isso fazia o aplicativo coletar DADO PESSOAL, contra o
+  // que a arquitetura promete desde o começo: telemetria sem pessoa dentro, para
+  // a conformidade ser simples na região inteira.
+  //
+  // Trocar o nome por um código ou por uma escolha de usuário não resolveria: na
+  // taxonomia do Google, "User IDs" mora na mesma categoria que "Name", e a
+  // definição é literal — "identifiers that relate to an identifiable person".
+  // O trabalho seria feito e a declaração continuaria igual.
+  //
+  // Então a identificação saiu do aparelho e foi para o painel, onde quem
+  // atribui já está autenticado. O registro fica MAIS forte, não menos: sai de
+  // "alguém digitou um nome num quiosque, e ninguém confere" para "um usuário
+  // logado afirmou quem foi, com trilha de auditoria".
+  //
+  // O aparelho continua mandando o recado, porque este é o último que ele
+  // consegue mandar: depois disto o app é desinstalado. O que ele conta agora é
+  // só o FATO e a HORA.
   if (payload.retirada && typeof payload.retirada === "object") {
-    const r = payload.retirada as Record<string, unknown>;
-    const texto = (v: unknown, max: number) => {
-      const s = String(v ?? "").trim();
-      return s.length > 0 ? s.slice(0, max) : null;
-    };
-    const nome = texto(r.nome, 120);
-    // Sem nome não registra: linha com "quem: (vazio)" é pior que linha nenhuma,
-    // porque parece resposta e não é.
-    if (nome) {
-      await supabase
-        .from("devices")
-        .update({
-          retirado_em: new Date().toISOString(),
-          retirado_por: nome,
-          retirado_cargo: texto(r.cargo, 120),
-          retirado_loja: texto(r.loja, 160),
-        })
-        .eq("id", device.id);
-    }
+    await supabase
+      .from("devices")
+      .update({ retirado_em: new Date().toISOString() })
+      .eq("id", device.id);
   }
 
   // QUEDAS DO APLICATIVO, relatadas pelo próprio aparelho.
