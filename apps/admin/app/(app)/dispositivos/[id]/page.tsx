@@ -27,7 +27,6 @@ import { AppsPanel, type DeviceApp } from "./apps-panel";
 import { PairingCard } from "./pairing-card";
 import { PinNotice } from "./pin-notice";
 import { ArchiveCard } from "./archive-card";
-import { RetiradaCard } from "./retirada-card";
 import { UpdateRetry } from "./update-retry";
 import { FUSO_PADRAO, dataHora, nomeDaLoja, tempoDecorrido } from "@/lib/datas";
 import { decimal } from "@/lib/numeros";
@@ -484,15 +483,27 @@ export default async function DeviceDetailPage({
            inteira: sem isto, um aparelho vendido parece um aparelho com defeito
            (offline, sem vídeo, sem bateria) e alguém sai atrás de um problema
            que não existe. */
-        <RetiradaCard
-          deviceId={d.id}
-          retiradoEm={d.retirado_em}
-          por={d.retirado_por}
-          cargo={d.retirado_cargo}
-          loja={d.retirado_loja}
-          quando={dataHora(d.retirado_em, fusoDaLoja)}
-          podeOperar={podeOperar}
-        />
+        <section className="mt-8 rounded-xl border border-line bg-surface p-5">
+          <h2 className="text-sm font-semibold">Retirado da vitrine para venda</h2>
+          <p className="mt-2 text-sm">
+            {dataHora(d.retirado_em, fusoDaLoja)}
+          </p>
+          {/* Quem retirou só aparece se veio dos aparelhos antigos: até a
+              0.111.0 a tela do aparelho pedia nome, cargo e loja. A pergunta
+              saiu (ver o comentário em agent-heartbeat), mas o que já foi
+              registrado continua valendo, porque aconteceu. */}
+          {d.retirado_por && (
+            <p className="mt-1 text-sm text-muted">
+              {d.retirado_por}
+              {d.retirado_cargo ? ` · ${d.retirado_cargo}` : ""}
+              {d.retirado_loja ? ` · ${d.retirado_loja}` : ""}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Informado no próprio aparelho, com o PIN de manutenção da loja. Ele
+            para de contar na frota e de gerar aviso.
+          </p>
+        </section>
       )}
 
       <section className="mt-8">
