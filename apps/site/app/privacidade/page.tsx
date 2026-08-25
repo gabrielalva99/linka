@@ -145,6 +145,44 @@ export default function PoliticaDePrivacidade() {
         </p>
       </Secao>
 
+      {/* SEÇÃO EXIGIDA PELA PLAY STORE, e as exigências são literais.
+          O campo "URL para exclusão de dados" só é aceito se a página apontada
+          fizer três coisas: nomear o app ou o desenvolvedor, mostrar os passos
+          do pedido, e dizer o que é apagado, o que é mantido e por quanto tempo.
+
+          A página já falava de direitos e de prazo, mas nenhuma das três de
+          forma direta. Link que não cumpre isso é recusa na revisão, e a recusa
+          não explica qual dos três itens faltou. */}
+      <Secao titulo="Como pedir a exclusão dos seus dados">
+        <p>
+          Vale para o aplicativo <strong>LINKA</strong> e para o painel LINKA, operados por
+          HANEI Comércio, Prestação de Serviços e Representação Comercial Ltda.
+        </p>
+        <p>Para pedir a exclusão:</p>
+        <Lista
+          itens={[
+            "Escreva para suporte@linkaretail.com.br com o assunto \"Exclusão de dados\"",
+            "Informe o e-mail da conta de acesso ao painel a que o pedido se refere",
+            "Respondemos em até 15 dias e concluímos a exclusão em até 30 dias",
+          ]}
+        />
+        <p>
+          <strong>O que é apagado:</strong> a conta de acesso ao painel e os dados dela, ou seja
+          nome, e-mail e os vínculos com os clientes atendidos.
+        </p>
+        <p>
+          <strong>O que é mantido, e por quê:</strong> o registro de auditoria das ações feitas
+          no painel, por obrigação de segurança e de prova, por 5 anos. E a medição enviada
+          pelos aparelhos, que descreve equipamento e não pessoa, mantida enquanto durar o
+          contrato do cliente que é dono daqueles aparelhos.
+        </p>
+        <p>
+          O aplicativo instalado nos aparelhos de loja não coleta nome, documento, telefone,
+          e-mail, rosto, voz nem localização de nenhuma pessoa. Por isso não existe dado
+          pessoal de visitante de loja para ser excluído.
+        </p>
+      </Secao>
+
       <Secao titulo="Contato">
         {/* IDENTIFICAÇÃO DA EMPRESA, e não é formalidade.
             A LGPD exige que o controlador seja identificável, e a revisão da Play
