@@ -24,7 +24,7 @@ export const metadata = {
   alternates: { canonical: "/privacidade" },
 };
 
-const ATUALIZADA_EM = "4 de agosto de 2026";
+const ATUALIZADA_EM = "24 de agosto de 2026";
 
 export default function PoliticaDePrivacidade() {
   return (
@@ -146,6 +146,21 @@ export default function PoliticaDePrivacidade() {
       </Secao>
 
       <Secao titulo="Contato">
+        {/* IDENTIFICAÇÃO DA EMPRESA, e não é formalidade.
+            A LGPD exige que o controlador seja identificável, e a revisão da Play
+            Store reprova política de privacidade que não diz de quem ela é. A
+            página tinha só o e-mail do encarregado: parecia completa, e a falta
+            só apareceria na recusa, sem explicação do motivo.
+            Sem logradouro de propósito: o endereço do CNPJ é residencial, e o
+            número do CNPJ já leva a ele por consulta pública para quem precisar. */}
+        <p>
+          A plataforma LINKA é operada por{" "}
+          <strong>
+            HANEI Comércio, Prestação de Serviços e Representação Comercial Ltda.
+          </strong>
+          , inscrita no CNPJ sob o nº <strong>12.986.474/0001-33</strong>, com sede em São
+          Paulo (SP).
+        </p>
         <p>
           Encarregado pelo tratamento de dados pessoais:{" "}
           <a href="mailto:suporte@linkaretail.com.br" className="text-primary underline">
