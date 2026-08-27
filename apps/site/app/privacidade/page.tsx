@@ -113,7 +113,7 @@ export default function PoliticaDePrivacidade() {
         </p>
       </Secao>
 
-      {/* CONTATO DE LOJA, acrescentado em 27/08 junto com o aviso por WhatsApp.
+      {/* CONTATO DE LOJA, acrescentado em 27/08 junto com o aviso por bot.
           É a única outra pessoa identificada pela plataforma, e por isso ganha
           seção própria em vez de virar linha solta na de contas do painel: quem
           se cadastra é gente da loja, que nunca vai abrir esta página por
@@ -122,7 +122,7 @@ export default function PoliticaDePrivacidade() {
         <p>
           Quem cuida dos aparelhos na loja pode se cadastrar, pelo próprio celular, para
           receber aviso quando um aparelho para de funcionar. Guardamos apenas{" "}
-          <strong>nome e número de WhatsApp</strong>, informados pela própria pessoa, e as
+          <strong>nome e celular</strong>, informados pela própria pessoa, e as
           lojas que ela acompanha.
         </p>
         <p>
@@ -193,7 +193,7 @@ export default function PoliticaDePrivacidade() {
         <p>
           <strong>O que é apagado:</strong> a conta de acesso ao painel e os dados dela, ou seja
           nome, e-mail e os vínculos com os clientes atendidos. E, para quem recebe aviso na
-          loja, o nome e o número de WhatsApp.
+          loja, o nome e o celular.
         </p>
         <p>
           <strong>O que é mantido, e por quê:</strong> o registro de auditoria das ações feitas

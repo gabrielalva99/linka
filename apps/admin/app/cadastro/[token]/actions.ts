@@ -20,13 +20,13 @@ export async function cadastrar(
 ): Promise<CadastroState> {
   const token = String(form.get("token") ?? "");
   const nome = String(form.get("nome") ?? "");
-  const whatsapp = String(form.get("whatsapp") ?? "");
+  const celular = String(form.get("celular") ?? "");
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("cadastrar_contato", {
     p_token: token,
     p_nome: nome,
-    p_whatsapp: whatsapp,
+    p_celular: celular,
   });
 
   if (error) return { ok: false, erro: "falhou" };

@@ -54,7 +54,7 @@ export default async function StoreDetailPage({
   // tabela porque o histórico de triagem aponta para ele.
   const { data: contatosData } = await supabase
     .from("contatos_de_loja")
-    .select("id, nome, whatsapp, confirmado_em, contato_lojas!inner(store_id)")
+    .select("id, nome, celular, canal, id_no_canal, confirmado_em, contato_lojas!inner(store_id)")
     .eq("contato_lojas.store_id", id)
     .eq("ativo", true)
     .order("nome");

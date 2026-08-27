@@ -7,7 +7,9 @@ import { linkDeCadastro, desativarContato } from "./actions";
 export type Contato = {
   id: string;
   nome: string;
-  whatsapp: string;
+  celular: string;
+  canal: string;
+  id_no_canal: string | null;
   confirmado_em: string | null;
 };
 
@@ -62,9 +64,17 @@ export function Contatos({
                 <div>
                   <p className="text-sm font-medium">{c.nome}</p>
                   <p className="text-xs text-muted">
-                    {legivel(c.whatsapp)}
+                    {legivel(c.celular)}
                     {c.confirmado_em ? " · confirmou o próprio número" : ""}
                   </p>
+                  {/* CADASTRADO NÃO É O MESMO QUE ALCANÇÁVEL. No Telegram o bot
+                      só consegue escrever depois que a pessoa inicia a conversa,
+                      e sem este aviso a loja apareceria coberta quando não está. */}
+                  {!c.id_no_canal && (
+                    <p className="mt-0.5 text-xs text-warning">
+                      ainda não iniciou a conversa com o bot
+                    </p>
+                  )}
                 </div>
                 {podeOperar && (
                   <button

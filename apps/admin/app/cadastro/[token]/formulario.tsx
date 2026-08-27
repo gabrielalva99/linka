@@ -20,7 +20,7 @@ export function Formulario({ token }: { token: string }) {
       <div className="mt-6 rounded-lg border border-primary/40 bg-primary/5 p-4">
         <p className="text-sm font-medium text-primary">Pronto, está cadastrado.</p>
         <p className="mt-1 text-sm text-muted">
-          Se algum aparelho parar, você recebe uma mensagem no WhatsApp. Pode
+          Se algum aparelho parar, você recebe uma mensagem. Pode
           fechar esta página.
         </p>
       </div>
@@ -42,12 +42,12 @@ export function Formulario({ token }: { token: string }) {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm text-muted">WhatsApp com DDD</span>
+        <span className="text-sm text-muted">Celular com DDD</span>
         {/* type=tel abre o teclado numérico no celular, que é onde isto vai ser
             preenchido. Sem máscara de propósito: o banco limpa o que vier, e
             máscara é o que mais faz gente desistir de formulário no balcão. */}
         <input
-          name="whatsapp"
+          name="celular"
           type="tel"
           inputMode="numeric"
           placeholder="11 98888-7777"
