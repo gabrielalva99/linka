@@ -5,6 +5,8 @@ import { getMessages } from "@/lib/i18n";
 import { getActiveTenant, toleranciaSemContatoMs } from "@/lib/tenant";
 import { PositionForm } from "./position-form";
 import { PositionRow } from "./position-row";
+import { Contatos, type Contato } from "./contatos";
+import { podeOperarAgora } from "@/lib/perms";
 
 type StoreDetail = {
   id: string;
@@ -48,6 +50,16 @@ export default async function StoreDetailPage({
   //
   // Só os que estão lá de verdade: arquivado aparecia como instalado na loja,
   // com posição e tudo, mandando alguém procurar o que já foi recolhido.
+  // QUEM RECEBE AVISO DESTA LOJA. Só os ativos: quem foi removido continua na
+  // tabela porque o histórico de triagem aponta para ele.
+  const { data: contatosData } = await supabase
+    .from("contatos_de_loja")
+    .select("id, nome, whatsapp, confirmado_em, contato_lojas!inner(store_id)")
+    .eq("contato_lojas.store_id", id)
+    .eq("ativo", true)
+    .order("nome");
+  const podeOperar = await podeOperarAgora();
+
   const { data: aparelhos } = await supabase
     .from("devices")
     .select(
@@ -177,6 +189,12 @@ export default async function StoreDetailPage({
           )}
         </div>
       </div>
+
+      <Contatos
+        storeId={store.id}
+        contatos={(contatosData ?? []) as unknown as Contato[]}
+        podeOperar={podeOperar}
+      />
     </div>
   );
 }

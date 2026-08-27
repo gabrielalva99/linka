@@ -63,3 +63,8 @@ verify_jwt = false
 
 [functions.alertas-avisar]
 verify_jwt = false
+
+# Consumida pelo bot que fala com a loja, que não tem sessão de usuário para
+# apresentar. Protegida pelo cabeçalho x-linka-guarda, valor nascido no cofre.
+[functions.bot-api]
+verify_jwt = false

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant";
 import { logAction } from "@/lib/audit";
+import { podeOperarAgora } from "@/lib/perms";
 
 export type CreatePositionState = { status: "idle" | "ok" | "error" };
 
@@ -86,6 +87,74 @@ export async function deletePosition(id: string, storeId: string) {
   const { error } = await supabase.from("positions").delete().eq("id", id);
   if (error) return { ok: false as const, error: "Não foi possível excluir." };
   await logAction("excluir_posicao", "store", storeId);
+  revalidatePath(`/lojas/${storeId}`);
+  return { ok: true as const };
+}
+
+/**
+ * Gera o link de auto-cadastro de quem recebe aviso desta loja.
+ *
+ * O TOKEN NASCE NO SERVIDOR, e é longo de propósito: ele é a única coisa que
+ * autoriza um estranho a se cadastrar, então precisa ser impossível de adivinhar
+ * e chato de digitar errado.
+ *
+ * Um convite por vez, reaproveitado enquanto valer. Gerar um novo a cada clique
+ * encheria a loja de links vivos, e link vivo esquecido é porta aberta.
+ */
+export async function linkDeCadastro(storeId: string) {
+  if (!(await podeOperarAgora())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const tenant = await getActiveTenant();
+  if (!tenant) return { ok: false as const, error: "Sem cliente ativo." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: loja } = await supabase
+    .from("stores")
+    .select("id, name")
+    .eq("id", storeId)
+    .maybeSingle();
+  if (!loja) return { ok: false as const, error: "Loja não encontrada." };
+
+  const { data: existente } = await supabase
+    .from("convites_de_contato")
+    .select("token")
+    .eq("tenant_id", tenant.id)
+    .contains("lojas", [storeId])
+    .limit(1)
+    .maybeSingle();
+
+  let token = existente?.token as string | undefined;
+  if (!token) {
+    token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8);
+    const { error } = await supabase.from("convites_de_contato").insert({
+      tenant_id: tenant.id,
+      token,
+      rotulo: `Avisos de ${loja.name}`,
+      lojas: [storeId],
+    });
+    if (error) return { ok: false as const, error: "Não consegui gerar o link." };
+    await logAction("convidar_contato", "store", storeId, { loja: loja.name });
+  }
+
+  revalidatePath(`/lojas/${storeId}`);
+  return { ok: true as const, token };
+}
+
+/** Tira a pessoa da lista de avisos. Não apaga: histórico de quem respondeu fica. */
+export async function desativarContato(contatoId: string, storeId: string) {
+  if (!(await podeOperarAgora())) {
+    return { ok: false as const, error: "Sem permissão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error, count } = await supabase
+    .from("contatos_de_loja")
+    .update({ ativo: false }, { count: "exact" })
+    .eq("id", contatoId);
+  if (error || (count ?? 0) === 0) {
+    return { ok: false as const, error: "Não consegui remover." };
+  }
+  await logAction("remover_contato", "store", storeId, {});
   revalidatePath(`/lojas/${storeId}`);
   return { ok: true as const };
 }

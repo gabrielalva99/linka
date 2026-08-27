@@ -24,7 +24,7 @@ export const metadata = {
   alternates: { canonical: "/privacidade" },
 };
 
-const ATUALIZADA_EM = "24 de agosto de 2026";
+const ATUALIZADA_EM = "27 de agosto de 2026";
 
 export default function PoliticaDePrivacidade() {
   return (
@@ -113,6 +113,30 @@ export default function PoliticaDePrivacidade() {
         </p>
       </Secao>
 
+      {/* CONTATO DE LOJA, acrescentado em 27/08 junto com o aviso por WhatsApp.
+          É a única outra pessoa identificada pela plataforma, e por isso ganha
+          seção própria em vez de virar linha solta na de contas do painel: quem
+          se cadastra é gente da loja, que nunca vai abrir esta página por
+          acaso, e precisa achar rápido como sair. */}
+      <Secao titulo="Contato de quem recebe aviso na loja">
+        <p>
+          Quem cuida dos aparelhos na loja pode se cadastrar, pelo próprio celular, para
+          receber aviso quando um aparelho para de funcionar. Guardamos apenas{" "}
+          <strong>nome e número de WhatsApp</strong>, informados pela própria pessoa, e as
+          lojas que ela acompanha.
+        </p>
+        <p>
+          Serve só para avisar sobre aparelho com problema e registrar a resposta (se já foi
+          verificado, se voltou a funcionar, se apareceu erro). Não é usado para propaganda,
+          não é compartilhado com terceiros e não alimenta relatório de desempenho de
+          ninguém.
+        </p>
+        <p>
+          Para sair, basta responder <strong>SAIR</strong> em qualquer mensagem, ou escrever
+          para o contato no fim desta página. A remoção é imediata e o cadastro é apagado.
+        </p>
+      </Secao>
+
       <Secao titulo="Com quem os dados são compartilhados">
         <p>
           Com o cliente contratante, que é quem os dados descrevem, e com os provedores de
@@ -168,7 +192,8 @@ export default function PoliticaDePrivacidade() {
         />
         <p>
           <strong>O que é apagado:</strong> a conta de acesso ao painel e os dados dela, ou seja
-          nome, e-mail e os vínculos com os clientes atendidos.
+          nome, e-mail e os vínculos com os clientes atendidos. E, para quem recebe aviso na
+          loja, o nome e o número de WhatsApp.
         </p>
         <p>
           <strong>O que é mantido, e por quê:</strong> o registro de auditoria das ações feitas
