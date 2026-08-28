@@ -116,15 +116,22 @@ export async function linkDeCadastro(storeId: string) {
     .maybeSingle();
   if (!loja) return { ok: false as const, error: "Loja não encontrada." };
 
+  // Reaproveita o convite vivo. Vencido ou esgotado nao serve, e gerar outro
+  // por cima deixaria dois links validos para a mesma loja circulando.
   const { data: existente } = await supabase
     .from("convites_de_contato")
-    .select("token")
+    .select("token, usos, max_usos, expira_em")
     .eq("tenant_id", tenant.id)
     .contains("lojas", [storeId])
+    .gt("expira_em", new Date().toISOString())
     .limit(1)
     .maybeSingle();
 
-  let token = existente?.token as string | undefined;
+  const vivo =
+    existente && (existente.usos as number) < (existente.max_usos as number)
+      ? existente
+      : null;
+  let token = vivo?.token as string | undefined;
   if (!token) {
     token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8);
     const { error } = await supabase.from("convites_de_contato").insert({
@@ -138,7 +145,13 @@ export async function linkDeCadastro(storeId: string) {
   }
 
   revalidatePath(`/lojas/${storeId}`);
-  return { ok: true as const, token };
+  return {
+    ok: true as const,
+    token,
+    usos: (vivo?.usos as number | undefined) ?? 0,
+    maxUsos: (vivo?.max_usos as number | undefined) ?? 20,
+    expiraEm: (vivo?.expira_em as string | undefined) ?? null,
+  };
 }
 
 /** Tira a pessoa da lista de avisos. Não apaga: histórico de quem respondeu fica. */

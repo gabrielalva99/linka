@@ -49,6 +49,7 @@ export function Contatos({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [link, setLink] = useState<string | null>(null);
+  const [uso, setUso] = useState<{ usos: number; max: number; ate: string | null } | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -128,6 +129,17 @@ export function Contatos({
               >
                 {copiado ? "Copiado" : "Copiar mensagem"}
               </button>
+              {/* VALIDADE E USO À VISTA. O link circula em conversa de WhatsApp
+                  e é encaminhável; saber quantas pessoas entraram por ele é o
+                  que faz um cadastro inesperado ser notado. */}
+              {uso && (
+                <p className="mt-2 text-xs text-muted">
+                  {uso.usos} de {uso.max} cadastros usados
+                  {uso.ate
+                    ? ` · vale até ${new Date(uso.ate).toLocaleDateString("pt-BR")}`
+                    : ""}
+                </p>
+              )}
             </div>
           ) : (
             <button
@@ -139,6 +151,7 @@ export function Contatos({
                     return;
                   }
                   setLink(`${window.location.origin}/cadastro/${r.token}`);
+                  setUso({ usos: r.usos, max: r.maxUsos, ate: r.expiraEm });
                 })
               }
               disabled={pending}
