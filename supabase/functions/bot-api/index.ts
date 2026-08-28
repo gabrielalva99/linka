@@ -59,6 +59,75 @@ Deno.serve(async (req) => {
     return json(linha);
   }
 
+  // ── A PESSOA APARECEU NO BOT ────────────────────────────────────────────
+  // POST /bot-api/vincular  { celular, id, canal? }
+  //
+  // Cadastrar diz QUEM é a pessoa; isto diz POR ONDE falar com ela. No Telegram
+  // o chat_id só existe depois que ela toca em Iniciar, então este é o único
+  // momento em que dá para gravá-lo, e é o bot quem o tem na mão.
+  if (req.method === "POST" && rota === "vincular") {
+    let corpo: Record<string, unknown>;
+    try {
+      corpo = await req.json();
+    } catch {
+      return json({ error: "json_invalido" }, 400);
+    }
+    const celular = String(corpo.celular ?? "").trim();
+    const id = String(corpo.id ?? "").trim();
+    if (!celular || !id) return json({ error: "informe_celular_e_id" }, 400);
+
+    const { data, error } = await supabase.rpc("registrar_id_no_canal", {
+      p_celular: celular,
+      p_canal: String(corpo.canal ?? "telegram"),
+      p_id: id,
+    });
+    if (error) return json({ error: "falha_ao_vincular", detalhe: error.message }, 500);
+
+    const r = (data ?? {}) as { ok?: boolean; contatos?: number };
+    // Distingue "vinculei" de "não achei esse número no cadastro", para o bot
+    // poder responder "não encontrei, você chegou a abrir o link de cadastro?"
+    // em vez de dar tudo certo e a pessoa nunca receber nada.
+    return json({
+      ok: r.ok === true,
+      contatos: r.contatos ?? 0,
+      recado: r.ok
+        ? null
+        : "Nao encontrei esse numero no cadastro. Abra o link de cadastro da loja primeiro.",
+    });
+  }
+
+  // ── SAIR ────────────────────────────────────────────────────────────────
+  // POST /bot-api/sair  { id, canal? }
+  //
+  // A política de privacidade promete remoção imediata a quem responder SAIR.
+  // Desliga pelo canal e não pelo telefone: quem está indo embora não deve ter
+  // que informar nada de novo.
+  if (req.method === "POST" && rota === "sair") {
+    let corpo: Record<string, unknown>;
+    try {
+      corpo = await req.json();
+    } catch {
+      return json({ error: "json_invalido" }, 400);
+    }
+    const id = String(corpo.id ?? "").trim();
+    if (!id) return json({ error: "informe_id" }, 400);
+
+    const { data, error } = await supabase.rpc("desligar_contato", {
+      p_canal: String(corpo.canal ?? "telegram"),
+      p_id: id,
+    });
+    if (error) return json({ error: "falha_ao_sair", detalhe: error.message }, 500);
+
+    const r = (data ?? {}) as { ok?: boolean; contatos?: number };
+    return json({
+      ok: true,
+      removido: r.ok === true,
+      // Responde ok mesmo quando não achou: quem pediu para sair não precisa
+      // saber se estava cadastrado, e insistir seria o oposto do que ele pediu.
+      recado: "Pronto, voce nao vai mais receber avisos. Para voltar, abra o link de cadastro da loja de novo.",
+    });
+  }
+
   // ── O QUE A LOJA RESPONDEU ──────────────────────────────────────────────
   // POST /bot-api/triagem  { alert_id, resposta, texto?, quem?, canal? }
   if (req.method === "POST" && rota === "triagem") {
@@ -137,5 +206,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  return json({ error: "rota_desconhecida", rotas: ["GET /alertas", "GET /aparelho?code=", "POST /triagem"] }, 404);
+  return json({
+    error: "rota_desconhecida",
+    rotas: [
+      "GET /alertas",
+      "GET /aparelho?code=",
+      "POST /vincular",
+      "POST /triagem",
+      "POST /sair",
+    ],
+  }, 404);
 });
