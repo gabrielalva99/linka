@@ -25,20 +25,35 @@ export function Formulario({ token }: { token: string }) {
             Quem fecha esta página achando que terminou nunca recebe nada, e o
             painel mostra a loja como coberta. Por isso o botão é o elemento
             principal da tela, e o texto diz que falta uma coisa. */}
-        <p className="mt-1 text-sm">
-          Falta um passo: abra o nosso bot e toque em <strong>Iniciar</strong>. É
-          por lá que os avisos chegam.
-        </p>
-        {/* O CÓDIGO VIAJA NO LINK. `?start=` entrega ele ao bot no primeiro
-            contato, então o bot já sabe quem está falando e não precisa pedir o
-            celular de novo. Menos uma pergunta é menos uma chance de a pessoa
-            digitar diferente do que cadastrou e o vínculo não acontecer. */}
-        <a
-          href={estado.vinculo ? `${BOT_URL}?start=${estado.vinculo}` : BOT_URL}
-          className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-black"
-        >
-          Abrir o bot no Telegram
-        </a>
+        {/* QUEM JÁ ESTÁ LIGADO NÃO GANHA CÓDIGO NOVO, e por isso não vê botão.
+            O link de convite é encaminhável, e com ele mais o celular de alguém
+            um estranho poderia recadastrar aquele número, pegar um código e
+            assumir o lugar da pessoa no bot. O banco já recusa dar o código; a
+            tela precisa contar a verdade em vez de pedir um passo que não
+            existe mais. */}
+        {estado.jaVinculado ? (
+          <p className="mt-1 text-sm">
+            Este número já está conectado ao nosso bot, e as lojas foram somadas
+            às suas. Não precisa fazer mais nada.
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm">
+              Falta um passo: abra o nosso bot e toque em <strong>Iniciar</strong>.
+              É por lá que os avisos chegam.
+            </p>
+            {/* O CÓDIGO VIAJA NO LINK. `?start=` entrega ele ao bot no primeiro
+                contato, então o bot já sabe quem está falando e não precisa
+                pedir o celular de novo. Menos uma pergunta é menos uma chance de
+                a pessoa digitar diferente do que cadastrou. */}
+            <a
+              href={estado.vinculo ? `${BOT_URL}?start=${estado.vinculo}` : BOT_URL}
+              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-black"
+            >
+              Abrir o bot no Telegram
+            </a>
+          </>
+        )}
       </div>
     );
   }
