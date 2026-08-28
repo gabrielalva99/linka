@@ -18,8 +18,8 @@ O QUE VAI NESTA PASTA (montada pelo suporte antes da visita):
   loja-atual.txt           (o codigo da loja da visita)
 
 ESTA PASTA ESTA PREPARADA PARA:
-  Cliente: Motorola                 (codigo MOTOBR01)
-  Loja:    Casas Bahia - Shopping Interlagos   (codigo SPC7613)
+  Cliente: Motorola                 (codigo no painel, em Clientes)
+  Loja:    Casas Bahia - Shopping Interlagos   (codigo na ficha da loja)
 
 ATENCAO: existem TRES lojas chamadas "Shopping Interlagos" no painel, uma por
 rede. SPC7612 e Ponto Frio e SPC7614 e Lojas Americanas. Conferir a rede na

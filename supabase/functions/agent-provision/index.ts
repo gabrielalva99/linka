@@ -122,9 +122,24 @@ Deno.serve(async (req) => {
   // quem erra. Vinte erros em quinze minutos da mesma origem e a porta fecha por
   // um tempo. Um técnico erra o código duas, três vezes; um laço automatizado
   // erra milhares.
+  // ── DE ONDE VEM O "QUEM", e por que não é o começo da cadeia (28/08) ──────
+  //
+  // Antes: primeiro elemento de x-forwarded-for. Esse valor é escrito pelo
+  // CLIENTE e a plataforma apenas acrescenta o dela no fim. Ou seja, quem
+  // chamasse mandando `X-Forwarded-For: <valor ao acaso>` trocava de identidade
+  // a cada tentativa, e o freio de vinte erros nunca fechava. O único controle
+  // contra chute do código de entrada era contornável com um cabeçalho.
+  //
+  // Agora, em ordem: o IP que a borda afirma (não é escrito pelo cliente), e
+  // senão o ÚLTIMO da cadeia, que é o que o gateway anexou. O que o cliente
+  // enviar fica no meio e é ignorado.
+  const cadeia = (req.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
   const ip =
-    (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("cf-connecting-ip")?.trim() ||
+    (cadeia.length > 0 ? cadeia[cadeia.length - 1] : "") ||
     "desconhecido";
 
   const desde = new Date(Date.now() - 15 * 60_000).toISOString();

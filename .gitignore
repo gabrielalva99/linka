@@ -61,3 +61,15 @@ Thumbs.db
 # Skill escrita PARA ESTE projeto não cai aqui: o padrão só pega remotion-*.
 .agents/
 .claude/skills/remotion-*
+
+# CREDENCIAL DE OPERACAO, nunca versionada.
+#
+# O codigo de inscricao provisiona aparelho na conta do cliente: quem tem ele
+# entra na frota sem mais nada. Estes arquivos guardam o valor em uso na bancada
+# e ficaram rastreados ate 28/08, quando uma auditoria externa apontou. Historico
+# de git e permanente, entao o conserto do arquivo nao basta: o codigo tambem foi
+# rotacionado no painel.
+apps/agent/codigo-de-inscricao.txt
+apps/agent/loja-atual.txt
+tools/provisionar/codigo-de-inscricao.txt
+tools/provisionar/loja-atual.txt
