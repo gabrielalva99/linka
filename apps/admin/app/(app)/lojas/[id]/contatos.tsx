@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { linkDeCadastro, desativarContato } from "./actions";
+import { convitePorMensagem } from "@/lib/bot";
 
 export type Contato = {
   id: string;
@@ -36,10 +37,12 @@ function legivel(fone: string): string {
  */
 export function Contatos({
   storeId,
+  storeNome,
   contatos,
   podeOperar,
 }: {
   storeId: string;
+  storeNome: string;
   contatos: Contato[];
   podeOperar: boolean;
 }) {
@@ -107,19 +110,23 @@ export function Contatos({
           {link ? (
             <div className="rounded-lg border border-line bg-surface p-4">
               <p className="text-xs text-muted">
-                Mande este link para quem cuida da loja. Ele se cadastra sozinho.
+                Mande esta mensagem para quem cuida da loja. Ela já explica os
+                dois passos e leva ao cadastro e ao bot.
               </p>
-              <p className="mt-2 break-all rounded-md bg-surface-2 px-3 py-2 text-xs">
-                {link}
-              </p>
+              {/* O que se copia é a MENSAGEM, não a URL. Link solto colado no
+                  WhatsApp de um vendedor, sem contexto, não é clicado: ninguém
+                  abre endereço estranho mandado por alguém que ele não conhece. */}
+              <pre className="mt-2 whitespace-pre-wrap break-words rounded-md bg-surface-2 px-3 py-2 text-xs text-muted">
+                {convitePorMensagem(link, storeNome)}
+              </pre>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(link);
+                  navigator.clipboard.writeText(convitePorMensagem(link, storeNome));
                   setCopiado(true);
                 }}
                 className="mt-2 rounded-md border border-line px-3 py-1.5 text-xs hover:bg-surface-2"
               >
-                {copiado ? "Copiado" : "Copiar link"}
+                {copiado ? "Copiado" : "Copiar mensagem"}
               </button>
             </div>
           ) : (

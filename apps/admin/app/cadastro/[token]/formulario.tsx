@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { cadastrar, type CadastroState } from "./actions";
+import { BOT_URL } from "@/lib/bot";
 
 const inicial: CadastroState = { ok: false, erro: null };
 
@@ -18,11 +19,22 @@ export function Formulario({ token }: { token: string }) {
   if (estado.ok) {
     return (
       <div className="mt-6 rounded-lg border border-primary/40 bg-primary/5 p-4">
-        <p className="text-sm font-medium text-primary">Pronto, está cadastrado.</p>
-        <p className="mt-1 text-sm text-muted">
-          Se algum aparelho parar, você recebe uma mensagem. Pode
-          fechar esta página.
+        <p className="text-sm font-medium text-primary">Cadastro feito.</p>
+        {/* FALTA UM PASSO, e é aqui que ele se perde.
+            O cadastro diz quem é a pessoa; o bot é por onde a mensagem chega.
+            Quem fecha esta página achando que terminou nunca recebe nada, e o
+            painel mostra a loja como coberta. Por isso o botão é o elemento
+            principal da tela, e o texto diz que falta uma coisa. */}
+        <p className="mt-1 text-sm">
+          Falta um passo: abra o nosso bot e toque em <strong>Iniciar</strong>. É
+          por lá que os avisos chegam.
         </p>
+        <a
+          href={BOT_URL}
+          className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-black"
+        >
+          Abrir o bot no Telegram
+        </a>
       </div>
     );
   }

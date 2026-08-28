@@ -192,6 +192,7 @@ export default async function StoreDetailPage({
 
       <Contatos
         storeId={store.id}
+        storeNome={store.name}
         contatos={(contatosData ?? []) as unknown as Contato[]}
         podeOperar={podeOperar}
       />
