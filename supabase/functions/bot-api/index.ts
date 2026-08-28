@@ -138,11 +138,34 @@ Deno.serve(async (req) => {
       return json({ error: "json_invalido" }, 400);
     }
 
-    const alertId = String(corpo.alert_id ?? "").trim();
+    let alertId = String(corpo.alert_id ?? "").trim();
+    const aparelho = String(corpo.aparelho ?? "").trim();
     const resposta = String(corpo.resposta ?? "").trim();
-    if (!alertId) return json({ error: "informe_alert_id" }, 400);
+    if (!alertId && !aparelho) {
+      return json({ error: "informe_alert_id_ou_aparelho" }, 400);
+    }
     if (!RESPOSTAS.has(resposta)) {
       return json({ error: "resposta_invalida", aceitas: [...RESPOSTAS] }, 400);
+    }
+
+    // ACEITA O CÓDIGO DO APARELHO, e não é conveniência.
+    //
+    // No caso BOM o alerta já fechou quando a resposta chega: a pessoa arruma,
+    // o aparelho volta, o relógio fecha o alerta, e só então ela escreve "já
+    // arrumei". Aí `/alertas` não devolve mais aquele id e o bot fica sem
+    // referência, perdendo justamente a conversa que mais interessa registrar.
+    //
+    // Resolve pelo alerta mais recente daquele aparelho, aberto ou fechado.
+    if (!alertId) {
+      const { data: achado } = await supabase
+        .from("device_alerts")
+        .select("id, devices!inner(code)")
+        .eq("devices.code", aparelho)
+        .order("opened_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!achado) return json({ error: "aparelho_sem_alerta" }, 404);
+      alertId = achado.id as string;
     }
 
     const { data: alerta } = await supabase
@@ -194,6 +217,10 @@ Deno.serve(async (req) => {
     return json({
       ok: true,
       registrado: resposta,
+      // Diz em qual alerta caiu. Quando o bot manda pelo codigo do aparelho,
+      // ele nao sabe qual foi escolhido, e precisa saber para nao registrar
+      // duas respostas no mesmo alerta achando que sao coisas diferentes.
+      alert_id: alertId,
       // O alerta fecha sozinho quando o aparelho volta, pelo relógio de 5
       // minutos. Esta rota nunca fecha alerta: quem decide é a telemetria, não
       // a conversa.
@@ -212,7 +239,7 @@ Deno.serve(async (req) => {
       "GET /alertas",
       "GET /aparelho?code=",
       "POST /vincular",
-      "POST /triagem",
+      "POST /triagem (alert_id ou aparelho)",
       "POST /sair",
     ],
   }, 404);
