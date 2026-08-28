@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { cadastrar, type CadastroState } from "./actions";
 import { BOT_URL } from "@/lib/bot";
 
-const inicial: CadastroState = { ok: false, erro: null, vinculo: null };
+const inicial: CadastroState = { ok: false, erro: null, vinculo: null, jaVinculado: false };
 
 const MOTIVO: Record<string, string> = {
   convite_invalido: "Este link não vale mais. Peça um novo para quem te enviou.",

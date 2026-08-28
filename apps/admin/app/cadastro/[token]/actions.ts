@@ -17,6 +17,8 @@ export type CadastroState = {
   erro: string | null;
   /** Codigo de uso unico que vai no link do Telegram, para o bot nao perguntar o celular. */
   vinculo?: string | null;
+  /** Ja conversou com o bot antes: nao sai codigo novo, para link encaminhado nao virar tomada de conta. */
+  jaVinculado?: boolean;
 };
 
 export async function cadastrar(
@@ -35,8 +37,18 @@ export async function cadastrar(
   });
 
   if (error) return { ok: false, erro: "falhou" };
-  const r = (data ?? {}) as { ok?: boolean; erro?: string; vinculo?: string };
+  const r = (data ?? {}) as {
+    ok?: boolean;
+    erro?: string;
+    vinculo?: string | null;
+    ja_vinculado?: boolean;
+  };
   return r.ok
-    ? { ok: true, erro: null, vinculo: r.vinculo ?? null }
+    ? {
+        ok: true,
+        erro: null,
+        vinculo: r.vinculo ?? null,
+        jaVinculado: r.ja_vinculado === true,
+      }
     : { ok: false, erro: r.erro ?? "falhou" };
 }
