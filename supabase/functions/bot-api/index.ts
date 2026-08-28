@@ -41,8 +41,19 @@ Deno.serve(async (req) => {
 
   // ── O QUE PRECISA DE GENTE AGORA ────────────────────────────────────────
   // GET /bot-api/alertas
+  // GET /bot-api/alertas?atencao=1          também o que pode esperar
+  // GET /bot-api/alertas?loja=SPC7613       só uma loja
+  //
+  // O padrão é só o crítico, porque é o que vira mensagem para a loja. O
+  // `atencao=1` existe para o bot olhar o quadro inteiro sem que isso incomode
+  // ninguém: aparelho que cai às 22h30 não é urgente até a loja abrir, mas você
+  // quer poder ver que ele caiu.
   if (req.method === "GET" && rota === "alertas") {
-    const { data, error } = await supabase.rpc("alertas_para_o_bot");
+    const q = new URL(req.url).searchParams;
+    const { data, error } = await supabase.rpc("alertas_para_o_bot", {
+      p_incluir_atencao: q.get("atencao") === "1" || q.get("atencao") === "true",
+      p_loja: q.get("loja")?.trim() || null,
+    });
     if (error) return json({ error: "falha_ao_listar", detalhe: error.message }, 500);
     return json({ alertas: data ?? [] });
   }
@@ -236,7 +247,7 @@ Deno.serve(async (req) => {
   return json({
     error: "rota_desconhecida",
     rotas: [
-      "GET /alertas",
+      "GET /alertas (?atencao=1, ?loja=CODIGO)",
       "GET /aparelho?code=",
       "POST /vincular",
       "POST /triagem (alert_id ou aparelho)",
