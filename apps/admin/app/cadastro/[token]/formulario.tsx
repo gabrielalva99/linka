@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { cadastrar, type CadastroState } from "./actions";
 import { BOT_URL } from "@/lib/bot";
 
-const inicial: CadastroState = { ok: false, erro: null };
+const inicial: CadastroState = { ok: false, erro: null, vinculo: null };
 
 const MOTIVO: Record<string, string> = {
   convite_invalido: "Este link não vale mais. Peça um novo para quem te enviou.",
@@ -29,8 +29,12 @@ export function Formulario({ token }: { token: string }) {
           Falta um passo: abra o nosso bot e toque em <strong>Iniciar</strong>. É
           por lá que os avisos chegam.
         </p>
+        {/* O CÓDIGO VIAJA NO LINK. `?start=` entrega ele ao bot no primeiro
+            contato, então o bot já sabe quem está falando e não precisa pedir o
+            celular de novo. Menos uma pergunta é menos uma chance de a pessoa
+            digitar diferente do que cadastrou e o vínculo não acontecer. */}
         <a
-          href={BOT_URL}
+          href={estado.vinculo ? `${BOT_URL}?start=${estado.vinculo}` : BOT_URL}
           className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-black"
         >
           Abrir o bot no Telegram

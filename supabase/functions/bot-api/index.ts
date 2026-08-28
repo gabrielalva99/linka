@@ -83,13 +83,42 @@ Deno.serve(async (req) => {
     } catch {
       return json({ error: "json_invalido" }, 400);
     }
+    const vinculo = String(corpo.vinculo ?? "").trim();
     const celular = String(corpo.celular ?? "").trim();
+    const canal = String(corpo.canal ?? "telegram");
     const id = String(corpo.id ?? "").trim();
-    if (!celular || !id) return json({ error: "informe_celular_e_id" }, 400);
+    if (!id) return json({ error: "informe_id" }, 400);
+    if (!vinculo && !celular) return json({ error: "informe_vinculo_ou_celular" }, 400);
 
+    // PELO CÓDIGO É O CAMINHO BOM.
+    //
+    // Ele vem no `?start=` do link do Telegram, aponta para uma pessoa só e vale
+    // uma vez. O bot não pergunta nada, e some a chance de alguém digitar um
+    // número diferente do que cadastrou e o vínculo nunca acontecer.
+    if (vinculo) {
+      const { data, error } = await supabase.rpc("vincular_por_codigo", {
+        p_vinculo: vinculo,
+        p_canal: canal,
+        p_id: id,
+      });
+      if (error) return json({ error: "falha_ao_vincular", detalhe: error.message }, 500);
+      const r = (data ?? {}) as { ok?: boolean; nome?: string; erro?: string };
+      return json({
+        ok: r.ok === true,
+        nome: r.nome ?? null,
+        // Código já usado e código vencido dão o mesmo recado: os dois se
+        // resolvem do mesmo jeito, refazendo o cadastro.
+        recado: r.ok
+          ? null
+          : "Esse codigo nao vale mais. Abra o link de cadastro da loja de novo.",
+      });
+    }
+
+    // PELO CELULAR é o caminho de trás, para quem se cadastrou antes de o código
+    // existir ou chegou ao bot por fora do link.
     const { data, error } = await supabase.rpc("registrar_id_no_canal", {
       p_celular: celular,
-      p_canal: String(corpo.canal ?? "telegram"),
+      p_canal: canal,
       p_id: id,
     });
     if (error) return json({ error: "falha_ao_vincular", detalhe: error.message }, 500);

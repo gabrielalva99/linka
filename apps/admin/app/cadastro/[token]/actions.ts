@@ -12,7 +12,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * O que autoriza é o token do convite, validado dentro do banco. Esta camada
  * não decide nada: passa adiante e devolve o que o banco respondeu.
  */
-export type CadastroState = { ok: boolean; erro: string | null };
+export type CadastroState = {
+  ok: boolean;
+  erro: string | null;
+  /** Codigo de uso unico que vai no link do Telegram, para o bot nao perguntar o celular. */
+  vinculo?: string | null;
+};
 
 export async function cadastrar(
   _anterior: CadastroState,
@@ -30,6 +35,8 @@ export async function cadastrar(
   });
 
   if (error) return { ok: false, erro: "falhou" };
-  const r = (data ?? {}) as { ok?: boolean; erro?: string };
-  return r.ok ? { ok: true, erro: null } : { ok: false, erro: r.erro ?? "falhou" };
+  const r = (data ?? {}) as { ok?: boolean; erro?: string; vinculo?: string };
+  return r.ok
+    ? { ok: true, erro: null, vinculo: r.vinculo ?? null }
+    : { ok: false, erro: r.erro ?? "falhou" };
 }
