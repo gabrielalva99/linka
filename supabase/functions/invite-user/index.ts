@@ -46,8 +46,25 @@ const DESTINOS = [
   // linka-admin.vercel.app saiu daqui em 31/07, depois de o Gabriel entrar pelo
   // endereço novo e confirmar. Ele continua respondendo (é o endereço interno da
   // Vercel, e não dá para desligar), mas convite nenhum aponta mais para lá.
-  "http://localhost:3000",
+  // localhost saiu em 28/08, por auditoria. Ele estava aqui para o
+  // desenvolvimento, e o efeito colateral era que um convite podia ser gerado
+  // apontando para a maquina de quem clicasse. Em desenvolvimento, acrescente
+  // pela variavel de ambiente abaixo em vez de deixar fixo no codigo.
+  ...(Deno.env.get("DESTINO_DEV") ? [Deno.env.get("DESTINO_DEV")!] : []),
 ];
+
+/**
+ * Escapa texto que entra em HTML de e-mail.
+ *
+ * O nome do cliente e digitado por gente e vai para dentro do corpo da
+ * mensagem. Sem isto, um nome com marcacao injetaria HTML no e-mail de convite.
+ * A funcao alertas-avisar ja fazia; esta esqueceu, e a auditoria de 28/08 pegou.
+ */
+function escapar(s: string): string {
+  return s.replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] ?? c)
+  );
+}
 
 function destinoSeguro(bruto: string): string | undefined {
   if (!bruto) return undefined;
@@ -184,6 +201,7 @@ Deno.serve(async (req) => {
     const { data: cliente } = await admin
       .from("tenants").select("name").eq("id", tenantId).maybeSingle();
     const marca = cliente?.name ?? "LINKA";
+    const marcaHtml = escapar(marca);
 
     if (!chave) throw new Error("chave do Resend ausente no cofre");
 
@@ -194,12 +212,12 @@ Deno.serve(async (req) => {
     // Sem link para conta que já existe: o corpo apenas avisa. Mandar link de
     // entrada para uma conta de outra pessoa seria entregar a conta dela.
     const miolo = link
-      ? `<p>Você foi convidado para o painel <strong>LINKA</strong>, no cliente <strong>${marca}</strong>.</p>
+      ? `<p>Você foi convidado para o painel <strong>LINKA</strong>, no cliente <strong>${marcaHtml}</strong>.</p>
          <p style="margin:28px 0">
            <a href="${link}" style="background:#00f24f;color:#000;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">Entrar no painel</a>
          </p>
          <p style="color:#666;font-size:13px">Este link é pessoal e vale por uma hora. Se expirar, peça um convite novo — não repasse este e-mail.</p>`
-      : `<p>Sua conta agora tem acesso ao cliente <strong>${marca}</strong> no painel <strong>LINKA</strong>.</p>
+      : `<p>Sua conta agora tem acesso ao cliente <strong>${marcaHtml}</strong> no painel <strong>LINKA</strong>.</p>
          <p>Entre normalmente com o seu e-mail e senha de sempre.</p>`;
 
     const r = await fetch("https://api.resend.com/emails", {

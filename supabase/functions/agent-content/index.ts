@@ -47,8 +47,17 @@ Deno.serve(async (req) => {
   }
 
   const auth = req.headers.get("authorization") ?? "";
-  const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
-  const token = bearer || String(payload.device_token ?? "");
+  // SÓ NO CABEÇALHO, desde 28/08.
+  //
+  // Antes o token também era aceito no corpo. Credencial no corpo de um POST
+  // vaza mais fácil: aparece em log de aplicação, em ferramenta de depuração e
+  // em qualquer captura que registre payload, enquanto cabeçalho de autorização
+  // costuma ser mascarado por padrão.
+  //
+  // Conferido antes de tirar: o agente manda pelo cabeçalho em todas as três
+  // rotas (Api.post assina com Authorization), e `device_token` só aparece no
+  // agente ao LER a resposta do provisionamento. A frota inteira está na 0.112.
+  const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
   if (!token) return json({ error: "missing_token" }, 401);
 
   const supabase = createClient(url, serviceKey);
