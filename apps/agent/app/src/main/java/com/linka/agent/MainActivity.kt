@@ -11,6 +11,7 @@ import android.os.SystemClock
 import com.google.firebase.messaging.FirebaseMessaging
 import android.os.Bundle
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -1262,6 +1263,52 @@ const val PASSADAS_DA_NUVEM = 3
         }
     }
 
+    /**
+     * O CONTROLE REMOTO ABRE A MANUTENÇÃO, porque na TV não existe tela para tocar.
+     *
+     * A vitrine de celular tem uma porta escondida: sete toques no canto chamam o
+     * PIN. Numa TV essa porta não existe, e sem ela um box em quiosque é um box
+     * que ninguém abre mais sem levar cabo até a loja.
+     *
+     * O GESTO É O MESMO: sete vezes, na mesma janela de quatro segundos, com o OK
+     * do controle no lugar do dedo. Uma regra a menos para o técnico aprender,
+     * porque ele já sabe "sete".
+     *
+     * SÓ NA TV, de propósito. Num celular isso faria teclado bluetooth e tecla de
+     * fone de ouvido abrirem a manutenção sem ninguém pedir, e os 250 aparelhos
+     * de loja ganhariam uma porta que ninguém sabe que existe.
+     *
+     * SÓ COM A VITRINE NA FRENTE. Com o PIN na tela, o OK precisa chegar inteiro
+     * ao teclado e ao botão de destravar; contar aqui roubaria a tecla de quem
+     * está digitando. `relogioDoPin` é o sinal de que aquela tela está de pé, e
+     * já existia — não inventei estado novo para saber disso.
+     *
+     * CONTA NO SOLTAR, e não no apertar. Tecla segurada dispara dezenas de
+     * eventos de apertar: sete deles chegariam sem ninguém apertar sete vezes, e
+     * a porta escondida abriria sozinha.
+     *
+     * VOLTAR é engolido enquanto a vitrine está no ar. Hoje ele já não fecha nada
+     * por acidente (esta é a tela inicial do aparelho, e o Android não fecha tela
+     * inicial com VOLTAR), e depender de acidente é como o defeito chega à loja.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (!Perfil.ehTv(this)) return super.dispatchKeyEvent(event)
+
+        val naVitrine = !telaDeManutencaoAberta && !painelAberto && relogioDoPin == null
+        if (!naVitrine) return super.dispatchKeyEvent(event)
+
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) return true
+
+        val ehOk = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            event.keyCode == KeyEvent.KEYCODE_ENTER ||
+            event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+        if (ehOk && event.action == KeyEvent.ACTION_UP) {
+            contarToqueDeManutencao()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     private fun contarToqueDeManutencao() {
         val agora = System.currentTimeMillis()
         // Fora da janela, o contador recomeça deste toque — e não do zero, senão
@@ -1344,6 +1391,11 @@ const val PASSADAS_DA_NUVEM = 3
                         android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
                     setTextColor(getColor(R.color.marca_claro))
                     setHintTextColor(getColor(R.color.marca_cinza))
+                    // Nasce com o foco. No celular isso é indiferente (o dedo dá
+                    // o foco ao tocar), mas no controle remoto campo sem foco não
+                    // recebe dígito nenhum: o técnico digitaria no vazio.
+                    isFocusableInTouchMode = true
+                    requestFocus()
                 }
                 val destravar = Button(this).apply {
                     text = "Destravar"
