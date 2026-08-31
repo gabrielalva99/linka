@@ -35,8 +35,14 @@ echo
 echo "════ IDENTIDADE ════"
 echo "  fabricante: $(g ro.product.manufacturer) · modelo: $(g ro.product.model) · placa: $(g ro.board.platform)"
 echo "  build: $(g ro.build.fingerprint)"
+# Os recursos do sistema sao consultados UMA vez e usados nos dois blocos:
+# eles decidem tanto um ponto de aprovacao (dono do aparelho) quanto o que
+# muda no agente. Antes esta lista so nascia depois dos pontos — e era por
+# isso que o ponto 7 nao podia existir.
+F=$(adb "${S[@]}" shell pm list features 2>/dev/null | tr -d '')
+
 echo
-echo "════ OS SEIS PONTOS QUE DECIDEM ════"
+echo "════ OS SETE PONTOS QUE DECIDEM ════"
 
 # 1. Versão REAL (o número que o sistema obedece, não o texto da tela)
 SDK=$(g ro.build.version.sdk); TXT=$(g ro.build.version.release)
@@ -80,9 +86,30 @@ MIN=$(g ro.build.version.sdk)
 if [ "${MIN:-0}" -ge 26 ] 2>/dev/null; then diz "O LINKA instala" "sim (exige API 26)"
 else nao "O LINKA instala" "NÃO — o app exige API 26"; fi
 
+# 7. VIRA DONO DO APARELHO? Sem isto nao existe quiosque, e sem quiosque nao
+#    existe vitrine: o cliente sai do app pelo controle e ninguem devolve.
+#
+# ESTE PONTO NASCEU DE UM FALSO POSITIVO, em 31/08. O box "RPCplus" passou por
+# aqui com "zero contas — pode virar dono do aparelho", e na hora de provisionar
+# o Android recusou sem dizer o motivo. A causa: a build dele nao tem
+# `android.software.device_admin` — o fabricante arrancou a administracao de
+# dispositivo do sistema inteiro.
+#
+# Contar contas NAO descobre isso. A linha antiga afirmava "pode" olhando so
+# metade do problema, que e o pior tipo de checagem: a que passa confianca
+# errada. Agora a pergunta e feita ao sistema, e a contagem de contas virou o
+# segundo filtro em vez do unico.
+CONTAS=$(adb "${S[@]}" shell dumpsys account 2>/dev/null | grep -cE "^[[:space:]]+Account \{")
+if ! echo "$F" | grep -q "android.software.device_admin"; then
+  nao "Vira dono do aparelho" "NAO — sistema sem device_admin; quiosque impossivel"
+elif [ "${CONTAS:-1}" -ne 0 ]; then
+  nao "Vira dono do aparelho" "$CONTAS conta(s) cadastrada(s) — remover e auditar de novo"
+else
+  diz "Vira dono do aparelho" "sim — recurso presente e zero contas"
+fi
+
 echo
 echo "════ O QUE MUDA NO AGENTE ════"
-F=$(adb "${S[@]}" shell pm list features 2>/dev/null | tr -d '\r')
 # O QUE PERGUNTAR MUDA COM O APARELHO.
 #
 # A primeira versao disto despejava as perguntas de TV em tudo: um tablet
@@ -99,9 +126,6 @@ else
 fi
 echo "$F" | grep -q "android.hardware.ethernet" && echo "  tem porta de rede"
 echo "$(echo "$F" | grep -c wifi) rede(s) sem fio"
-C=$(adb "${S[@]}" shell dumpsys account 2>/dev/null | grep -cE "^[[:space:]]+Account \{")
-[ "${C:-1}" -eq 0 ] && echo "  zero contas — pode virar dono do aparelho" \
-                    || echo "  $C conta(s) — REMOVER antes de tentar virar dono do aparelho"
 echo "$(adb "${S[@]}" shell pm list packages 2>/dev/null | grep -c com.android.vending) Play Store (0 = push do Google não funciona; a batida de 60s cobre)"
 
 echo
