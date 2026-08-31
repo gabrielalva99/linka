@@ -100,21 +100,43 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <!-- HOME e DEFAULT existem por um motivo que custou caro para
-                     descobrir. O provisionamento diz ao Android, via dono do
-                     aparelho, "para a tela inicial use sempre o LINKA"
-                     (Kiosk.addPersistentPreferredActivity). Sem declarar aqui
-                     que esta tela SABE ser tela inicial, o Android fica com uma
-                     ordem apontando para uma tela que não atende, não encontra
-                     substituto, e o log diz exatamente isto:
+                <!-- HOME e DEFAULT ficam declarados, mas O LINKA NÃO É A TELA
+                     INICIAL DA FROTA — e isso é decisão, não esquecimento.
+
+                     O provisionamento já registrou o LINKA como tela inicial, e
+                     custou dois aparelhos inutilizáveis. Reproduzido em hardware
+                     limpo (0581c2b): Razr apagado, provisionado, reiniciado na
+                     hora, nunca mais ligou. O log:
 
                         No home screen found for Intent { MAIN + HOME } user 0
 
-                     A partir daí o usuário do sistema nunca termina de iniciar e
-                     o aparelho fica na animação de boot para sempre. Não aparece
-                     no provisionamento porque o launcher antigo ainda está de pé:
-                     só o PRIMEIRO REINÍCIO revela. Dois aparelhos de teste
-                     ficaram inutilizáveis até isto ser encontrado. -->
+                     Durante o boot travado o Android só enxerga componentes
+                     preparados para rodar antes do destravamento. A única tela
+                     inicial do aparelho era a nossa, inalcançável, sem reserva
+                     permitida — e o boot não terminava nunca. Não aparece no
+                     provisionamento porque o launcher antigo ainda está de pé:
+                     só o PRIMEIRO REINÍCIO revela, e aí o aparelho já está na loja.
+
+                     Hoje quem devolve a vitrine são três caminhos que NÃO
+                     conseguem impedir o aparelho de ligar: o quiosque, o retorno
+                     por inatividade e o BootReceiver. Menos garantido que ser
+                     dono da tela inicial, e é a troca certa.
+
+                     ── POR QUE ENTÃO CONTINUAM DECLARADOS ────────────────────
+                     Porque são pré-requisito para religar aquilo um dia, e porque
+                     sem eles o aparelho não teria como nos escolher nem quando
+                     alguém escolhe à mão. O resto do pré-requisito também já
+                     está de pé: directBootAware no aplicativo e Prefs no
+                     armazenamento protegido por aparelho, para o token sobreviver
+                     à fase travada.
+
+                     RELIGAR EXIGE VALIDAR ANTES, e o teste é específico: apagar
+                     um aparelho de verdade, provisionar e reiniciar com a fixação
+                     ligada. Enquanto esse teste não existir, fica desligado.
+
+                     Em 31/08 esta explicação estava no tempo presente e afirmava
+                     que o provisionamento ainda fixava a tela inicial. Custou uma
+                     investigação inteira atrás de um defeito que não existia. -->
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <!-- A TV não olha para LAUNCHER: ela lista só quem declara esta
