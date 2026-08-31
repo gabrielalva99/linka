@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cartão do LINKA no lançador da Android TV.
+     A TV não usa ícone: ela exige um BANNER de 320x180, e app sem banner
+     simplesmente não aparece na lista de aplicativos. Reaproveita o logotipo
+     vetorial da marca, então acompanha a paleta sem virar um segundo arquivo
+     de imagem para manter. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/marca_preto" />
+    <item
+        android:drawable="@drawable/logo_linka"
+        android:left="40dp"
+        android:right="40dp"
+        android:top="58dp"
+        android:bottom="58dp" />
+</layer-list>

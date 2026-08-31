@@ -2,6 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ── O QUE FAZ A TV ACEITAR ESTE APP ──────────────────────────────────
+         Sem estas duas linhas o LINKA some do lançador da Android TV: medido em
+         31/08 no primeiro box, `query-activities` da categoria de TV devolvia
+         ZERO entradas do LINKA. Ele só subia por comando pelo cabo — ou seja,
+         numa loja, depois de um reinício, ninguém conseguiria abrir a vitrine.
+
+         `required="false"` nas duas de propósito: elas DECLARAM que o app sabe
+         funcionar em TV, sem exigir TV. O mesmo APK continua instalando em
+         celular e tablet (ADR-10: uma frota só, um APK só). Marcar `true`
+         faria o contrário do que se quer — excluiria os 250 aparelhos de mão. -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- A TV não tem tela de toque. Sem declarar que o toque é dispensável, a
+         instalação é recusada em aparelho sem toque. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -51,9 +66,13 @@
          destravamento. Sem isto não existe tela inicial nenhuma no aparelho
          (nem a nossa, nem a da Motorola), e o boot não termina nunca.
          Por isso o Prefs mora no armazenamento protegido por aparelho. -->
+    <!-- android:banner — cartão do lançador de TV. A Android TV ignora o ícone
+         e exige banner; sem ele o app não aparece na lista de aplicativos mesmo
+         com a categoria de TV declarada abaixo. -->
     <application
         android:directBootAware="true"
         android:label="@string/app_name"
+        android:banner="@drawable/banner_tv"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@android:style/Theme.DeviceDefault">
@@ -98,6 +117,10 @@
                      ficaram inutilizáveis até isto ser encontrado. -->
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <!-- A TV não olha para LAUNCHER: ela lista só quem declara esta
+                     categoria. É a linha que coloca o LINKA na tela inicial da
+                     Android TV, do mesmo jeito que LAUNCHER faz no celular. -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
 

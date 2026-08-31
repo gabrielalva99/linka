@@ -2,6 +2,7 @@ package com.linka.agent
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -178,6 +179,23 @@ const val PASSADAS_DA_NUVEM = 3
         // é justamente a subida — e é a queda na subida que deixa a vitrine preta.
         CrashLog.instalar(applicationContext)
         marco("crashlog")
+        // NUMA TV, A VITRINE NASCE DEITADA.
+        //
+        // O manifesto trava esta tela em retrato, e está certo para a frota de
+        // celular. Numa TV não existe retrato: a caixa manda 1280x720 para um
+        // painel que não gira.
+        //
+        // Medido em 31/08 no primeiro box: a Android TV IGNORA o pedido de
+        // retrato sozinha, então lá esta linha não muda nada. Ela existe pelo
+        // box que NÃO se declara televisão — o AOSP de media box, que tem cara
+        // de tablet e OBEDECE o manifesto. Nesse, sem isto, a campanha apareceria
+        // girada 90 graus ocupando uma faixa vertical da TV inteira.
+        //
+        // Guardada por Perfil.ehTv: em celular e tablet nada muda, e os 250
+        // aparelhos de loja não sentem esta linha existir.
+        if (Perfil.ehTv(this)) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
         // Descobre onde mora a tela de Otimizacao de RAM enquanto ninguem esta
         // esperando. A busca varre o aparelho inteiro e leva segundos; no toque
         // do cliente, esses segundos sao a demonstracao que nao acontece.
