@@ -127,6 +127,12 @@ fi
 echo "$F" | grep -q "android.hardware.ethernet" && echo "  tem porta de rede"
 echo "$(echo "$F" | grep -c wifi) rede(s) sem fio"
 echo "$(adb "${S[@]}" shell pm list packages 2>/dev/null | grep -c com.android.vending) Play Store (0 = push do Google não funciona; a batida de 60s cobre)"
+# MEMORIA E COTA DE HEAP. O defeito numero 1 do projeto foi a vitrine estourar a
+# COTA do app (192 a 384 MB conforme o aparelho), que nao tem relacao nenhuma com
+# a RAM da maquina. Box de vitrine roda 12 horas seguidas e cai na menor cota que
+# existe, entao esta e a pergunta que decide se ele aguenta o dia inteiro.
+RAMKB=$(adb "${S[@]}" shell cat /proc/meminfo 2>/dev/null | awk '/MemTotal/{print $2}')
+echo "  RAM $(awk -v k="${RAMKB:-0}" 'BEGIN{printf "%.1f GB", k/1048576}') · cota de heap do app $(g dalvik.vm.heapgrowthlimit) (quanto menor a cota, maior o risco de a vitrine estourar)"
 
 echo
 if [ "$nok" -eq 0 ]; then echo "════ VEREDITO: aprovado nos $ok pontos ════"
