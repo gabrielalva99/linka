@@ -39,7 +39,8 @@ echo "  build: $(g ro.build.fingerprint)"
 # eles decidem tanto um ponto de aprovacao (dono do aparelho) quanto o que
 # muda no agente. Antes esta lista so nascia depois dos pontos — e era por
 # isso que o ponto 7 nao podia existir.
-F=$(adb "${S[@]}" shell pm list features 2>/dev/null | tr -d '')
+F=$(adb "${S[@]}" shell pm list features 2>/dev/null | tr -d '
+')
 
 echo
 echo "════ OS SETE PONTOS QUE DECIDEM ════"
@@ -63,9 +64,22 @@ ANO="${P%%-*}"
 if [ "${ANO:-0}" -ge 2024 ] 2>/dev/null; then diz "Patch de segurança" "$P"
 else nao "Patch de segurança" "${P:-ausente} — desatualizado"; fi
 
-# 4. 64 bits
+# 4. 64 bits — AVISO, NAO REPROVACAO.
+#
+# ISTO JA REPROVOU UM APARELHO POR ENGANO, em 04/09: a Intelbras/Homatics veio
+# com userspace de 32 bits e caiu aqui. So que o APK do LINKA nao tem UMA
+# biblioteca nativa sequer (e Java/Kotlin puro: o ExoPlayer usa o MediaCodec do
+# sistema, e o Firebase Messaging nao traz .so). Conferido abrindo o APK. Ele
+# instalou e rodou no aparelho de 32 bits sem reclamar.
+#
+# Fica como aviso porque volta a importar no dia em que alguem adicionar
+# biblioteca nativa ao agente. Reprovar por isso hoje e reprovar por um problema
+# que nao existe.
 ABI=$(g ro.product.cpu.abilist)
-case "$ABI" in *arm64*) diz "Arquitetura" "$ABI";; *) nao "Arquitetura" "$ABI — 32 bits";; esac
+case "$ABI" in
+  *arm64*) diz "Arquitetura" "$ABI";;
+  *) aviso "Arquitetura" "$ABI — 32 bits (o APK nao tem lib nativa: instala igual)";;
+esac
 
 # 5. Resolucao — so cobra 1080p de quem MANDA imagem para uma TV.
 #
