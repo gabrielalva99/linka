@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getMessages } from "@/lib/i18n";
 
@@ -19,6 +20,11 @@ import { getMessages } from "@/lib/i18n";
 export function MagicLink() {
   const t = getMessages();
   const [estado, setEstado] = useState<"nada" | "entrando" | "falhou">("nada");
+
+  // Link do e-mail que já não vale (expirou, foi usado, ou não era link):
+  // /auth/entrar manda para cá com esta marca. Lido da URL, e não copiado para
+  // estado: a URL já é a fonte, e um F5 repete um aviso que continua verdadeiro.
+  const expirado = useSearchParams().get("link") === "expirado";
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -50,17 +56,18 @@ export function MagicLink() {
       .catch(() => setEstado("falhou"));
   }, []);
 
-  if (estado === "nada") return null;
+  const mostrar = estado === "nada" && expirado ? "falhou" : estado;
+  if (mostrar === "nada") return null;
 
   return (
     <p
       className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-        estado === "falhou"
+        mostrar === "falhou"
           ? "border-warning/40 bg-warning/10 text-warning"
           : "border-line bg-surface text-muted"
       }`}
     >
-      {estado === "entrando" ? t.login.signingIn : t.login.linkExpired}
+      {mostrar === "entrando" ? t.login.signingIn : t.login.linkExpired}
     </p>
   );
 }

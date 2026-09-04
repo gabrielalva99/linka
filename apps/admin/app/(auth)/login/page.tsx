@@ -2,7 +2,7 @@
 
 import { CampoSenha } from "@/components/campo-senha";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import Link from "next/link";
 import { getMessages } from "@/lib/i18n";
 import { LinkaLogo } from "../../linka-logo";
@@ -29,7 +29,11 @@ export default function LoginPage() {
 <LinkaLogo className="h-8 w-auto" />
         </div>
 
-        <MagicLink />
+        {/* MagicLink lê a URL com useSearchParams, e o Next exige Suspense em
+            volta disso na página pré-renderizada. Sem ele o build falha. */}
+        <Suspense>
+          <MagicLink />
+        </Suspense>
 
         <h1 className="text-lg font-semibold">{t.login.title}</h1>
         <p className="mt-1 text-sm text-muted">{t.login.subtitle}</p>

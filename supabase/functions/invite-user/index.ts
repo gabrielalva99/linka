@@ -182,7 +182,16 @@ Deno.serve(async (req) => {
       email,
       options: redirectTo ? { redirectTo } : undefined,
     });
-    link = gerado?.properties?.action_link ?? null;
+    // O LINK DO E-MAIL É DO PAINEL, NÃO DO FORNECEDOR. O action_link pronto
+    // aponta para xkzktmsqtvpkxmzftars.supabase.co, que para quem recebe é um
+    // endereço aleatório com cara de golpe. O que vai no e-mail é o hash do
+    // token no domínio do painel, e /auth/entrar troca o hash pela sessão.
+    // O hash vale uma vez e não é credencial: sozinho não abre nada.
+    const hash = gerado?.properties?.hashed_token ?? null;
+    const painel = redirectTo ? new URL(redirectTo).origin : DESTINOS[0];
+    link = hash
+      ? `${painel}/auth/entrar?token_hash=${encodeURIComponent(hash)}&type=magiclink`
+      : (gerado?.properties?.action_link ?? null);
   }
 
   // ENTREGA O CONVITE.
