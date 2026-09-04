@@ -54,3 +54,10 @@ configuradas (que impedem virar dono do aparelho) e Play Store.
 
 VEREDITO: REPROVADO em 6 de 6 pontos
 ```
+
+## Nunca rode `adb root` num box pela rede
+
+Em 04/09 um `adb root` num box `userdebug` (Amlogic/WYST, Android 9) reiniciou o `adbd`
+e levou o Wi‑Fi junto: o aparelho sumiu da rede e parou de mandar imagem até ser tirado da
+tomada. Não é necessário para nada que o script faz. Para saber se a build é de depuração,
+leia `ro.build.type` e `ro.build.tags`, que o script já mostra.
