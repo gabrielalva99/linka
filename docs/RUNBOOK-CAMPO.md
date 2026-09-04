@@ -234,6 +234,13 @@ concede por ADB a janela por cima e as estatísticas de uso, e tira o agente da 
 do sistema. Depois reinicie o box e confira que a vitrine voltou sozinha: foi assim que
 se provou, com reinício frio, em 04/09.
 
+**O que sobrevive ao reinício e o que não** (medido duas vezes no mesmo box): o launcher
+desligado, a lista da soneca e o LINKA como tela inicial sobrevivem. As duas permissões
+concedidas por `appops` (janela por cima e estatísticas de uso) **voltam a `default` a cada
+boot** neste modelo. Na TV isso não faz diferença: nada da vitrine usa janela por cima, e
+estatística de uso mede app aberto por cliente, que não existe numa vitrine pura. Não perca
+tempo reaplicando.
+
 **O que não existe nesse modo, e a loja precisa saber:**
 
 - Quiosque: com o controle remoto na mão dá para abrir Ajustes. Guarde o controle.
