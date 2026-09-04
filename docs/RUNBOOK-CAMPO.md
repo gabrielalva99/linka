@@ -215,6 +215,35 @@ Vale olhar o ponto físico em vez de pedir para plugar de novo toda semana.
 
 ---
 
+## 10. TV box: a vitrine sobe, mas o aparelho não vira dono de si mesmo
+
+**Como reconhecer:** `tools/auditar-box/auditar-box.sh <ip>` responde
+`Vira dono do aparelho: NAO — sistema sem device_admin`, e `dpm set-device-owner`
+devolve `Can't set package as device owner` mesmo com zero contas. O próprio sistema
+confirma em `dumpsys device_policy`: `mHasFeature=false`.
+
+**O que significa:** a build da TV veio sem administração de dispositivo. Não é conta
+sobrando, não é configuração, e não tem contorno: o Google não exige esse recurso em
+Android TV, e dois de dois boxes de consumo vieram sem ele (RPCplus em 31/08,
+Intelbras/Homatics em 04/09).
+
+**O que fazer:** o box ainda serve de vitrine. Rode `tools/auditar-box/preparar-box.sh <ip>`
+com o LINKA já instalado. Ele desliga o launcher de fábrica (sem dono o Android TV não
+troca a tela inicial, mas com o launcher desligado o botão de início cai no LINKA),
+concede por ADB a janela por cima e as estatísticas de uso, e tira o agente da soneca
+do sistema. Depois reinicie o box e confira que a vitrine voltou sozinha: foi assim que
+se provou, com reinício frio, em 04/09.
+
+**O que não existe nesse modo, e a loja precisa saber:**
+
+- Quiosque: com o controle remoto na mão dá para abrir Ajustes. Guarde o controle.
+- Autoatualização: `SelfUpdate` exige dono. Versão nova entra por `adb install -r` pela
+  rede, com a depuração ligada. Enquanto isso não muda no agente, cada box é uma visita
+  (ou um acesso remoto) por versão.
+- As 12 travas do dono (Wi-Fi, modo avião, senha de tela, bloqueio de apps).
+
+**Para desfazer:** `adb -s <ip>:5555 shell pm enable com.google.android.tvlauncher`.
+
 ## Ao chamar por ajuda
 
 Diga sempre estas quatro coisas, que são as que respondem a maioria dos casos:

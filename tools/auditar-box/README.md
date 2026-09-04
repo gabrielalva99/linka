@@ -8,6 +8,14 @@ letras garrafais, e o LINKA simplesmente não instalava.
 O sistema não consegue mentir sobre o que ele **obedece**. Este script pergunta
 isso, e não o que está escrito na tela.
 
+## Depois de aprovar: preparar o box sem dono
+
+Se o script disser "Vira dono do aparelho: NAO", o aparelho ainda pode servir de
+vitrine. `./preparar-box.sh <ip>` desliga o launcher de fabrica (o botao de inicio
+passa a cair no LINKA), concede por ADB o que o dono daria, e tira o agente da soneca
+do sistema. Provado com reinicio frio na Intelbras/Homatics em 04/09. O que se perde
+sem dono esta no cabecalho do script: quiosque, autoatualizacao e as 12 travas.
+
 ## Como usar
 
 Ligue a depuração no box (Ajustes → Sobre → 7 toques em "Número da versão" →
