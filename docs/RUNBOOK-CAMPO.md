@@ -249,7 +249,15 @@ tempo reaplicando.
   (ou um acesso remoto) por versão.
 - As 12 travas do dono (Wi-Fi, modo avião, senha de tela, bloqueio de apps).
 
-**Para desfazer:** `adb -s <ip>:5555 shell pm enable com.google.android.tvlauncher`.
+**Dois modos, e como alternar.** Com o launcher do Google desligado (modo loja), o botão de
+início cai no LINKA e **não existe caminho pelo controle até a tela do Google**: só os
+atalhos de app do próprio controle (YouTube, Netflix) respondem, porque são atalhos do
+sistema. Para mexer no box na bancada, religue o launcher (modo mesa):
+`adb -s <ip>:5555 shell pm enable com.google.android.tvlauncher` e aperte início. Para
+devolver ao modo loja, rode `preparar-box.sh` de novo. A partir da **0.114.0** existe a
+porta de manutenção pelo controle: **sete vezes OK em quatro segundos** com a vitrine na
+frente, PIN, e dali "Abrir Ajustes do aparelho" ou "Retirar da vitrine". É o caminho para
+não precisar religar o launcher em loja.
 
 ## Ao chamar por ajuda
 
