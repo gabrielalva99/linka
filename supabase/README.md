@@ -12,16 +12,31 @@ Este banco atende frota real em loja. Não é ambiente de teste.
 painel do Supabase nem por SQL avulso: o que não estiver aqui não existe no próximo
 ambiente, e a diferença só aparece quando já é tarde.
 
-São 146 arquivos, em ordem cronológica. Não vale a pena listar aqui, porque a lista
+São 164 arquivos, em ordem cronológica. Não vale a pena listar aqui, porque a lista
 envelhece antes de ser lida. O nome de cada arquivo diz o que ele conserta, e o cabeçalho
 de cada um diz **por quê**, com o incidente que o motivou. Essa é a documentação de
 verdade do banco.
 
 ```bash
-pnpm exec supabase db push                        # aplica o que falta
+pnpm exec supabase migration list --linked        # compara local com o banco
 node ../tools/conferir-migrations.mjs             # lista as versões locais
 node ../tools/conferir-migrations.mjs versoes.json # compara com o que está no banco
 ```
+
+**`supabase db push` não funciona neste repositório, e não adianta insistir.** Ele aborta
+antes de aplicar qualquer coisa, com `LegacyDbPushMissingLocalError`: o banco tem 124
+versões registradas entre 24/07 e 04/08 que não têm arquivo local com aquele nome. De
+08/08 em diante as duas pontas batem, e é por isso que a falha ficou escondida.
+
+Enquanto esse histórico não for reconciliado, **migration nova entra pelo `apply_migration`
+do MCP do Supabase**, e o arquivo em `migrations/` é renomeado para a versão que o banco
+registrou. É assim que as versões recentes entraram, e é o que mantém as duas pontas
+iguais daqui para a frente.
+
+Custou um incidente em 07/09: o `db push` foi dado como aplicado sem conferência, a função
+de borda subiu chamando uma função do banco que ainda não existia, e a curva de memória
+parou de gravar **em silêncio** — o `rpc` falha sem derrubar a batida. Quando a mudança
+tem banco e função de borda juntos, o banco vai primeiro, e conferir depois não é opcional.
 
 Aplicar migration direto no banco e esquecer de versioná-la **não dá erro nenhum**. Tudo
 funciona, e a divergência só aparece no dia em que alguém publica a partir do repositório

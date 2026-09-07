@@ -53,7 +53,9 @@ Cada uma destas custou um incidente. Não são preferências de estilo.
 
 **Banco só muda por migration.** Nunca alterar schema pelo painel do Supabase nem por
 SQL avulso. O arquivo em `supabase/migrations/` é a única versão da verdade, e sem ele
-o próximo ambiente nasce diferente deste.
+o próximo ambiente nasce diferente deste. Atenção: `supabase db push` **não funciona
+neste repositório** e aborta sem aplicar nada. Como aplicar está em
+[`supabase/README.md`](supabase/README.md).
 
 **Edge Function só se publica pelo CLI:**
 
