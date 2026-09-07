@@ -13,9 +13,10 @@ isso, e não o que está escrito na tela.
 Se o script disser "Vira dono do aparelho: NAO", o aparelho ainda pode servir de
 vitrine. `./preparar-box.sh <ip>` desliga o launcher de fabrica (o botao de inicio
 passa a cair no LINKA), concede por ADB o que o dono daria, e tira o agente da soneca
-do sistema. Provado com reinicio frio na Intelbras/Homatics em 04/09: launcher desligado,
-soneca e tela inicial sobrevivem ao reinicio; os dois appops NAO (voltam a `default` a cada
-boot), e na TV isso nao faz falta, porque nada da vitrine depende deles. O que se perde
+do sistema, e concede tambem o de INSTALAR APLICATIVOS, que e o que permite atualizacao
+sem ser dono. Provado com reinicio frio na Intelbras/Homatics: tudo sobrevive, DESDE QUE o
+script grave em disco no fim (`appops write-settings`). A versao de 04/09 dizia que os
+appops nao sobreviviam; estava errado, o teste e que reiniciava antes de o Android gravar. O que se perde
 sem dono esta no cabecalho do script: quiosque, autoatualizacao e as 12 travas.
 
 ## Como usar

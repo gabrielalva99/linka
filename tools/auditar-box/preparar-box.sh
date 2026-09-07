@@ -5,23 +5,29 @@
 # legitima) reprovou em `dpm set-device-owner`: a build nao tem device_admin,
 # e nao existe contorno para isso. Foi declarado morto em dois comandos. Estava
 # errado: sem dono, ainda da para conquistar o que uma vitrine precisa, e tudo
-# por ADB. Este script e a lista do que foi conquistado, provada com reinicio
-# frio no mesmo dia. O QUE SOBREVIVE A REINICIO (medido duas vezes em 04/09):
-# o launcher desligado, a lista da soneca e o LINKA como tela inicial. O QUE
-# NAO SOBREVIVE: os dois appops do passo 2, que voltam para `default` a cada
-# boot neste modelo. Na TV isso nao faz falta (ver o passo 2).
+# por ADB, e TUDO sobrevive a reinicio.
+#
+# -- A CORRECAO DE 05/09, QUE VALE MAIS QUE O SCRIPT -----------------------
+# Em 04/09 este cabecalho afirmava que os appops NAO sobreviviam a reinicio.
+# Estava errado, e o erro era do teste: o Android grava o estado dos appops
+# COM ATRASO, e o reinicio vinha segundos depois de conceder, dentro dessa
+# janela. Com `appops write-settings` forcando a gravacao antes, os tres
+# sobreviveram a dois reinicios seguidos.
+#
+# POR QUE ISSO IMPORTA EM LOJA: o medo era queda de energia, que e reinicio
+# sujo. Com a gravacao forcada isso deixa de importar, porque o estado vai
+# para o disco NA PREPARACAO, na bancada, e nao no desligamento.
 #
 # O QUE ELE FAZ (e por que):
 #   1. Desliga o launcher do Google. Sem dono, o Android TV nao deixa trocar a
 #      tela inicial (`set-home-activity` responde Success e ignora). Mas com o
 #      launcher do Google DESLIGADO, o botao de inicio cai no proximo que
 #      declara HOME: o LINKA. Reversivel com `pm enable`.
-#   2. Concede por appops o que o agente pediria ao dono: janela por cima e
-#      estatisticas de uso. NAO SOBREVIVE A REINICIO neste modelo, e na TV nao
-#      faz falta: nenhuma linha do agente usa SYSTEM_ALERT_WINDOW (a vitrine
-#      volta pelo BootReceiver), e GET_USAGE_STATS so alimenta Interaction.kt,
-#      que mede app aberto por cliente, coisa que nao existe numa vitrine pura.
-#      Fica aqui porque custa zero e vale enquanto o box nao reinicia.
+#   2. Concede por appops o que o agente pediria ao dono, e GRAVA em disco:
+#      janela por cima, estatisticas de uso e INSTALAR APLICATIVOS. O terceiro
+#      e o que permite a autoatualizacao sem ser dono do aparelho; sem ele o
+#      box so atualiza por cabo, e uma TV em loja congela na versao que foi.
+#      O write-settings do fim nao e enfeite: sem ele nada disso persiste.
 #   3. Tira o agente da otimizacao de bateria. Box nao tem bateria, mas o
 #      Android aplica a mesma soneca e mata servico do mesmo jeito.
 #   4. Aperta o botao de inicio e mostra quem assumiu a tela.
@@ -61,11 +67,17 @@ for p in com.google.android.tvlauncher com.google.android.apps.tv.launcherx; do
 done
 
 echo
-echo "════ 2. PERMISSOES ESPECIAIS (o que o dono daria; NAO sobrevivem a reinicio, e na TV nao fazem falta) ════"
-for op in SYSTEM_ALERT_WINDOW GET_USAGE_STATS; do
+echo "════ 2. PERMISSOES ESPECIAIS (o que o dono daria) ════"
+for op in SYSTEM_ALERT_WINDOW GET_USAGE_STATS REQUEST_INSTALL_PACKAGES; do
   sh appops set com.linka.agent "$op" allow >/dev/null
-  printf "  %-22s %s\n" "$op" "$(sh appops get com.linka.agent "$op" | head -1)"
+  printf "  %-24s %s
+" "$op" "$(sh appops get com.linka.agent "$op" | head -1)"
 done
+# SEM ESTA LINHA NADA ACIMA PERSISTE. O AppOpsService grava com atraso; um
+# reinicio dentro da janela apaga tudo, e foi assim que a medicao de 04/09
+# concluiu errado que o aparelho nao guardava os ajustes.
+printf "  %-24s %s
+" "gravando em disco" "$(sh appops write-settings)"
 
 echo
 echo "════ 3. FORA DA SONECA DO SISTEMA ════"

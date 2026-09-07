@@ -234,12 +234,16 @@ concede por ADB a janela por cima e as estatísticas de uso, e tira o agente da 
 do sistema. Depois reinicie o box e confira que a vitrine voltou sozinha: foi assim que
 se provou, com reinício frio, em 04/09.
 
-**O que sobrevive ao reinício e o que não** (medido duas vezes no mesmo box): o launcher
-desligado, a lista da soneca e o LINKA como tela inicial sobrevivem. As duas permissões
-concedidas por `appops` (janela por cima e estatísticas de uso) **voltam a `default` a cada
-boot** neste modelo. Na TV isso não faz diferença: nada da vitrine usa janela por cima, e
-estatística de uso mede app aberto por cliente, que não existe numa vitrine pura. Não perca
-tempo reaplicando.
+**Tudo o que o script faz sobrevive ao reinício, desde que ele grave em disco.** Em 04/09
+esta seção dizia o contrário, que as permissões concedidas por `appops` voltavam a
+`default` a cada boot. Estava errado: o Android grava o estado dos appops **com atraso**, e
+a medição reiniciava o box dentro dessa janela. Com `appops write-settings` no fim da
+preparação (que o `preparar-box.sh` agora faz), os três appops sobreviveram a dois
+reinícios seguidos, junto com o launcher desligado, a soneca e a tela inicial.
+
+Isso importa em loja porque o medo era queda de energia, que é reinício sujo. Com a
+gravação forçada, o estado vai para o disco **na bancada, durante a preparação**, e não no
+desligamento. A janela de risco passa a ser de segundos, com o técnico do lado.
 
 **O que não existe nesse modo, e a loja precisa saber:**
 
