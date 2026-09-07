@@ -130,6 +130,19 @@ Deno.serve(async (req) => {
     }
   }
 
+  // IDADE DO PROCESSO, em segundos. Nao e o uptime do aparelho: o aplicativo
+  // pode ter morrido e voltado dez vezes sem a maquina reiniciar uma so, e e
+  // essa diferenca que separa "o coletor de lixo trabalhou" de "o aplicativo
+  // caiu" quando a curva de memoria despenca.
+  //
+  // Frota em versao antiga nao manda o campo, e ai grava nulo, que e o certo:
+  // nulo diz "nao sei". Zero diria "acabou de subir", que num diagnostico de
+  // reinicio e exatamente a afirmacao errada — e Number(null) da zero, entao o
+  // ausente precisa ser barrado antes da conversao.
+  const processoSegundos = payload.processo_segundos == null
+    ? Number.NaN
+    : Number(payload.processo_segundos);
+
   if (typeof payload.battery_charging === "boolean") {
     update.battery_charging = payload.battery_charging;
   }
@@ -442,8 +455,13 @@ Deno.serve(async (req) => {
   // responder uma pergunta que uma amostra a cada 10 minutos ja responde: sao 30
   // pontos nas cinco horas que o razr leva para estourar.
   //
-  // Guarda o PICO da faixa, porque quem mata e o pico e nao a media. E e upsert
-  // sem leitura antes: uma escrita por batida, sem custo de ida e volta.
+  // Guarda o PICO da faixa, porque quem mata e o pico e nao a media. E guarda o
+  // PISO junto, porque e ele que separa vazamento de folga do coletor: num
+  // aplicativo saudavel o piso volta ao mesmo lugar por mais alto que o pico
+  // tenha ido; num vazamento o piso sobe junto e nao desce mais.
+  //
+  // Continua sendo upsert sem leitura antes: uma escrita por batida, e o least
+  // e o greatest resolvem no banco.
   if (memOk) {
     const agora = Date.now();
     const faixa = new Date(agora - (agora % 600_000)).toISOString();
@@ -454,6 +472,11 @@ Deno.serve(async (req) => {
       p_usado: Math.round(mem.usado),
       p_teto: Math.round(mem.teto),
       p_nativo: Number.isFinite(mem.nativo) && mem.nativo >= 0 ? Math.round(mem.nativo) : 0,
+      // Idade do processo: e ela que diz se uma queda na curva foi o coletor
+      // de lixo trabalhando ou o aplicativo tendo morrido e voltado.
+      p_processo: Number.isFinite(processoSegundos) && processoSegundos >= 0
+        ? Math.round(processoSegundos)
+        : null,
     });
   }
 

@@ -66,6 +66,23 @@ object Health {
     /** Segundos desde o último boot — reinício sozinho aparece como uptime baixo. */
     fun uptimeSeconds(): Long = SystemClock.elapsedRealtime() / 1000
 
+    /**
+     * HÁ QUANTO TEMPO ESTE PROCESSO ESTÁ VIVO, em segundos.
+     *
+     * Não é `uptimeSeconds`, e a diferença é o diagnóstico inteiro: aquele conta
+     * desde que o APARELHO ligou, e o aplicativo pode ter morrido e voltado dez
+     * vezes sem o aparelho reiniciar uma só.
+     *
+     * POR QUE ISTO EXISTE. A curva de memória do razr 007 despenca de 284 para
+     * 10 MB às 22:00 e de 226 para 27 às 16:30. Sem este número não dá para saber
+     * se foi o coletor de lixo fazendo o trabalho dele, a loja fechando, ou o
+     * aplicativo tendo morrido — e cada uma dessas leva a um conserto diferente.
+     * Queda com processo velho é coletor. Queda com processo recém-nascido é
+     * defeito.
+     */
+    fun processoSegundos(): Long =
+        (SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime()) / 1000
+
     /** Tela acesa agora: vitrine apagada não é a mesma coisa que aparelho offline. */
     fun screenOn(ctx: Context): Boolean {
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager

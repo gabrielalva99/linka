@@ -261,6 +261,10 @@ object Telemetry {
             // Saúde: explica queda de loja sem visita técnica.
             .put("temperature_c", Health.temperatureC(ctx) ?: JSONObject.NULL)
             .put("uptime_seconds", Health.uptimeSeconds())
+            // Ha quanto tempo o PROCESSO esta vivo. Vai ao lado do uptime de
+            // proposito: e a diferenca entre os dois que diz se o aplicativo
+            // morreu e voltou sem o aparelho ter reiniciado.
+            .put("processo_segundos", Health.processoSegundos())
             .put("screen_on", Health.screenOn(ctx))
             .put("connection", Health.connection(ctx))
             .put("signal_dbm", Health.signalDbm(ctx) ?: JSONObject.NULL)
