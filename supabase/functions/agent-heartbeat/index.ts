@@ -229,6 +229,17 @@ Deno.serve(async (req) => {
       update.app_removido_em = null;
     }
   }
+  // CONSIGO ME ATUALIZAR SOZINHO? Nasceu com a TV, que nunca vira dona do
+  // aparelho: la a autoatualizacao depende do appop de instalar aplicativos,
+  // concedido na preparacao do box. Se a preparacao falhar, o aparelho congela
+  // na versao e nada avisa — sem erro, sem queda, so uma loja velha.
+  //
+  // Agente antigo nao manda o campo, e nesse caso a coluna fica NULA de
+  // proposito: `v_device_issues` so acusa quem reporta falso, entao publicar
+  // esta versao nao acende os 250 aparelhos de mao de uma vez.
+  if (typeof payload.pode_atualizar_sozinho === "boolean") {
+    update.pode_atualizar_sozinho = payload.pode_atualizar_sozinho;
+  }
   if (typeof payload.kiosk_locked === "boolean") update.kiosk_locked = payload.kiosk_locked;
   // A trava DE VERDADE e a janela de manutencao, separadas do campo acima.
   //

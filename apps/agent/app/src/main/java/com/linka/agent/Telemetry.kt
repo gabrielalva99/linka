@@ -270,6 +270,15 @@ object Telemetry {
             .put("signal_dbm", Health.signalDbm(ctx) ?: JSONObject.NULL)
             // Kiosk: o painel nunca deve adivinhar se a trava pegou.
             .put("is_device_owner", Kiosk.isDeviceOwner(ctx))
+            // CONSIGO ME ATUALIZAR SOZINHO? Existe para a TV, que nunca vira dona
+            // do aparelho e depende do appop de instalação. Se a preparação do box
+            // falhar, ele congela na versão e NADA avisa: sem erro, sem queda, só
+            // uma loja velha. Com este campo o painel abre "não atualiza" e a falha
+            // silenciosa vira visita marcada.
+            .put(
+                "pode_atualizar_sozinho",
+                Kiosk.isDeviceOwner(ctx) || SelfUpdate.podeInstalarEmSilencio(ctx),
+            )
             // Tres fatos diferentes, e o nome de cada um diz o que ele mede.
             // "kiosk_locked" nunca foi a trava do quiosque: sao as travas de REDE.
             // Elas ficam aplicadas durante a manutencao, entao sozinhas diziam ao

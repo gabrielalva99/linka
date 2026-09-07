@@ -7,7 +7,7 @@
 # errado: sem dono, ainda da para conquistar o que uma vitrine precisa, e tudo
 # por ADB, e TUDO sobrevive a reinicio.
 #
-# -- A CORRECAO DE 05/09, QUE VALE MAIS QUE O SCRIPT -----------------------
+# -- A CORRECAO DE 07/09, QUE VALE MAIS QUE O SCRIPT -----------------------
 # Em 04/09 este cabecalho afirmava que os appops NAO sobreviviam a reinicio.
 # Estava errado, e o erro era do teste: o Android grava o estado dos appops
 # COM ATRASO, e o reinicio vinha segundos depois de conceder, dentro dessa

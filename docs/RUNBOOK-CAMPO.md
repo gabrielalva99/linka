@@ -248,10 +248,18 @@ desligamento. A janela de risco passa a ser de segundos, com o técnico do lado.
 **O que não existe nesse modo, e a loja precisa saber:**
 
 - Quiosque: com o controle remoto na mão dá para abrir Ajustes. Guarde o controle.
-- Autoatualização: `SelfUpdate` exige dono. Versão nova entra por `adb install -r` pela
-  rede, com a depuração ligada. Enquanto isso não muda no agente, cada box é uma visita
-  (ou um acesso remoto) por versão.
 - As 12 travas do dono (Wi-Fi, modo avião, senha de tela, bloqueio de apps).
+
+**Como a TV se atualiza (desde a 0.116.0).** Ela não é dona do aparelho e nunca vai ser,
+então a autoatualização não passa por aí: passa pelo appop de **instalar aplicativos**, que
+o `preparar-box.sh` concede e grava. Com ele, o agente instala a versão nova em silêncio,
+igual a um aparelho de mão. Sem ele, o box congela na versão com que foi instalado.
+
+Para não descobrir isso meses depois, o agente reporta se consegue se atualizar, e o painel
+abre a pendência **"não consegue instalar atualização sozinho; falta liberar a instalação de
+aplicativos neste aparelho"**. Se ela aparecer, a correção é rodar o `preparar-box.sh` de
+novo. Testado nos dois sentidos em 07/09: tirando a permissão a pendência abre, devolvendo
+pelo script ela fecha sozinha.
 
 **Dois modos, e como alternar.** Com o launcher do Google desligado (modo loja), o botão de
 início cai no LINKA e **não existe caminho pelo controle até a tela do Google**: só os

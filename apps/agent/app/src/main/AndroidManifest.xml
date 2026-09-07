@@ -53,6 +53,32 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- ATUALIZAR SOZINHO SEM SER DONO DO APARELHO.
+         Estas duas existem por causa da TV. O box Android TV nao aceita virar
+         dono do aparelho (a build vem sem device_admin), e sem dono o
+         SelfUpdate parava na porta: uma TV em loja congelaria para sempre na
+         versao com que foi instalada, e cada correcao viraria visita com cabo.
+
+         A regra do Android para instalar em silencio, desde a 12 (API 31): o
+         app instalado precisa mirar API alta (o limite sobe com a versao do
+         sistema — 29 no Android 12, 31 no Android 14; miramos 34, entao passa
+         com folga), o instalador precisa ser o PROPRIO APP se atualizando (e o
+         nosso caso) e precisa declarar UPDATE_PACKAGES_WITHOUT_USER_ACTION.
+
+         REQUEST_INSTALL_PACKAGES nao basta declarar: ela e um appop, o
+         "instalar apps desconhecidos" dos ajustes, e precisa ser CONCEDIDA. Quem
+         concede e o preparar-box.sh, que tambem grava em disco — sem a gravacao
+         o ajuste se perde no primeiro reinicio, e a atualizacao morre em loja
+         depois de funcionar na bancada (medido em 07/09).
+
+         Custo: REQUEST_INSTALL_PACKAGES e permissao sensivel na Play e nao
+         estava no pedido de liberacao do DPC de 25/08. UPDATE_PACKAGES_... e
+         normal, concedida automaticamente. Em aparelho de mao nada muda: la o
+         cargo de dono continua sendo o caminho, e este e o plano B do dia em
+         que um celular perder o cargo em loja. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
     <!-- Subir sozinho quando o aparelho liga. Sem isto, só o cargo de dono do
          aparelho trazia a vitrine de volta depois de um reinício, e a frota de
          instalação assistida não tem esse cargo: a loja tirava da tomada e a

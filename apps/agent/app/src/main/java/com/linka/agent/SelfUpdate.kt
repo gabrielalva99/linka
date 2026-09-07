@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.app.PendingIntent
+import android.os.Build
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -13,11 +14,41 @@ import java.net.URL
  *
  * 250 aparelhos em 15 lojas não voltam para a bancada a cada correção. Como
  * device owner, o Android permite instalar em silêncio — sem ninguém tocar em
- * "permitir". Em aparelho que não é device owner isso é impossível: nesse caso o
- * agente simplesmente não atualiza, e o painel mostra a versão velha (honesto,
- * em vez de fingir que atualizou).
+ * "permitir".
+ *
+ * ── E QUANDO NÃO SE É DONO DO APARELHO (a TV) ───────────────────────────────
+ * Até 07/09 esta era a única porta, e ela fechava: sem dono, o agente
+ * simplesmente não atualizava. Isso valia enquanto a frota era só de mão, onde
+ * o cargo de dono sempre existe. O box Android TV quebrou a premissa — a build
+ * dele não tem `device_admin`, então ele nunca será dono, e uma TV em loja
+ * ficaria congelada para sempre na versão com que foi instalada.
+ *
+ * O Android tem uma segunda porta desde a 12 (API 31): instalar em silêncio
+ * sem ser dono, se o app declarar `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, tiver
+ * `REQUEST_INSTALL_PACKAGES` **concedida** e estiver atualizando A SI MESMO.
+ * É o caso exato daqui. Ver [podeInstalarEmSilencio].
+ *
+ * A ordem importa: dono do aparelho continua sendo o caminho preferido em
+ * aparelho de mão, e a segunda porta é o que salva a TV — e vira plano B do dia
+ * em que um celular perder o cargo de dono em loja.
  */
 object SelfUpdate {
+
+    /**
+     * A segunda porta: dá para instalar sem confirmação na tela?
+     *
+     * Duas condições, e as duas precisam ser verdadeiras em tempo de execução:
+     * o sistema é Android 12 ou mais (antes disso `setRequireUserAction` nem
+     * existe), e o appop de instalar aplicativos está concedido.
+     *
+     * `canRequestPackageInstalls()` pergunta pelo APPOP, não pela declaração no
+     * manifesto. É a diferença que decide: declarar não concede nada, e um box
+     * preparado errado responde `false` aqui — que é exatamente o que o painel
+     * precisa saber, em vez de descobrir meses depois que a loja está velha.
+     */
+    fun podeInstalarEmSilencio(ctx: Context): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ctx.packageManager.canRequestPackageInstalls()
 
     /**
      * QUANDO a tentativa em curso comecou (0 = nenhuma).
@@ -97,7 +128,12 @@ object SelfUpdate {
             Prefs.clearUpdateFailure(ctx)
             return
         }
-        if (!Kiosk.isDeviceOwner(ctx)) return
+        // DUAS PORTAS, e basta uma. Dono do aparelho (frota de mão) ou o appop
+        // de instalação concedido (a TV, que nunca vira dona). Sem nenhuma das
+        // duas, sair aqui continua sendo o certo: o painel mostra a versão velha,
+        // que é honesto, em vez de deixar um diálogo de "permitir" pendurado numa
+        // vitrine onde ninguém vai clicar.
+        if (!Kiosk.isDeviceOwner(ctx) && !podeInstalarEmSilencio(ctx)) return
 
         // GUARDA O QUE ESTÁ PENDENTE, para o relógio de 60s poder voltar aqui.
         //
@@ -375,6 +411,16 @@ object SelfUpdate {
         val params = PackageInstaller.SessionParams(
             PackageInstaller.SessionParams.MODE_FULL_INSTALL
         )
+        // SEM ISTO A SESSÃO PEDE CONFIRMAÇÃO NA TELA, e numa vitrine ninguém
+        // clica: o app fica esperando para sempre e a versão nova nunca entra.
+        // Como dono do aparelho o Android já dispensa a confirmação, então esta
+        // linha é a que faz a TV funcionar. O padrão quando não se diz nada é
+        // EXIGIR a confirmação, ou seja, o silêncio aqui era o defeito.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            params.setRequireUserAction(
+                PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED
+            )
+        }
         val sessionId = installer.createSession(params)
         installer.openSession(sessionId).use { session ->
             session.openWrite("linka", 0, apk.length()).use { out ->
