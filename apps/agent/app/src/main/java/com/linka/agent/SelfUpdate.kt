@@ -177,8 +177,26 @@ object SelfUpdate {
         // A espera vem ANTES da contagem de tentativas de proposito: adiar nao e
         // falhar, e gastar tentativa aqui faria uma versao boa ser declarada
         // "recusada, precisa de cabo" so porque alguem mexeu no aparelho.
+        //
+        // ── E NA TV A ESPERA SE INVERTE ────────────────────────────────────
+        // Tudo acima vale para aparelho de mão. Na TV não existe quiosque para
+        // esperar: `lockTaskOn` exige ser dono do aparelho, e a build de Android
+        // TV não permite isso. A espera nunca terminaria, e o box ficaria parado
+        // na versão de instalação para sempre — o mesmo congelamento que o
+        // portão lá de cima acabou de resolver, reaparecendo dez linhas abaixo.
+        //
+        // Medido em 07/09: com a 0.117.0 publicada, o box reiniciou e ficou 12
+        // minutos na 0.116.0 sem se mexer. Foi esta linha.
+        //
+        // E o motivo da espera some junto: ela existe para o cliente não ver o
+        // launcher do fabricante depois da instalação. No box, a tela inicial é
+        // o PRÓPRIO LINKA (o `preparar-box.sh` desliga o launcher do Google),
+        // então o Android pede a tela inicial e quem responde somos nós. O pouso
+        // já é o caso bom.
+        //
+        // Por isso a espera passa a valer só onde o quiosque é possível.
         if (Prefs.emManutencao(ctx)) return
-        if (!Kiosk.lockTaskOn(ctx)) return
+        if (Kiosk.isDeviceOwner(ctx) && !Kiosk.lockTaskOn(ctx)) return
 
         val tentativas = Prefs.updateAttempts(ctx, version)
         if (tentativas >= MAX_TENTATIVAS) {
