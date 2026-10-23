@@ -23,10 +23,29 @@ export type DadosDoQr = {
   codigo: string;
   /** Endereço do APK publicado. */
   apkUrl: string;
+  /** Fuso da loja, do cadastro dela. Sem ele, vale o de São Paulo. */
+  fuso?: string | null;
 };
 
-export function conteudoDoQr({ codigo, apkUrl }: DadosDoQr): string {
+/**
+ * IDIOMA E FUSO, definidos na instalação e não depois.
+ *
+ * O aparelho de vitrine sai da caixa no idioma que a fábrica quiser, e o LINKA
+ * trava a troca de idioma (`DISALLOW_CONFIG_LOCALE`) para o cliente da loja não
+ * deixar o aparelho em outra língua. As duas coisas juntas querem dizer que um
+ * aparelho instalado em inglês FICA em inglês. O QR é o momento de escolher, e é
+ * o único em que o Android aceita isso sem ninguém tocar em Ajustes.
+ *
+ * O fuso pesa mais do que parece: a sessão vai para o servidor com a hora do
+ * aparelho, e o relatório lê por hora local da loja.
+ */
+const IDIOMA = "pt_BR";
+const FUSO_PADRAO = "America/Sao_Paulo";
+
+export function conteudoDoQr({ codigo, apkUrl, fuso }: DadosDoQr): string {
   return JSON.stringify({
+    "android.app.extra.PROVISIONING_LOCALE": IDIOMA,
+    "android.app.extra.PROVISIONING_TIME_ZONE": fuso || FUSO_PADRAO,
     "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": COMPONENTE,
     // Sem esta impressão digital, qualquer arquivo trocado no caminho seria
     // instalado como dono do aparelho. Com ela, o Android recusa o que não foi

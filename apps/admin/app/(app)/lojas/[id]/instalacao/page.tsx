@@ -20,7 +20,7 @@ export default async function Instalacao({
 
   const { data: loja } = await supabase
     .from("stores")
-    .select("id, name, code, city, state, tenants(name, enrollment_code)")
+    .select("id, name, code, city, state, timezone, tenants(name, enrollment_code)")
     .eq("id", id)
     .maybeSingle();
   if (!loja) notFound();
@@ -52,7 +52,7 @@ export default async function Instalacao({
 
   const pronto = Boolean(codigo && versao?.url);
   const svg = pronto
-    ? await svgDoQr({ codigo: codigo!, apkUrl: versao!.url })
+    ? await svgDoQr({ codigo: codigo!, apkUrl: versao!.url, fuso: loja.timezone })
     : null;
 
   return (
