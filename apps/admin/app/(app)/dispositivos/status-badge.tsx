@@ -7,11 +7,21 @@ const DOT: Record<DeviceStatus, string> = {
   provisioning: "bg-muted",
 };
 
-export function StatusBadge({ status }: { status: DeviceStatus }) {
+// `rotulo` é o aparelho que saiu da vitrine ("Fora da vitrine"). Vence o
+// status de conexão, com ponto neutro: não é defeito de rede, é outro estado.
+export function StatusBadge({
+  status,
+  rotulo,
+}: {
+  status: DeviceStatus;
+  rotulo?: string | null;
+}) {
   return (
     <span className="inline-flex items-center gap-2 text-sm">
-      <span className={`inline-block h-2 w-2 rounded-full ${DOT[status]}`} />
-      {DEVICE_STATUS_LABELS[status]}
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${rotulo ? "bg-muted" : DOT[status]}`}
+      />
+      {rotulo ?? DEVICE_STATUS_LABELS[status]}
     </span>
   );
 }

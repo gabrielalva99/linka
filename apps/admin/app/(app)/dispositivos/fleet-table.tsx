@@ -11,6 +11,8 @@ import { definirEmMassa } from "./bulk-actions";
 export type Linha = {
   id: string;
   status: DeviceStatus;
+  /** "Fora da vitrine": vence o status de conexão. */
+  saida?: string | null;
   codigo: string;
   nome: string;
   modelo: string;
@@ -222,7 +224,7 @@ export function FleetTable({
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  <StatusBadge status={d.status} />
+                  <StatusBadge status={d.status} rotulo={d.saida} />
                 </td>
                 <td className="px-4 py-3 text-muted">{d.codigo}</td>
                 <td className="px-4 py-3">

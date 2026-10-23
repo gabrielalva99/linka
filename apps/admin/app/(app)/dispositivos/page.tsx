@@ -38,6 +38,7 @@ type DeviceRow = {
   hardware_model: string | null;
   kiosk_locked: boolean;
   store_id: string | null;
+  app_removido_em: string | null;
   device_models: Rel;
   stores: Rel;
 };
@@ -59,6 +60,40 @@ function effectiveStatus(
   const age = Date.now() - new Date(lastSeen).getTime();
   if (age > toleranciaMs) return "offline";
   return status;
+}
+
+/**
+ * O APARELHO SAIU DA VITRINE, e isso vence o último contato.
+ *
+ * Visto em 23/10: o razr 121 foi retirado às 18:20 e a lista seguiu mostrando
+ * "No ar", porque o que decide "No ar" é ter falado nos últimos minutos, e ele
+ * tinha acabado de falar: a última batida é justamente a que avisa que o LINKA
+ * deixou de ser dono. Quem olhava a frota via um aparelho de vitrine a mais.
+ *
+ * A marca que vale é `app_removido_em`, e não `retirado_em`: a data de retirada
+ * fica no cadastro para sempre, e um aparelho reinstalado volta no MESMO cadastro
+ * (identidade estável). `app_removido_em` o servidor apaga sozinho quando ele
+ * volta a ser dono.
+ *
+ * Um rótulo só, de propósito. Separar "retirado" de "app arrancado" pela data de
+ * retirada erraria os 12 do Interlagos, retirados pelo COMANDO do painel em 26/08,
+ * que não grava essa data. O app arrancado sem pedido já tem alerta próprio.
+ */
+function saidaDaVitrine(d: { app_removido_em?: string | null }): string | null {
+  return d.app_removido_em ? "Fora da vitrine" : null;
+}
+
+/** Status da linha: aparelho que saiu da vitrine nunca conta como no ar. */
+function statusDaLinha(
+  d: {
+    status: DeviceStatus;
+    last_seen_at: string | null;
+    app_removido_em?: string | null;
+  },
+  toleranciaMs: number,
+): DeviceStatus {
+  if (saidaDaVitrine(d)) return "offline";
+  return effectiveStatus(d.status, d.last_seen_at, toleranciaMs);
 }
 
 /**
@@ -159,7 +194,7 @@ export default async function FrotaPage({
     supabase
       .from("devices")
       .select(
-        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, is_active, archive_reason, device_models(name), stores(name, retail_chains(name))",
+        "id, code, name, status, mode, battery_level, battery_charging, synced, agent_version, last_seen_at, device_type, hardware_model, kiosk_locked, store_id, is_active, archive_reason, app_removido_em, device_models(name), stores(name, retail_chains(name))",
       ),
     filtro,
   )
@@ -248,7 +283,7 @@ export default async function FrotaPage({
     }
     // "arquivados" já foi resolvido na consulta; aqui ele não filtra mais nada.
     if (situacao && situacao !== "arquivados") {
-      const fora = effectiveStatus(d.status, d.last_seen_at, toleranciaMs) !== "online";
+      const fora = statusDaLinha(d, toleranciaMs) !== "online";
       if (situacao === "offline" && !fora) return false;
       if (situacao === "sem_travas" && d.kiosk_locked) return false;
       if (situacao === "app_extra" && !appExtraPorAparelho.has(d.id)) return false;
@@ -280,7 +315,7 @@ export default async function FrotaPage({
   // estado conhecido, e último estado conhecido de um aparelho sumido é
   // exatamente o que não se deve exibir como fato.
   const noAr = daAba.filter(
-    (d) => effectiveStatus(d.status, d.last_seen_at, toleranciaMs) === "online",
+    (d) => statusDaLinha(d, toleranciaMs) === "online",
   );
   const online = noAr.length;
   const synced = noAr.filter((d) => d.synced).length;
@@ -424,7 +459,8 @@ export default async function FrotaPage({
         <FleetTable
           linhas={devices.map((d) => ({
             id: d.id,
-            status: effectiveStatus(d.status, d.last_seen_at, toleranciaMs),
+            status: statusDaLinha(d, toleranciaMs),
+            saida: saidaDaVitrine(d),
             codigo: d.code ?? "—",
             nome: d.name,
             modelo: modelLabel(
