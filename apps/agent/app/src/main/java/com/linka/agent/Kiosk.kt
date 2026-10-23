@@ -835,20 +835,73 @@ object Kiosk {
         false
     }
 
+    /**
+     * A TELA INICIAL DO FABRICANTE, e não "a tela inicial atual".
+     *
+     * O LINKA declara HOME no manifesto (é assim que ele assume a tela do box de
+     * TV). No celular isso deixa dois candidatos, o nosso e o do fabricante, e
+     * enquanto ninguém escolhe o Android pergunta. Perguntar "qual é a tela inicial
+     * atual" nesse intervalo devolve a PRÓPRIA JANELA DE ESCOLHA (pacote
+     * "android"), e era ela que entrava no quiosque no lugar do launcher da
+     * Motorola.
+     */
+    fun telaInicialDeFabrica(ctx: Context): android.content.ComponentName? = try {
+        ctx.packageManager
+            .queryIntentActivities(
+                android.content.Intent(android.content.Intent.ACTION_MAIN)
+                    .addCategory(android.content.Intent.CATEGORY_HOME),
+                0,
+            )
+            .map { it.activityInfo }
+            .filter { it.packageName != ctx.packageName && it.packageName != "android" }
+            .sortedByDescending {
+                (it.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            }
+            .firstOrNull()
+            ?.let { android.content.ComponentName(it.packageName, it.name) }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * FIXA A TELA INICIAL DO FABRICANTE, para a instalação pelo QR não perguntar.
+     *
+     * Visto em 23/10: depois de ler o QR, o razr abria "escolha o aplicativo de
+     * tela inicial", com o LINKA na lista. Quem está na loja não sabe o que
+     * responder, e a resposta errada é a que já custou caro.
+     *
+     * ── ISTO NÃO É O QUE INUTILIZOU DOIS APARELHOS ──────────────────────────
+     * Em agosto o LINKA foi fixado como tela inicial, e dois razr nunca mais
+     * ligaram: no boot travado o Android só enxerga quem roda antes do
+     * destravamento, e a única tela inicial era a nossa (ver o manifesto). Aqui é
+     * o contrário: fixa a do FABRICANTE, que é a que o aparelho usaria sem nós e
+     * sempre funciona no boot. O LINKA continua voltando pela vitrine, pelo
+     * quiosque e pelo BootReceiver, como hoje.
+     *
+     * TV fica de fora: no box o LINKA É a tela inicial, de propósito, e a do
+     * Google é desligada na preparação.
+     */
+    fun fixarTelaInicialDeFabrica(ctx: Context) {
+        if (!isDeviceOwner(ctx) || Perfil.ehTv(ctx)) return
+        val fabrica = telaInicialDeFabrica(ctx) ?: return
+        try {
+            val filtro = android.content.IntentFilter(android.content.Intent.ACTION_MAIN).apply {
+                addCategory(android.content.Intent.CATEGORY_HOME)
+                addCategory(android.content.Intent.CATEGORY_DEFAULT)
+            }
+            dpm(ctx).addPersistentPreferredActivity(admin(ctx), filtro, fabrica)
+        } catch (_: Exception) {
+        }
+    }
+
     fun autorizarNoQuiosque(ctx: Context) {
         if (!isDeviceOwner(ctx)) return
+        fixarTelaInicialDeFabrica(ctx)
         try {
             val permitidos = mutableSetOf(ctx.packageName)
             // A tela inicial de fábrica entra: é de onde o cliente abre a câmera.
             // Sem ela, o quiosque vira uma tela de vídeo e nada mais.
-            ctx.packageManager
-                .resolveActivity(
-                    android.content.Intent(android.content.Intent.ACTION_MAIN)
-                        .addCategory(android.content.Intent.CATEGORY_HOME),
-                    0,
-                )
-                ?.activityInfo?.packageName
-                ?.let { permitidos.add(it) }
+            telaInicialDeFabrica(ctx)?.packageName?.let { permitidos.add(it) }
             for (a in Inventory.apps(ctx)) {
                 if (a.pacote !in FORA_DO_QUIOSQUE) permitidos.add(a.pacote)
             }
@@ -1287,6 +1340,14 @@ object Kiosk {
         try {
             dpm.clearPackagePersistentPreferredActivities(admin, ctx.packageName)
         } catch (_: Exception) {
+        }
+        // E solta a tela inicial do fabricante que fixamos: aparelho vendido
+        // escolhe a própria, como qualquer celular.
+        telaInicialDeFabrica(ctx)?.packageName?.let {
+            try {
+                dpm.clearPackagePersistentPreferredActivities(admin, it)
+            } catch (_: Exception) {
+            }
         }
         try {
             dpm.setLockTaskPackages(admin, emptyArray())
