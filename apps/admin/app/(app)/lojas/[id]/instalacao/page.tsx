@@ -30,10 +30,20 @@ export default async function Instalacao({
   // A versão publicada é a que o aparelho vai baixar. Se ninguém publicou ainda,
   // não existe QR possível — e dizer isso é melhor do que entregar um código que
   // falha na loja, com o promotor sozinho e sem como saber por quê.
+  //
+  // A VERSÃO GERAL, e não "a" versão atual. Desde 20/08 pode haver duas no ar ao
+  // mesmo tempo: a geral e uma mirada num tipo de aparelho (a 0.118.0 só para TV,
+  // publicada em 07/09). Esta consulta pedia uma linha só com `maybeSingle`, que com
+  // duas devolve erro e `data` vazio, e a tela concluía que não havia versão
+  // nenhuma: o QR sumiu de todas as lojas sem ninguém ter despublicado nada. A
+  // geral é a que serve qualquer aparelho; quem tiver versão mirada se atualiza
+  // sozinho na primeira batida. É o mesmo filtro que o kit de provisionamento por
+  // cabo já usa.
   const { data: versao } = await supabase
     .from("agent_releases")
     .select("version, url")
     .eq("is_current", true)
+    .is("target_device_type", null)
     .maybeSingle();
 
   const codigo = cliente?.enrollment_code && loja.code
