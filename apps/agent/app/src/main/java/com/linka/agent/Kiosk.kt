@@ -587,6 +587,18 @@ object Kiosk {
         android.os.UserManager.DISALLOW_DEBUGGING_FEATURES,
     )
 
+    /**
+     * As travas que deixam um aparelho VENDIDO sem conserto se ficarem para trás.
+     * A retirada exige que estas estejam soltas de verdade, venham de onde vierem;
+     * as demais só precisam estar soltas do nosso lado. Ver `deprovision`.
+     */
+    private val GRAVES_PARA_QUEM_COMPRA = listOf(
+        android.os.UserManager.DISALLOW_FACTORY_RESET,
+        android.os.UserManager.DISALLOW_MODIFY_ACCOUNTS,
+        android.os.UserManager.DISALLOW_CONFIG_CREDENTIALS,
+        android.os.UserManager.DISALLOW_SAFE_BOOT,
+    )
+
     private val RESTRICOES_DE_VITRINE = listOf(
         android.os.UserManager.DISALLOW_CONFIG_CREDENTIALS,
         android.os.UserManager.DISALLOW_FACTORY_RESET,
@@ -1224,13 +1236,43 @@ object Kiosk {
         // Confere no aparelho em vez de confiar no comando: `clearUserRestriction`
         // não estoura quando não surte efeito, e é o mesmo engano que já deixou
         // permissões "concedidas" que nunca valeram.
-        val presas = try {
-            val um = ctx.getSystemService(Context.USER_SERVICE) as android.os.UserManager
-            val bundle = um.userRestrictions
-            todas.filter { bundle.getBoolean(it, false) }
+        //
+        // ── DUAS PERGUNTAS DIFERENTES, e misturá-las travou o razr 121 ─────────
+        // A conferência olhava as travas EM VIGOR no aparelho, venham de onde
+        // vierem. Em 23/10 o primeiro aparelho instalado pelo QR recusou a
+        // retirada três vezes por "add_user", sempre essa e só essa, enquanto os
+        // instalados por cabo sempre saíram limpos. A instalação pelo QR é a do
+        // próprio Android, e ele mesmo põe regras de sistema por baixo das do
+        // dono. Uma trava que não fomos nós que pusemos nós não conseguimos tirar,
+        // e exigir isso deixava o aparelho preso no LINKA para sempre.
+        //
+        // Então:
+        //  - GRAVES PARA QUEM COMPRA (restaurar, conta, credenciais, modo
+        //    seguro): continuam exigindo estar soltas DE VERDADE, de qualquer
+        //    origem. Com qualquer uma delas presa, o aparelho não sai.
+        //  - AS DEMAIS: conferidas pelo que ESTE app pôs
+        //    (`getUserRestrictions(admin)`). Sobra do sistema é citada na resposta
+        //    e não segura mais o aparelho.
+        //
+        // O pior caso, se a origem não for a do sistema, é sobrar a trava de
+        // criar um segundo usuário: não impede usar, pôr conta Google nem
+        // restaurar o aparelho.
+        val emVigor = try {
+            (ctx.getSystemService(Context.USER_SERVICE) as android.os.UserManager).userRestrictions
         } catch (_: Exception) {
-            emptyList()
+            null
         }
+        val nossas = try {
+            dpm.getUserRestrictions(admin)
+        } catch (_: Exception) {
+            null
+        }
+        val graves = GRAVES_PARA_QUEM_COMPRA.filter { emVigor?.getBoolean(it, false) == true }
+        val nossasPresas = todas.filter { nossas?.getBoolean(it, false) == true }
+        val presas = (graves + nossasPresas).distinct()
+        val doSistema = todas
+            .filter { emVigor?.getBoolean(it, false) == true }
+            .filterNot { it in presas }
         if (presas.isNotEmpty()) {
             // Não abre mão do cargo: com ele ainda em mãos, dá para tentar de novo.
             // A mensagem sai nomeando as travas — quem está na loja com o aparelho
@@ -1253,7 +1295,12 @@ object Kiosk {
 
         return try {
             dpm.clearDeviceOwnerApp(ctx.packageName)
-            "controle devolvido: pode desinstalar e vender"
+            if (doSistema.isEmpty()) {
+                "controle devolvido: pode desinstalar e vender"
+            } else {
+                "controle devolvido: pode desinstalar e vender (regra do sistema mantida: " +
+                    doSistema.joinToString(", ") { it.removePrefix("no_") } + ")"
+            }
         } catch (e: Exception) {
             "falhou ao devolver o controle: " + (e.message ?: "erro desconhecido")
         }
