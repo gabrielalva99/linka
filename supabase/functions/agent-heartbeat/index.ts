@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
   const { data: device } = await supabase
     .from("devices")
     .select(
-      `model_id, pending_command, push_token, is_device_owner, app_removido_em, ${CAMPOS_DO_APARELHO}`,
+      `model_id, pending_command, push_token, is_device_owner, app_removido_em, stable_id, stable_id_source, ${CAMPOS_DO_APARELHO}`,
     )
     .eq("device_token", token)
     .maybeSingle();
@@ -290,11 +290,25 @@ Deno.serve(async (req) => {
   // Chega pelo heartbeat de propósito: os aparelhos que já estão na rua nunca vão
   // reprovisionar, e é assim que eles aprendem. Sem isto, a proteção contra
   // aparelho fantasma só valeria para aparelho novo.
+  //
+  // ── NUNCA TROCAR POR UMA MAIS FRACA (23/10) ────────────────────────────────
+  // A força vai do que sobrevive à restauração (esid, só para quem é dono do
+  // aparelho) ao que não sobrevive (android_id). Um aparelho que sai da vitrine
+  // deixa de ser dono, perde acesso ao esid, e na última batida manda o android_id.
+  // Aceitar isso apagava justamente a identidade que existe para reconhecer o
+  // aparelho quando ele voltar: o razr 121 saiu às 18:20, foi restaurado, entrou
+  // de novo pelo QR e virou o 122, cadastro duplicado do mesmo ferro.
   const FONTES = new Set(["esid", "serial", "android_id"]);
+  const FORCA: Record<string, number> = { esid: 3, serial: 2, android_id: 1 };
   if (typeof payload.stable_id === "string" && payload.stable_id.length > 0) {
-    update.stable_id = payload.stable_id.slice(0, 120);
-    if (FONTES.has(String(payload.stable_id_source))) {
-      update.stable_id_source = payload.stable_id_source;
+    const fonteNova = FONTES.has(String(payload.stable_id_source))
+      ? String(payload.stable_id_source)
+      : null;
+    const forcaNova = fonteNova ? FORCA[fonteNova] : 0;
+    const forcaAtual = device.stable_id_source ? (FORCA[String(device.stable_id_source)] ?? 0) : 0;
+    if (!device.stable_id || forcaNova >= forcaAtual) {
+      update.stable_id = payload.stable_id.slice(0, 120);
+      if (fonteNova) update.stable_id_source = fonteNova;
     }
   }
 
