@@ -845,22 +845,60 @@ object Kiosk {
      * "android"), e era ela que entrava no quiosque no lugar do launcher da
      * Motorola.
      */
-    fun telaInicialDeFabrica(ctx: Context): android.content.ComponentName? = try {
+    fun telaInicialDeFabrica(ctx: Context): android.content.ComponentName? =
+        candidatosATelaInicial(ctx)
+            .filterNot { ehAssistenteDeConfiguracao(it) }
+            .sortedWith(
+                compareByDescending<android.content.pm.ResolveInfo> {
+                    (it.activityInfo.applicationInfo.flags and
+                        android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                }.thenBy { it.priority },
+            )
+            .firstOrNull()
+            ?.activityInfo
+            ?.let { android.content.ComponentName(it.packageName, it.name) }
+
+    /** Todos que respondem por tela inicial agora, menos nós e a janela de escolha. */
+    private fun candidatosATelaInicial(ctx: Context): List<android.content.pm.ResolveInfo> = try {
         ctx.packageManager
             .queryIntentActivities(
                 android.content.Intent(android.content.Intent.ACTION_MAIN)
                     .addCategory(android.content.Intent.CATEGORY_HOME),
                 0,
             )
-            .map { it.activityInfo }
-            .filter { it.packageName != ctx.packageName && it.packageName != "android" }
-            .sortedByDescending {
-                (it.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            .filter {
+                it.activityInfo.packageName != ctx.packageName &&
+                    it.activityInfo.packageName != "android"
             }
-            .firstOrNull()
-            ?.let { android.content.ComponentName(it.packageName, it.name) }
     } catch (_: Exception) {
-        null
+        emptyList()
+    }
+
+    /**
+     * O ASSISTENTE DE CONFIGURAÇÃO TAMBÉM SE DIZ TELA INICIAL, e ele vai embora.
+     *
+     * Medido em 23/10 com a 0.120.0: a fixação rodou na instalação pelo QR e a
+     * pergunta "qual tela inicial usar" apareceu mesmo assim. Durante o primeiro
+     * uso, o assistente do Android (e o do fabricante) atende por HOME, com
+     * prioridade acima dos launchers, para ser o que aparece no primeiro boot.
+     * Escolher "o primeiro do sistema" naquele instante fixava o ASSISTENTE; ao
+     * terminar ele se desliga, a fixação aponta para o nada e o Android pergunta.
+     *
+     * Duas defesas: fora quem tem prioridade acima de zero (launcher de verdade
+     * atende com zero) ou nome de assistente; e só fixar depois que o aparelho
+     * terminou o primeiro uso (`fixarTelaInicialDeFabrica`).
+     */
+    private fun ehAssistenteDeConfiguracao(r: android.content.pm.ResolveInfo): Boolean {
+        val nome = (r.activityInfo.packageName + "/" + r.activityInfo.name).lowercase()
+        return r.priority > 0 ||
+            listOf("setupwizard", "setup_wizard", "provision", "oobe").any { it in nome }
+    }
+
+    /** O aparelho já passou do assistente de primeiro uso. */
+    private fun primeiroUsoConcluido(ctx: Context): Boolean = try {
+        android.provider.Settings.Secure.getInt(ctx.contentResolver, "user_setup_complete", 0) == 1
+    } catch (_: Exception) {
+        false
     }
 
     /**
@@ -883,7 +921,20 @@ object Kiosk {
      */
     fun fixarTelaInicialDeFabrica(ctx: Context) {
         if (!isDeviceOwner(ctx) || Perfil.ehTv(ctx)) return
+        // Antes de o primeiro uso acabar, a lista ainda tem o assistente. A vitrine
+        // abre logo depois que ele termina e reaplica as regras, então a fixação
+        // entra antes de alguém apertar o botão de início.
+        if (!primeiroUsoConcluido(ctx)) return
         val fabrica = telaInicialDeFabrica(ctx) ?: return
+        // Solta qualquer fixação nossa que aponte para outro candidato, inclusive a
+        // que a 0.120.0 pode ter deixado presa no assistente.
+        for (outro in candidatosATelaInicial(ctx).map { it.activityInfo.packageName }.distinct()) {
+            if (outro == fabrica.packageName) continue
+            try {
+                dpm(ctx).clearPackagePersistentPreferredActivities(admin(ctx), outro)
+            } catch (_: Exception) {
+            }
+        }
         try {
             val filtro = android.content.IntentFilter(android.content.Intent.ACTION_MAIN).apply {
                 addCategory(android.content.Intent.CATEGORY_HOME)
@@ -1087,6 +1138,20 @@ object Kiosk {
                 r,
                 try { um.hasUserRestriction(r) } catch (_: Exception) { false },
             )
+        }
+        // QUAL TELA INICIAL O BOTÃO DE INÍCIO ABRE, provado no aparelho.
+        // "tela_inicial:android" quer dizer que o Android ainda pergunta. Existe
+        // para a fixação da tela do fabricante ser conferida pelo painel, sem cabo.
+        try {
+            ctx.packageManager
+                .resolveActivity(
+                    android.content.Intent(android.content.Intent.ACTION_MAIN)
+                        .addCategory(android.content.Intent.CATEGORY_HOME),
+                    0,
+                )
+                ?.activityInfo?.packageName
+                ?.let { o.put("tela_inicial:$it", true) }
+        } catch (_: Exception) {
         }
         if (daVitrine) {
             for (pkg in BLOCKABLE) {
