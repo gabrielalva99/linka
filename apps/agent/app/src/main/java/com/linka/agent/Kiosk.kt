@@ -848,12 +848,10 @@ object Kiosk {
     fun telaInicialDeFabrica(ctx: Context): android.content.ComponentName? =
         candidatosATelaInicial(ctx)
             .filterNot { ehAssistenteDeConfiguracao(it) }
-            .sortedWith(
-                compareByDescending<android.content.pm.ResolveInfo> {
-                    (it.activityInfo.applicationInfo.flags and
-                        android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-                }.thenBy { it.priority },
-            )
+            .sortedByDescending {
+                (it.activityInfo.applicationInfo.flags and
+                    android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            }
             .firstOrNull()
             ?.activityInfo
             ?.let { android.content.ComponentName(it.packageName, it.name) }
@@ -884,21 +882,22 @@ object Kiosk {
      * Escolher "o primeiro do sistema" naquele instante fixava o ASSISTENTE; ao
      * terminar ele se desliga, a fixação aponta para o nada e o Android pergunta.
      *
-     * Duas defesas: fora quem tem prioridade acima de zero (launcher de verdade
-     * atende com zero) ou nome de assistente; e só fixar depois que o aparelho
-     * terminou o primeiro uso (`fixarTelaInicialDeFabrica`).
+     * A defesa: só vale quem tem prioridade exatamente zero, que é como launcher
+     * de verdade atende, e nada com nome de assistente ou de tela de emergência.
+     * (A 0.121.0 também esperava o fim do primeiro uso; isso deixava o Android
+     * perguntar antes da fixação, e saiu na 0.122.0.)
      */
     private fun ehAssistenteDeConfiguracao(r: android.content.pm.ResolveInfo): Boolean {
         val nome = (r.activityInfo.packageName + "/" + r.activityInfo.name).lowercase()
-        return r.priority > 0 ||
-            listOf("setupwizard", "setup_wizard", "provision", "oobe").any { it in nome }
-    }
-
-    /** O aparelho já passou do assistente de primeiro uso. */
-    private fun primeiroUsoConcluido(ctx: Context): Boolean = try {
-        android.provider.Settings.Secure.getInt(ctx.contentResolver, "user_setup_complete", 0) == 1
-    } catch (_: Exception) {
-        false
+        // SÓ PRIORIDADE ZERO É LAUNCHER DE VERDADE, e as duas pontas enganam.
+        // Acima de zero: o assistente de primeiro uso. ABAIXO de zero: a tela de
+        // emergência dos Ajustes (com.android.settings/.FallbackHome), que só
+        // existe para os primeiros segundos do boot travado. A 0.121.0 escolhia
+        // "a de menor prioridade" para fugir do assistente e fixou justamente
+        // essa: o razr 123 reportou tela_inicial:com.android.settings em 23/10.
+        return r.priority != 0 ||
+            listOf("setupwizard", "setup_wizard", "provision", "oobe", "fallbackhome")
+                .any { it in nome }
     }
 
     /**
@@ -921,10 +920,11 @@ object Kiosk {
      */
     fun fixarTelaInicialDeFabrica(ctx: Context) {
         if (!isDeviceOwner(ctx) || Perfil.ehTv(ctx)) return
-        // Antes de o primeiro uso acabar, a lista ainda tem o assistente. A vitrine
-        // abre logo depois que ele termina e reaplica as regras, então a fixação
-        // entra antes de alguém apertar o botão de início.
-        if (!primeiroUsoConcluido(ctx)) return
+        // NA INSTALAÇÃO, e não depois do primeiro uso. A 0.121.0 esperava o fim do
+        // primeiro uso, e é exatamente nesse instante que o Android pergunta qual
+        // tela inicial usar, antes de a vitrine abrir. Com o filtro de prioridade
+        // zero, o assistente já não tem como ser escolhido, então fixar cedo é
+        // seguro.
         val fabrica = telaInicialDeFabrica(ctx) ?: return
         // Solta qualquer fixação nossa que aponte para outro candidato, inclusive a
         // que a 0.120.0 pode ter deixado presa no assistente.
