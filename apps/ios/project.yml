@@ -1,0 +1,39 @@
+# O projeto do Xcode nasce deste arquivo (XcodeGen), e não fica no repositório.
+# Motivo: não há Mac na equipe, e um .xcodeproj escrito à mão quebra fácil. A
+# nuvem gera o projeto e compila (ver .github/workflows/ios.yml).
+name: Linka
+options:
+  bundleIdPrefix: com.linka
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.9"
+targets:
+  Linka:
+    type: application
+    platform: iOS
+    sources:
+      - path: Linka
+        excludes:
+          - Info.plist
+    info:
+      path: Linka/Info.plist
+      properties:
+        CFBundleDisplayName: LINKA
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.linka.agent
+        TARGETED_DEVICE_FAMILY: "1,2"

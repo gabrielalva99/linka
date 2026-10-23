@@ -73,3 +73,7 @@ apps/agent/codigo-de-inscricao.txt
 apps/agent/loja-atual.txt
 tools/provisionar/codigo-de-inscricao.txt
 tools/provisionar/loja-atual.txt
+
+# iOS: o projeto do Xcode é gerado de apps/ios/project.yml
+apps/ios/Linka.xcodeproj/
+apps/ios/Linka/Info.plist

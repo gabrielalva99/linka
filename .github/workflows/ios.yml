@@ -1,0 +1,44 @@
+# Compila o app do iPhone num Mac da nuvem, a cada mudança em apps/ios.
+#
+# Por que aqui: a equipe não tem Mac, e o iOS só compila em macOS. Enquanto não
+# existe conta de desenvolvedor da Apple, compila para o SIMULADOR, sem
+# assinatura: prova que o código fecha. Com a conta, este mesmo arquivo ganha a
+# etapa de assinar e mandar para o TestFlight.
+#
+# Custo: minuto de macOS consome a cota gratuita do GitHub dez vezes mais rápido
+# que Linux. Por isso só roda quando algo do iOS muda.
+name: iOS
+
+on:
+  push:
+    paths:
+      - "apps/ios/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+jobs:
+  simulador:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar o gerador do projeto
+        run: brew install xcodegen
+
+      - name: Gerar o projeto do Xcode
+        working-directory: apps/ios
+        run: xcodegen generate
+
+      - name: Compilar para o simulador
+        working-directory: apps/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Linka.xcodeproj \
+            -scheme Linka \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tail -80
