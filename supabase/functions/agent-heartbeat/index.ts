@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
   const { data: device } = await supabase
     .from("devices")
     .select(
-      `model_id, pending_command, push_token, is_device_owner, app_removido_em, stable_id, stable_id_source, ${CAMPOS_DO_APARELHO}`,
+      `model_id, pending_command, push_token, is_device_owner, app_removido_em, retirado_em, stable_id, stable_id_source, ${CAMPOS_DO_APARELHO}`,
     )
     .eq("device_token", token)
     .maybeSingle();
@@ -228,6 +228,35 @@ Deno.serve(async (req) => {
     if (payload.is_device_owner && device.app_removido_em) {
       update.app_removido_em = null;
     }
+
+    // ── RETIRADA CONFIRMADA CORTA O ACESSO (23/10) ───────────────────────────
+    // O razr 50 (116) saiu da frota em 04/08 com "controle devolvido", a pessoa
+    // não confirmou a desinstalação, e o app seguiu dois meses e meio mandando
+    // bateria, rede e sinal de um celular que já estava no bolso de alguém, no
+    // 4G. A credencial nunca morria, porque nada a matava.
+    //
+    // Corta aqui, e só aqui: deixou de ser dono AGORA e havia uma retirada
+    // PEDIDA, pela tela do aparelho (retirado_em recente) ou pelo comando do
+    // painel. O aviso de retirada da tela chega ANTES de soltar as travas, e a
+    // soltura pode falhar (o 121 recusou três vezes em 23/10), então ele sozinho
+    // não basta; esta batida, que vem do Android avisando que o dono saiu, é a
+    // prova de que saiu.
+    //
+    // Deixar de ser dono SEM retirada pedida não corta: é alguém arrancando o app
+    // na loja, e o aparelho precisa continuar visível para o alerta acima.
+    //
+    // Depois de cinco recusas o próprio app esquece o vínculo (Telemetry.beat).
+    const retiradaRecente = device.retirado_em &&
+      Date.now() - new Date(String(device.retirado_em)).getTime() < 86_400_000;
+    const pediuPeloPainel = device.pending_command === "deprovision" ||
+      payload.command_done === "deprovision";
+    if (
+      !payload.is_device_owner && device.is_device_owner === true &&
+      (retiradaRecente || pediuPeloPainel)
+    ) {
+      update.device_token = null;
+      update.push_token = null;
+    }
   }
   // CONSIGO ME ATUALIZAR SOZINHO? Nasceu com a TV, que nunca vira dona do
   // aparelho: la a autoatualizacao depende do appop de instalar aplicativos,
@@ -318,7 +347,12 @@ Deno.serve(async (req) => {
   // o servidor perder o endereço, a próxima batida devolve. Atalho que se registra
   // uma vez só some em silêncio — o aparelho continuaria verde no painel, só mais
   // lento, e ninguém reporta isso.
-  if (typeof payload.push_token === "string" && payload.push_token.length > 0) {
+  // Aparelho que acabou de ter o acesso cortado (retirada confirmada, acima) não
+  // ganha endereço de push de volta na mesma batida.
+  if (
+    update.device_token !== null &&
+    typeof payload.push_token === "string" && payload.push_token.length > 0
+  ) {
     const novo = payload.push_token.slice(0, 400);
     if (novo !== device.push_token) {
       update.push_token = novo;
